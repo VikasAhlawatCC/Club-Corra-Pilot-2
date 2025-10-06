@@ -9,7 +9,7 @@ echo "🧪 Testing database seeding process..."
 cd apps/api
 
 # Check if the seeding script exists
-if [ ! -f "src/scripts/seed-dummy-data.ts" ]; then
+if [ ! -f "src/scripts/seed-dummy-data-simple.ts" ]; then
     echo "❌ Seeding script not found!"
     exit 1
 fi
@@ -24,7 +24,7 @@ echo "✅ Seeding script and configuration found"
 
 # Test TypeScript compilation
 echo "🔍 Testing TypeScript compilation..."
-npx tsc --noEmit src/scripts/seed-dummy-data.ts
+npx tsc --noEmit src/scripts/seed-dummy-data-simple.ts
 
 if [ $? -eq 0 ]; then
     echo "✅ TypeScript compilation successful"

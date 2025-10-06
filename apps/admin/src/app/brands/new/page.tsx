@@ -23,10 +23,23 @@ export default function NewBrandPage() {
     try {
       setIsLoadingCategories(true)
       const response = await categoryApi.getAllCategories()
-      setCategories(response)
+      console.log('Categories API response:', response)
+      console.log('Categories type:', typeof response)
+      console.log('Categories is array:', Array.isArray(response))
+      
+      // Handle both direct array response and wrapped response
+      if (Array.isArray(response)) {
+        setCategories(response)
+      } else if (response && response.data && Array.isArray(response.data)) {
+        setCategories(response.data)
+      } else {
+        console.error('Unexpected categories response format:', response)
+        setCategories([])
+      }
     } catch (error) {
       console.error('Failed to fetch categories:', error)
       showError('Failed to fetch categories', 'Unable to load brand categories. Please try again.')
+      setCategories([])
     } finally {
       setIsLoadingCategories(false)
     }

@@ -34,6 +34,21 @@ export class DashboardController {
     return this.dashboardService.getBrandPerformanceAnalytics(period);
   }
 
+  @Get('analytics/transactions/trends')
+  async getTransactionTrendsAnalytics(@Query('period') period: string = '7d') {
+    return this.dashboardService.getTransactionTrends(period);
+  }
+
+  @Get('analytics/users/growth-trends')
+  async getUserGrowthTrendsAnalytics(@Query('period') period: string = '7d') {
+    return this.dashboardService.getUserGrowthTrends(period);
+  }
+
+  @Get('analytics/brands/performance')
+  async getBrandPerformanceAnalyticsEndpoint(@Query('period') period: string = '30d') {
+    return this.dashboardService.getBrandPerformanceAnalytics(period);
+  }
+
   @Get('saved-views')
   async getSavedViews(@Req() req: any) {
     const adminId = req.user.id;

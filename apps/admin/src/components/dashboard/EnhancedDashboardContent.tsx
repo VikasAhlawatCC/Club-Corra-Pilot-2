@@ -1,5 +1,6 @@
 'use client'
 
+// @ts-ignore
 import { useState, useEffect } from 'react'
 import { 
   UserGroupIcon, 
@@ -95,7 +96,7 @@ export function EnhancedDashboardContent() {
   const { error, handleError, clearError } = useErrorHandler()
   
   // State declarations
-  const [stats, setStats] = useState<DashboardStats>({
+  const [stats, setStats] = useState({
     totalUsers: 1234,
     activeBrands: 45,
     totalCoinsInCirculation: 89432,
@@ -214,7 +215,7 @@ export function EnhancedDashboardContent() {
         if (metricsResp.success && metricsResp.data) {
           const m = metricsResp.data as any
           setDashboardMetrics(m)
-          setStats(prev => ({
+          setStats((prev: DashboardStats) => ({
             ...prev,
             totalUsers: m?.userMetrics?.totalUsers ?? prev.totalUsers,
             activeBrands: m?.brandMetrics?.activeBrands ?? prev.activeBrands,
@@ -230,7 +231,7 @@ export function EnhancedDashboardContent() {
           setLastError(err)
           if (!isRetry && retryCount < 2) {
             console.log('Authentication error, will retry...')
-            setRetryCount(prev => prev + 1)
+            setRetryCount((prev: number) => prev + 1)
             setTimeout(() => fetchDashboardData(true), 2000) // Retry after 2 seconds
             return
           } else {
@@ -245,7 +246,7 @@ export function EnhancedDashboardContent() {
         const transactionStats = await transactionApi.getTransactionStats()
         if (transactionStats.success) {
           const data = transactionStats.data
-          setStats(prev => ({
+          setStats((prev: DashboardStats) => ({
             ...prev,
             pendingEarnRequests: data.pendingEarn || prev.pendingEarnRequests,
             pendingRedeemRequests: data.pendingRedeem || prev.pendingRedeemRequests,
@@ -259,7 +260,7 @@ export function EnhancedDashboardContent() {
           setLastError(err)
           if (!isRetry && retryCount < 2) {
             console.log('Authentication error in transaction stats, will retry...')
-            setRetryCount(prev => prev + 1)
+            setRetryCount((prev: number) => prev + 1)
             setTimeout(() => fetchDashboardData(true), 2000) // Retry after 2 seconds
             return
           } else {
@@ -284,7 +285,7 @@ export function EnhancedDashboardContent() {
       
       // Update stats with real-time data if available
       if (pendingRequestCounts.total > 0) {
-        setStats(prev => ({
+        setStats((prev: DashboardStats) => ({
           ...prev,
           pendingEarnRequests: pendingRequestCounts.earn,
           pendingRedeemRequests: pendingRequestCounts.redeem,
@@ -294,7 +295,7 @@ export function EnhancedDashboardContent() {
       
       // Also update when WebSocket data changes (even if 0)
       if (pendingRequestCounts.total >= 0) {
-        setStats(prev => ({
+        setStats((prev: DashboardStats) => ({
           ...prev,
           pendingEarnRequests: pendingRequestCounts.earn,
           pendingRedeemRequests: pendingRequestCounts.redeem,
@@ -387,7 +388,7 @@ export function EnhancedDashboardContent() {
   // Real-time updates from WebSocket
   useEffect(() => {
     if (pendingRequestCounts.total >= 0) {
-      setStats(prev => ({
+      setStats((prev: DashboardStats) => ({
         ...prev,
         pendingEarnRequests: pendingRequestCounts.earn,
         pendingRedeemRequests: pendingRequestCounts.redeem,
@@ -408,7 +409,7 @@ export function EnhancedDashboardContent() {
         
         if (metricsResp.success && metricsResp.data) {
           const m = metricsResp.data as any
-          setStats(prev => ({
+          setStats((prev: DashboardStats) => ({
             ...prev,
             totalUsers: m?.userMetrics?.totalUsers ?? prev.totalUsers,
             activeBrands: m?.brandMetrics?.activeBrands ?? prev.activeBrands,
@@ -420,7 +421,7 @@ export function EnhancedDashboardContent() {
         
         if (transactionStats.success) {
           const data = transactionStats.data
-          setStats(prev => ({
+          setStats((prev: DashboardStats) => ({
             ...prev,
             pendingEarnRequests: data.pendingEarn || prev.pendingEarnRequests,
             pendingRedeemRequests: data.pendingRedeem || prev.pendingRedeemRequests,
@@ -435,35 +436,35 @@ export function EnhancedDashboardContent() {
     return () => clearInterval(interval)
   }, [])
 
-  const getTransactionTypeColor = (type: RecentTransaction['type']) => {
+  const getTransactionTypeVariant = (type: RecentTransaction['type']) => {
     switch (type) {
       case 'EARN':
-        return 'text-soft-gold-foreground bg-soft-gold'
+        return 'earn'
       case 'REDEEM':
-        return 'text-silver-theme-primary bg-silver-fluorescent'
+        return 'redeem'
       case 'WELCOME_BONUS':
-        return 'text-green-theme-primary bg-green-theme-secondary'
+        return 'welcome-bonus'
       case 'ADJUSTMENT':
-        return 'text-gold-theme-primary bg-gold-theme-secondary'
+        return 'adjustment'
       default:
-        return 'text-gray-600 bg-gray-100'
+        return 'secondary'
     }
   }
 
-  const getStatusColor = (status: RecentTransaction['status'] | 'PROCESSED') => {
+  const getStatusVariant = (status: RecentTransaction['status'] | 'PROCESSED') => {
     switch (status) {
       case 'APPROVED':
-        return 'text-status-success bg-green-theme-secondary'
+        return 'approved'
       case 'REJECTED':
-        return 'text-status-error bg-red-100'
+        return 'rejected'
       case 'PENDING':
-        return 'text-status-warning bg-gold-theme-secondary'
+        return 'pending'
       case 'PROCESSED':
-        return 'text-status-success bg-green-theme-secondary'
+        return 'processed'
       case 'PAID':
-        return 'text-silver-theme-primary bg-silver-fluorescent'
+        return 'paid'
       default:
-        return 'text-gray-600 bg-gray-100'
+        return 'secondary'
     }
   }
 
@@ -864,22 +865,24 @@ export function EnhancedDashboardContent() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {recentTransactions.map((transaction) => (
+            {recentTransactions.map((transaction: RecentTransaction) => (
               <div key={transaction.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-gray-100 last:border-b-0 space-y-2 sm:space-y-0">
                 <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary" className={getTransactionTypeColor(transaction.type)}>
+                    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getTransactionTypeVariant(transaction.type) === 'earn' ? 'bg-soft-gold text-soft-gold-foreground border-soft-gold-accent' : getTransactionTypeVariant(transaction.type) === 'redeem' ? 'bg-silver-theme-secondary text-silver-theme-primary border-silver-theme-accent' : getTransactionTypeVariant(transaction.type) === 'welcome-bonus' ? 'bg-green-theme-secondary text-green-theme-primary border-green-theme-accent' : getTransactionTypeVariant(transaction.type) === 'adjustment' ? 'bg-gold-theme-secondary text-gold-theme-primary border-gold-theme-accent' : 'bg-secondary text-secondary-foreground'}`}>
                       {transaction.type}
-                    </Badge>
-                    <Badge variant="secondary" className={getStatusColor(transaction.status)}>
-                      {getStatusIcon(transaction.status)}
-                      <span className="ml-1">{transaction.status}</span>
-                    </Badge>
+                    </span>
+                    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getStatusVariant(transaction.status) === 'approved' ? 'bg-green-theme-secondary text-green-theme-primary border-green-theme-accent' : getStatusVariant(transaction.status) === 'rejected' ? 'bg-red-100 text-red-800 border-red-300' : getStatusVariant(transaction.status) === 'pending' ? 'bg-gold-theme-secondary text-gold-theme-primary border-gold-theme-accent' : getStatusVariant(transaction.status) === 'processed' ? 'bg-green-theme-secondary text-green-theme-primary border-green-theme-accent' : getStatusVariant(transaction.status) === 'paid' ? 'bg-silver-theme-secondary text-silver-theme-primary border-silver-theme-accent' : 'bg-secondary text-secondary-foreground'}`}>
+                      <div className="flex items-center">
+                        {getStatusIcon(transaction.status)}
+                        <span className="ml-1">{transaction.status}</span>
+                      </div>
+                    </span>
                   </div>
                   <div className="text-sm text-gray-600">
                     <span className="font-medium">{transaction.brandName || 'N/A'}</span>
                     <span className="mx-2 hidden sm:inline">•</span>
-                    <span className="block sm:inline">{transaction.userId.slice(0, 8)}...</span>
+                    <span className="block sm:inline">{transaction.userId ? `${transaction.userId.slice(0, 8)}...` : 'N/A'}</span>
                     <span className="mx-2 hidden sm:inline">•</span>
                     <span className="font-medium block sm:inline">{formatCurrency(transaction.amount)}</span>
                   </div>

@@ -28,7 +28,7 @@ async function seedDummyData() {
         const userInserts = [];
         for (let i = 1; i <= 50; i++) {
             const mobileNumber = `+91${Math.floor(Math.random() * 3000000000) + 7000000000}`;
-            const email = `user${i}@example.com`;
+            const email = `user${Date.now()}_${i}@example.com`;
             const status = ['ACTIVE', 'PENDING', 'SUSPENDED'][Math.floor(Math.random() * 3)];
             const isMobileVerified = Math.random() > 0.3;
             const isEmailVerified = Math.random() > 0.4;
@@ -45,12 +45,12 @@ async function seedDummyData() {
       )`);
         }
         await queryRunner.query(`
-      INSERT INTO users (mobile_number, email, status, is_mobile_verified, is_email_verified, has_welcome_bonus_processed, roles, last_login_at)
+      INSERT INTO users ("mobileNumber", "email", "status", "isMobileVerified", "isEmailVerified", "hasWelcomeBonusProcessed", "roles", "lastLoginAt")
       VALUES ${userInserts.join(', ')}
     `);
         console.log('🌱 Seeding user profiles...');
         // Get user IDs
-        const users = await queryRunner.query('SELECT id FROM users ORDER BY created_at DESC LIMIT 50');
+        const users = await queryRunner.query('SELECT id FROM users ORDER BY "createdAt" DESC LIMIT 50');
         // Insert user profiles
         const profileInserts = [];
         const firstNames = ['Aarav', 'Aditi', 'Arjun', 'Bhavya', 'Chetan', 'Deepika', 'Esha', 'Gaurav', 'Isha', 'Jatin'];
@@ -61,7 +61,7 @@ async function seedDummyData() {
             profileInserts.push(`('${user.id}', '${firstName}', '${lastName}')`);
         }
         await queryRunner.query(`
-      INSERT INTO user_profiles (user_id, first_name, last_name)
+      INSERT INTO user_profiles ("user_id", "firstName", "lastName")
       VALUES ${profileInserts.join(', ')}
     `);
         console.log('🌱 Seeding payment details...');
@@ -72,7 +72,7 @@ async function seedDummyData() {
             paymentInserts.push(`('${user.id}', '${mobileNumber}@paytm', '${mobileNumber}')`);
         }
         await queryRunner.query(`
-      INSERT INTO payment_details (user_id, upi_id, mobile_number)
+      INSERT INTO payment_details ("userId", "upiId", "mobileNumber")
       VALUES ${paymentInserts.join(', ')}
     `);
         console.log('🌱 Seeding coin balances...');
@@ -85,7 +85,7 @@ async function seedDummyData() {
             coinBalanceInserts.push(`('${user.id}', '${balance}', '${totalEarned}', '${totalRedeemed}')`);
         }
         await queryRunner.query(`
-      INSERT INTO coin_balances (user_id, balance, total_earned, total_redeemed)
+      INSERT INTO coin_balances ("userId", "balance", "totalEarned", "totalRedeemed")
       VALUES ${coinBalanceInserts.join(', ')}
     `);
         console.log('🌱 Seeding coin transactions...');
@@ -100,11 +100,11 @@ async function seedDummyData() {
             const brand = brands[Math.floor(Math.random() * brands.length)];
             const amount = Math.floor(Math.random() * 1000) + 10;
             const type = transactionTypes[Math.floor(Math.random() * transactionTypes.length)];
-            const status = statuses[Math.floor(Math.random() * statuses.length)];
+            const status = transactionStatuses[Math.floor(Math.random() * transactionStatuses.length)];
             transactionInserts.push(`('${user.id}', '${brand.id}', '${amount}', '${type}', '${status}')`);
         }
         await queryRunner.query(`
-      INSERT INTO coin_transactions (user_id, brand_id, amount, type, status)
+      INSERT INTO coin_transactions ("userId", "brandId", "amount", "type", "status")
       VALUES ${transactionInserts.join(', ')}
     `);
         console.log('🌱 Seeding notifications...');
@@ -123,23 +123,23 @@ async function seedDummyData() {
             notificationInserts.push(`('${user.id}', '${type}', '${title}', '${message}', ${isRead}, ${readAt})`);
         }
         await queryRunner.query(`
-      INSERT INTO notifications (user_id, type, title, message, is_read, read_at)
+      INSERT INTO notifications ("userId", "type", "title", "message", "isRead", "readAt")
       VALUES ${notificationInserts.join(', ')}
     `);
         console.log('🌱 Seeding waitlist entries...');
         // Insert waitlist entries
         const waitlistInserts = [];
         const sources = ['website', 'social_media', 'referral', 'advertisement', 'organic'];
-        const statuses = ['pending', 'approved', 'rejected', 'onboarded'];
+        const waitlistStatuses = ['pending', 'approved', 'rejected', 'onboarded'];
         for (let i = 0; i < 30; i++) {
-            const email = `waitlist${i + 1}@example.com`;
+            const email = `waitlist${Date.now()}_${i + 1}@example.com`;
             const source = sources[Math.floor(Math.random() * sources.length)];
-            const status = statuses[Math.floor(Math.random() * statuses.length)];
+            const status = waitlistStatuses[Math.floor(Math.random() * waitlistStatuses.length)];
             const adminNotes = Math.random() > 0.7 ? `Notes for entry ${i + 1}` : null;
             waitlistInserts.push(`('${email}', '${source}', '${status}', ${adminNotes ? `'${adminNotes}'` : 'NULL'})`);
         }
         await queryRunner.query(`
-      INSERT INTO waitlist_entries (email, source, status, admin_notes)
+      INSERT INTO waitlist_entries ("email", "source", "status", "adminNotes")
       VALUES ${waitlistInserts.join(', ')}
     `);
         console.log('🌱 Seeding partner applications...');
@@ -155,7 +155,7 @@ async function seedDummyData() {
             partnerInserts.push(`('${companyName}', '${contactEmail}', '${status}', ${adminNotes ? `'${adminNotes}'` : 'NULL'})`);
         }
         await queryRunner.query(`
-      INSERT INTO partner_applications (company_name, contact_email, status, admin_notes)
+      INSERT INTO partner_applications ("companyName", "contactEmail", "status", "adminNotes")
       VALUES ${partnerInserts.join(', ')}
     `);
         console.log('🌱 Seeding offers...');
@@ -172,7 +172,7 @@ async function seedDummyData() {
             offerInserts.push(`('${brand.id}', '${title}', '${description}', '${termsAndConditions}', ${startDate}, ${endDate}, ${isActive})`);
         }
         await queryRunner.query(`
-      INSERT INTO offers (brand_id, title, description, terms_and_conditions, start_date, end_date, is_active)
+      INSERT INTO offers ("brandId", "title", "description", "termsAndConditions", "startDate", "endDate", "isActive")
       VALUES ${offerInserts.join(', ')}
     `);
         console.log('🌱 Seeding files...');
@@ -192,7 +192,7 @@ async function seedDummyData() {
             fileInserts.push(`('${user.id}', '${fileName}', '${originalName}', '${mimeType}', ${size}, '${url}', '${type}', ${description ? `'${description}'` : 'NULL'})`);
         }
         await queryRunner.query(`
-      INSERT INTO files (user_id, file_name, original_name, mime_type, size, url, type, description)
+      INSERT INTO files ("userId", "fileName", "originalName", "mimeType", "size", "url", "type", "description")
       VALUES ${fileInserts.join(', ')}
     `);
         console.log('🌱 Seeding risk signals...');
@@ -207,7 +207,7 @@ async function seedDummyData() {
             riskSignalInserts.push(`('${user.id}', '${signal}', '{"severity": "${severity}", "confidence": ${confidence}}')`);
         }
         await queryRunner.query(`
-      INSERT INTO risk_signals (user_id, signal, metadata)
+      INSERT INTO risk_signals ("userId", "signal", "metadata")
       VALUES ${riskSignalInserts.join(', ')}
     `);
         console.log('🌱 Seeding saved views...');
@@ -227,7 +227,7 @@ async function seedDummyData() {
             savedViewInserts.push(`('${admin.id}', '${name}', '${config}')`);
         }
         await queryRunner.query(`
-      INSERT INTO saved_views (owner_id, name, config)
+      INSERT INTO saved_views ("ownerId", "name", "config")
       VALUES ${savedViewInserts.join(', ')}
     `);
         console.log('🌱 Seeding experiment configs...');
@@ -242,9 +242,9 @@ async function seedDummyData() {
                 endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
             });
             await queryRunner.query(`
-        INSERT INTO experiment_configs (key, value)
+        INSERT INTO experiment_configs ("key", "value")
         VALUES ('${key}', '${value}')
-        ON CONFLICT (key) DO NOTHING
+        ON CONFLICT ("key") DO NOTHING
       `);
         }
         console.log('🌱 Seeding dashboard metrics cache...');
@@ -259,9 +259,9 @@ async function seedDummyData() {
             });
             const expiresAt = `NOW() + INTERVAL '1 hour'`;
             await queryRunner.query(`
-        INSERT INTO dashboard_metrics_cache (key, value, expires_at)
+        INSERT INTO dashboard_metrics_cache ("key", "value", "expiresAt")
         VALUES ('${metric}', '${value}', ${expiresAt})
-        ON CONFLICT (key) DO NOTHING
+        ON CONFLICT ("key") DO NOTHING
       `);
         }
         console.log('🌱 Seeding audit logs...');
@@ -281,7 +281,7 @@ async function seedDummyData() {
             auditLogInserts.push(`(${admin ? `'${admin.id}'` : 'NULL'}, '${action}', '${details}')`);
         }
         await queryRunner.query(`
-      INSERT INTO audit_logs (actor_id, action, details)
+      INSERT INTO audit_logs ("actorId", "action", "details")
       VALUES ${auditLogInserts.join(', ')}
     `);
         console.log('🌱 Seeding financial reconciliation...');
@@ -300,7 +300,7 @@ async function seedDummyData() {
             reconciliationInserts.push(`('${brand.id}', '${brandName}', ${pendingAmount}, ${settledAmount}, ${lastSettlementDate}, ${nextSettlementDate}, '${status}', ${notes ? `'${notes}'` : 'NULL'})`);
         }
         await queryRunner.query(`
-      INSERT INTO financial_reconciliation (brand_id, brand_name, pending_amount, settled_amount, last_settlement_date, next_settlement_date, status, notes)
+      INSERT INTO financial_reconciliation ("brandId", "brandName", "pendingAmount", "settledAmount", "lastSettlementDate", "nextSettlementDate", "status", "notes")
       VALUES ${reconciliationInserts.join(', ')}
     `);
         await queryRunner.release();

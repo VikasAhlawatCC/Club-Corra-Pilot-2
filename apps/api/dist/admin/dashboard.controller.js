@@ -37,6 +37,15 @@ let DashboardController = class DashboardController {
     async getBrandPerformanceAnalytics(period = '30d') {
         return this.dashboardService.getBrandPerformanceAnalytics(period);
     }
+    async getTransactionTrendsAnalytics(period = '7d') {
+        return this.dashboardService.getTransactionTrends(period);
+    }
+    async getUserGrowthTrendsAnalytics(period = '7d') {
+        return this.dashboardService.getUserGrowthTrends(period);
+    }
+    async getBrandPerformanceAnalyticsEndpoint(period = '30d') {
+        return this.dashboardService.getBrandPerformanceAnalytics(period);
+    }
     async getSavedViews(req) {
         const adminId = req.user.id;
         return this.dashboardService.getSavedViews(adminId);
@@ -86,6 +95,27 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], DashboardController.prototype, "getBrandPerformanceAnalytics", null);
+__decorate([
+    (0, common_1.Get)('analytics/transactions/trends'),
+    __param(0, (0, common_1.Query)('period')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], DashboardController.prototype, "getTransactionTrendsAnalytics", null);
+__decorate([
+    (0, common_1.Get)('analytics/users/growth-trends'),
+    __param(0, (0, common_1.Query)('period')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], DashboardController.prototype, "getUserGrowthTrendsAnalytics", null);
+__decorate([
+    (0, common_1.Get)('analytics/brands/performance'),
+    __param(0, (0, common_1.Query)('period')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], DashboardController.prototype, "getBrandPerformanceAnalyticsEndpoint", null);
 __decorate([
     (0, common_1.Get)('saved-views'),
     __param(0, (0, common_1.Req)()),

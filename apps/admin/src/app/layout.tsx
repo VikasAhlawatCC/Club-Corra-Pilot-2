@@ -6,6 +6,7 @@ import { ErrorBoundary } from '@/components/common'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { AuthGuard } from '@/components/auth/AuthGuard'
 import { cn } from '@/lib/utils'
+import QueryProvider from '@/contexts/QueryProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -27,14 +28,16 @@ export default function RootLayout({
       )} suppressHydrationWarning>
         <ErrorBoundary>
           <AuthProvider>
-            <div className="min-h-screen bg-background">
-              <AuthGuard>
-                <AdminNavigation />
-                <main className="flex-1 p-6">
-                  {children}
-                </main>
-              </AuthGuard>
-            </div>
+            <QueryProvider>
+              <div className="min-h-screen bg-background">
+                <AuthGuard>
+                  <AdminNavigation />
+                  <main className="flex-1 p-6">
+                    {children}
+                  </main>
+                </AuthGuard>
+              </div>
+            </QueryProvider>
           </AuthProvider>
         </ErrorBoundary>
       </body>

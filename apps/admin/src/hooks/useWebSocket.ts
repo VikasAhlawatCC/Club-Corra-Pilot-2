@@ -40,6 +40,11 @@ class WebSocketManager {
     this.connectionState = 'connecting'
 
     try {
+      // For now, disable WebSocket connection since backend doesn't have Socket.IO
+      console.log('WebSocket connection disabled - backend does not have Socket.IO configured')
+      this.connectionState = 'disconnected'
+      return
+
       this.socket = io(url, {
         transports: ['websocket', 'polling'],
         path: '/socket.io',

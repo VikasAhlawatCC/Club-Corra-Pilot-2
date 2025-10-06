@@ -70,6 +70,11 @@ export class CoinAdminController {
   async getStats() {
     return this.coinsService.getTransactionStats();
   }
+
+  @Get('stats/transactions')
+  async getTransactionStats() {
+    return this.coinsService.getTransactionStats();
+  }
 }
 
 

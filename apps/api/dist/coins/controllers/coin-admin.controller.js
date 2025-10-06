@@ -49,6 +49,9 @@ let CoinAdminController = class CoinAdminController {
     async getStats() {
         return this.coinsService.getTransactionStats();
     }
+    async getTransactionStats() {
+        return this.coinsService.getTransactionStats();
+    }
 };
 exports.CoinAdminController = CoinAdminController;
 __decorate([
@@ -110,6 +113,12 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], CoinAdminController.prototype, "getStats", null);
+__decorate([
+    (0, common_1.Get)('stats/transactions'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], CoinAdminController.prototype, "getTransactionStats", null);
 exports.CoinAdminController = CoinAdminController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, admin_guard_1.AdminGuard),
     (0, common_1.Controller)('admin/coins'),

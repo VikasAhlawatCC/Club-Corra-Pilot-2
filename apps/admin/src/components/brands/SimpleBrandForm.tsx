@@ -175,11 +175,15 @@ export function SimpleBrandForm({
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.filter(category => category.id).map((category) => (
+                    {Array.isArray(categories) ? categories.filter(category => category.id).map((category) => (
                       <SelectItem key={category.id!} value={category.id!}>
                         {category.name}
                       </SelectItem>
-                    ))}
+                    )) : (
+                      <SelectItem value="no-categories" disabled>
+                        No categories available
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
                 {errors.categoryId && (
