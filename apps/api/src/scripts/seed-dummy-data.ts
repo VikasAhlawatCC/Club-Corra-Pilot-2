@@ -206,8 +206,27 @@ async function seedCoinTransactions(users: User[], brands: Brand[]): Promise<Coi
     const transaction = new CoinTransaction();
     transaction.user = randomChoice(users);
     transaction.brand = randomChoice(brands);
-    transaction.amount = randomInt(10, 1000).toString();
-    transaction.type = randomChoice(['EARN', 'REDEEM', 'BONUS', 'PENALTY', 'REFUND']);
+    
+    const type = randomChoice(['EARN', 'REDEEM', 'BONUS', 'PENALTY', 'REFUND']);
+    let amount = 0;
+    
+    if (type === 'EARN') {
+      // For EARN transactions, calculate based on a random bill amount and brand's earning percentage
+      const billAmount = randomInt(100, 5000); // Random bill amount between 100-5000
+      const earningPercentage = parseFloat(transaction.brand.earningPercentage.toString());
+      amount = Math.max(1, Math.round((billAmount * earningPercentage) / 100));
+    } else if (type === 'REDEEM') {
+      // For REDEEM transactions, calculate based on a random bill amount and brand's redemption percentage
+      const billAmount = randomInt(50, 3000); // Random bill amount between 50-3000
+      const redemptionPercentage = parseFloat(transaction.brand.redemptionPercentage.toString());
+      amount = Math.max(1, Math.round((billAmount * redemptionPercentage) / 100));
+    } else {
+      // For other transaction types, use random amounts
+      amount = randomInt(10, 1000);
+    }
+    
+    transaction.amount = amount.toString();
+    transaction.type = type;
     transaction.status = randomChoice(['PENDING', 'COMPLETED', 'FAILED'] as CoinTransactionStatus[]);
     
     transactions.push(transaction);

@@ -109,43 +109,33 @@ export const transactionApi = {
       `/admin/coins/users/${userId}/verification-data`
     ),
 
-  // Approve earn transaction
-  approveEarnTransaction: (id: string, adminUserId: string, adminNotes?: string) =>
+  // Approve transaction (unified for all types)
+  approveTransaction: (id: string, adminNotes?: string) =>
     apiRequest<{ success: boolean, message: string, data: { transaction: CoinTransaction } }>(
       `/admin/coins/transactions/${id}/approve`,
       {
-        method: 'PUT',
-        body: JSON.stringify({ adminUserId, adminNotes }),
+        method: 'POST',
+        body: JSON.stringify({ adminNotes }),
       }
     ),
 
-  // Reject earn transaction
-  rejectEarnTransaction: (id: string, adminUserId: string, adminNotes: string) =>
-    apiRequest<{ success: boolean, message: string, data: { transactionId: string, adminNotes: string } }>(
+  // Reject transaction (unified for all types)
+  rejectTransaction: (id: string, reason: string, adminNotes?: string) =>
+    apiRequest<{ success: boolean, message: string, data: { transaction: CoinTransaction } }>(
       `/admin/coins/transactions/${id}/reject`,
       {
-        method: 'PUT',
-        body: JSON.stringify({ adminUserId, adminNotes }),
+        method: 'POST',
+        body: JSON.stringify({ reason, adminNotes }),
       }
     ),
 
-  // Approve redeem transaction
-  approveRedeemTransaction: (id: string, adminUserId: string, adminNotes?: string) =>
+  // Mark transaction as paid
+  markTransactionAsPaid: (id: string, transactionId: string, adminNotes?: string) =>
     apiRequest<{ success: boolean, message: string, data: { transaction: CoinTransaction } }>(
-      `/admin/coins/transactions/${id}/approve-redeem`,
+      `/admin/coins/transactions/${id}/mark-paid`,
       {
-        method: 'PUT',
-        body: JSON.stringify({ adminUserId, adminNotes }),
-      }
-    ),
-
-  // Reject redeem transaction
-  rejectRedeemTransaction: (id: string, adminUserId: string, adminNotes: string) =>
-    apiRequest<{ success: boolean, message: string, data: { transaction: CoinTransaction } }>(
-      `/admin/coins/transactions/${id}/reject-redeem`,
-      {
-        method: 'PUT',
-        body: JSON.stringify({ adminUserId, adminNotes }),
+        method: 'POST',
+        body: JSON.stringify({ transactionId, adminNotes }),
       }
     ),
 
@@ -192,10 +182,42 @@ export const transactionApi = {
       '/admin/coins/stats/transactions'
     ),
 
+  // Unified reward request endpoints
+  createRewardRequest: (data: {
+    brandId: string
+    billAmount: number
+    billDate: string
+    receiptUrl: string
+    coinsToRedeem?: number
+    notes?: string
+  }) =>
+    apiRequest<{ success: boolean, message: string, data: any }>(
+      '/transactions/rewards',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    ),
+
+  getUserTransactions: (page = 1, limit = 20, filters?: {
+    status?: string
+    type?: string
+    brandId?: string
+  }) => {
+    const queryParams = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      ...filters,
+    })
+    return apiRequest<{ success: boolean, message: string, data: { data: CoinTransaction[], total: number, page: number, limit: number, totalPages: number } }>(
+      `/transactions?${queryParams}`
+    )
+  },
+
   // Comprehensive coin system statistics
   getCoinSystemStats: () =>
     apiRequest<{ success: boolean; message: string; data: any }>(
-      '/admin/coins/stats/system'
+      '/admin/coins/stats'
     ),
 
   // Get payment statistics

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard'
 import { AdminGuard } from '../common/guards/admin.guard'
 import { UsersService } from './users.service'
@@ -13,13 +13,23 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
-  async list(@Query() searchDto: UserSearchDto): Promise<UserListResponseDto> {
-    return this.usersService.findAll(searchDto.page, searchDto.limit, searchDto);
+  async list(@Query() searchDto: UserSearchDto) {
+    const result = await this.usersService.findAll(searchDto.page, searchDto.limit, searchDto);
+    return {
+      success: true,
+      message: 'Users fetched successfully',
+      data: result
+    };
   }
 
   @Get('stats')
   async stats() {
-    return this.usersService.getUserStats();
+    const result = await this.usersService.getUserStats();
+    return {
+      success: true,
+      message: 'User stats fetched successfully',
+      data: result
+    };
   }
 
   @Get('search')
@@ -56,8 +66,13 @@ export class UsersController {
   }
 
   @Get(':id')
-  async get(@Param('id') id: string): Promise<User> {
-    return this.usersService.findById(id);
+  async get(@Param('id') id: string) {
+    const result = await this.usersService.findById(id);
+    return {
+      success: true,
+      message: 'User fetched successfully',
+      data: result
+    };
   }
 
   @Get(':id/activity')
@@ -76,27 +91,77 @@ export class UsersController {
 
   @Get(':id/balance')
   async getBalance(@Param('id') id: string) {
-    return this.usersService.getUserBalance(id);
+    const result = await this.usersService.getUserBalance(id);
+    return {
+      success: true,
+      message: 'User balance fetched successfully',
+      data: { balance: result }
+    };
   }
 
   @Patch(':id/profile')
   async updateProfile(@Param('id') id: string, @Body() body: UpdateUserProfileDto) {
-    return this.usersService.updateProfile(id, body);
+    const result = await this.usersService.updateProfile(id, body);
+    return {
+      success: true,
+      message: 'User profile updated successfully',
+      data: result
+    };
   }
 
   @Patch(':id/email')
   async updateEmail(@Param('id') id: string, @Body() body: UpdateUserEmailDto) {
-    return this.usersService.updateEmail(id, body.email);
+    const result = await this.usersService.updateEmail(id, body.email);
+    return {
+      success: true,
+      message: 'User email updated successfully',
+      data: result
+    };
   }
 
   @Patch(':id/status')
   async updateStatus(@Param('id') id: string, @Body() body: UpdateUserStatusDto) {
-    return this.usersService.updateUserStatus(id, body.status);
+    const result = await this.usersService.updateUserStatus(id, body.status);
+    return {
+      success: true,
+      message: 'User status updated successfully',
+      data: result
+    };
   }
 
   @Patch(':id/payment-details')
   async updatePaymentDetails(@Param('id') id: string, @Body() body: UpdatePaymentDetailsDto) {
     return this.usersService.updatePaymentDetails(id, body);
+  }
+
+  @Post()
+  async createUser(@Body() body: { firstName: string; lastName: string; mobileNumber: string; email?: string }) {
+    const result = await this.usersService.createUser(body);
+    return {
+      success: true,
+      message: 'User created successfully',
+      data: result
+    };
+  }
+
+  @Patch(':id/coins')
+  async adjustUserCoins(@Param('id') id: string, @Body() body: { newBalance?: number; delta?: number; reason?: string }) {
+    const result = await this.usersService.adjustUserCoins(id, body);
+    return {
+      success: true,
+      message: 'User coins adjusted successfully',
+      data: result
+    };
+  }
+
+  @Delete(':id')
+  async deleteUser(@Param('id') id: string) {
+    const result = await this.usersService.deleteUser(id);
+    return {
+      success: true,
+      message: 'User deleted successfully',
+      data: result
+    };
   }
 }
 

@@ -15,6 +15,11 @@ const base_entity_1 = require("../../common/entities/base.entity");
 const user_entity_1 = require("../../users/entities/user.entity");
 const brand_entity_1 = require("../../brands/entities/brand.entity");
 let CoinTransaction = class CoinTransaction extends base_entity_1.BaseEntity {
+    calculateAmount() {
+        if (this.coinsEarned !== undefined && this.coinsRedeemed !== undefined) {
+            this.amount = (this.coinsEarned - this.coinsRedeemed).toString();
+        }
+    }
 };
 exports.CoinTransaction = CoinTransaction;
 __decorate([
@@ -38,6 +43,53 @@ __decorate([
     (0, typeorm_1.Column)({ type: 'varchar', default: 'PENDING' }),
     __metadata("design:type", String)
 ], CoinTransaction.prototype, "status", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'decimal', precision: 10, scale: 2, nullable: true }),
+    __metadata("design:type", Number)
+], CoinTransaction.prototype, "billAmount", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    __metadata("design:type", Number)
+], CoinTransaction.prototype, "coinsEarned", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    __metadata("design:type", Number)
+], CoinTransaction.prototype, "coinsRedeemed", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 500, nullable: true }),
+    __metadata("design:type", String)
+], CoinTransaction.prototype, "receiptUrl", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'text', nullable: true }),
+    __metadata("design:type", String)
+], CoinTransaction.prototype, "adminNotes", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'timestamp', nullable: true }),
+    __metadata("design:type", Date)
+], CoinTransaction.prototype, "processedAt", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 100, nullable: true }),
+    __metadata("design:type", String)
+], CoinTransaction.prototype, "transactionId", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'date', nullable: true }),
+    __metadata("design:type", Date)
+], CoinTransaction.prototype, "billDate", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'timestamp', nullable: true }),
+    __metadata("design:type", Date)
+], CoinTransaction.prototype, "paymentProcessedAt", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'timestamp', nullable: true }),
+    __metadata("design:type", Date)
+], CoinTransaction.prototype, "statusUpdatedAt", void 0);
+__decorate([
+    (0, typeorm_1.BeforeInsert)(),
+    (0, typeorm_1.BeforeUpdate)(),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], CoinTransaction.prototype, "calculateAmount", null);
 exports.CoinTransaction = CoinTransaction = __decorate([
     (0, typeorm_1.Entity)('coin_transactions')
 ], CoinTransaction);

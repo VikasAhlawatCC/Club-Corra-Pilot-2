@@ -24,10 +24,20 @@ let UsersController = class UsersController {
         this.usersService = usersService;
     }
     async list(searchDto) {
-        return this.usersService.findAll(searchDto.page, searchDto.limit, searchDto);
+        const result = await this.usersService.findAll(searchDto.page, searchDto.limit, searchDto);
+        return {
+            success: true,
+            message: 'Users fetched successfully',
+            data: result
+        };
     }
     async stats() {
-        return this.usersService.getUserStats();
+        const result = await this.usersService.getUserStats();
+        return {
+            success: true,
+            message: 'User stats fetched successfully',
+            data: result
+        };
     }
     async search(query, page = 1, limit = 20) {
         return this.usersService.searchUsers(query, page, limit);
@@ -43,7 +53,12 @@ let UsersController = class UsersController {
         return this.usersService.exportUsers(filters);
     }
     async get(id) {
-        return this.usersService.findById(id);
+        const result = await this.usersService.findById(id);
+        return {
+            success: true,
+            message: 'User fetched successfully',
+            data: result
+        };
     }
     async getActivity(id) {
         return this.usersService.getUserActivity(id);
@@ -52,19 +67,63 @@ let UsersController = class UsersController {
         return this.usersService.getUserTransactionHistory(id, page, limit);
     }
     async getBalance(id) {
-        return this.usersService.getUserBalance(id);
+        const result = await this.usersService.getUserBalance(id);
+        return {
+            success: true,
+            message: 'User balance fetched successfully',
+            data: { balance: result }
+        };
     }
     async updateProfile(id, body) {
-        return this.usersService.updateProfile(id, body);
+        const result = await this.usersService.updateProfile(id, body);
+        return {
+            success: true,
+            message: 'User profile updated successfully',
+            data: result
+        };
     }
     async updateEmail(id, body) {
-        return this.usersService.updateEmail(id, body.email);
+        const result = await this.usersService.updateEmail(id, body.email);
+        return {
+            success: true,
+            message: 'User email updated successfully',
+            data: result
+        };
     }
     async updateStatus(id, body) {
-        return this.usersService.updateUserStatus(id, body.status);
+        const result = await this.usersService.updateUserStatus(id, body.status);
+        return {
+            success: true,
+            message: 'User status updated successfully',
+            data: result
+        };
     }
     async updatePaymentDetails(id, body) {
         return this.usersService.updatePaymentDetails(id, body);
+    }
+    async createUser(body) {
+        const result = await this.usersService.createUser(body);
+        return {
+            success: true,
+            message: 'User created successfully',
+            data: result
+        };
+    }
+    async adjustUserCoins(id, body) {
+        const result = await this.usersService.adjustUserCoins(id, body);
+        return {
+            success: true,
+            message: 'User coins adjusted successfully',
+            data: result
+        };
+    }
+    async deleteUser(id) {
+        const result = await this.usersService.deleteUser(id);
+        return {
+            success: true,
+            message: 'User deleted successfully',
+            data: result
+        };
     }
 };
 exports.UsersController = UsersController;
@@ -177,6 +236,28 @@ __decorate([
     __metadata("design:paramtypes", [String, update_user_dto_1.UpdatePaymentDetailsDto]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "updatePaymentDetails", null);
+__decorate([
+    (0, common_1.Post)(),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "createUser", null);
+__decorate([
+    (0, common_1.Patch)(':id/coins'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "adjustUserCoins", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "deleteUser", null);
 exports.UsersController = UsersController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, admin_guard_1.AdminGuard),
     (0, common_1.Controller)('admin/users'),

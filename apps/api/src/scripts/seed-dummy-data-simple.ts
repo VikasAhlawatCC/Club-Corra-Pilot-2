@@ -111,26 +111,76 @@ async function seedDummyData() {
     
     console.log('🌱 Seeding coin transactions...');
     
-    // Get brand IDs
-    const brands = await queryRunner.query('SELECT id FROM brands LIMIT 10');
+    // Get brand IDs with their earning and redemption percentages
+    const brands = await queryRunner.query('SELECT id, "earningPercentage", "redemptionPercentage" FROM brands LIMIT 10');
     
-    // Insert coin transactions
+    // Insert unified reward request transactions
     const transactionInserts = [];
-    const transactionTypes = ['EARN', 'REDEEM', 'BONUS', 'PENALTY', 'REFUND'];
-    const transactionStatuses = ['PENDING', 'COMPLETED', 'FAILED'];
+    const transactionTypes = ['REWARD_REQUEST', 'BONUS', 'PENALTY', 'REFUND'];
+    const transactionStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'PROCESSED', 'PAID', 'COMPLETED', 'FAILED'];
     
     for (let i = 0; i < 300; i++) {
       const user = users[Math.floor(Math.random() * users.length)];
       const brand = brands[Math.floor(Math.random() * brands.length)];
-      const amount = Math.floor(Math.random() * 1000) + 10;
       const type = transactionTypes[Math.floor(Math.random() * transactionTypes.length)];
       const status = transactionStatuses[Math.floor(Math.random() * transactionStatuses.length)];
       
-      transactionInserts.push(`('${user.id}', '${brand.id}', '${amount}', '${type}', '${status}')`);
+      let amount = 0;
+      let billAmount = null;
+      let coinsEarned = null;
+      let coinsRedeemed = null;
+      let receiptUrl = null;
+      let billDate = null;
+      
+      if (type === 'REWARD_REQUEST') {
+        // For unified reward requests, create realistic bill data
+        billAmount = Math.floor(Math.random() * 5000) + 100; // Random bill amount between 100-5100
+        const earningPercentage = parseFloat(brand.earningPercentage);
+        coinsEarned = Math.max(1, Math.round((billAmount * earningPercentage) / 100));
+        
+        // Sometimes include redemption (30% chance)
+        if (Math.random() < 0.3) {
+          const maxRedeem = Math.min(coinsEarned, Math.floor(billAmount * 0.1)); // Max 10% of bill amount
+          coinsRedeemed = Math.floor(Math.random() * maxRedeem) + 1;
+        } else {
+          coinsRedeemed = 0;
+        }
+        
+        amount = coinsEarned - coinsRedeemed;
+        receiptUrl = `https://example.com/receipts/receipt_${Date.now()}_${i}.jpg`;
+        billDate = `2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`;
+      } else {
+        // For other transaction types, use random amounts
+        amount = Math.floor(Math.random() * 1000) + 10;
+      }
+      
+      const createdAt = `NOW() - INTERVAL '${Math.floor(Math.random() * 30)} days'`;
+      const statusUpdatedAt = status !== 'PENDING' ? `NOW() - INTERVAL '${Math.floor(Math.random() * 7)} days'` : 'NULL';
+      const processedAt = ['APPROVED', 'REJECTED', 'PROCESSED', 'PAID'].includes(status) ? `NOW() - INTERVAL '${Math.floor(Math.random() * 5)} days'` : 'NULL';
+      
+      transactionInserts.push(`(
+        '${user.id}', 
+        '${brand.id}', 
+        '${amount}', 
+        '${type}', 
+        '${status}',
+        ${billAmount ? `'${billAmount}'` : 'NULL'},
+        ${coinsEarned ? `'${coinsEarned}'` : 'NULL'},
+        ${coinsRedeemed ? `'${coinsRedeemed}'` : 'NULL'},
+        ${receiptUrl ? `'${receiptUrl}'` : 'NULL'},
+        ${billDate ? `'${billDate}'` : 'NULL'},
+        ${createdAt},
+        ${statusUpdatedAt},
+        ${processedAt}
+      )`);
     }
     
     await queryRunner.query(`
-      INSERT INTO coin_transactions ("userId", "brandId", "amount", "type", "status")
+      INSERT INTO coin_transactions (
+        "userId", "brandId", "amount", "type", "status", 
+        "billAmount", "coinsEarned", "coinsRedeemed", "receiptUrl", "billDate",
+        "createdAt", "statusUpdatedAt", "processedAt"
+      )
       VALUES ${transactionInserts.join(', ')}
     `);
     

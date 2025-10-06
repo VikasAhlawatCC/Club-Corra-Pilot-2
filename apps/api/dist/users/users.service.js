@@ -54,8 +54,22 @@ let UsersService = class UsersService {
             queryBuilder.andWhere('user.isEmailVerified = :isEmailVerified', { isEmailVerified: filters.isEmailVerified });
         }
         const [users, total] = await queryBuilder.getManyAndCount();
+        // Add coin balance information to each user
+        const usersWithCoins = await Promise.all(users.map(async (user) => {
+            const coinBalance = await this.coinBalanceRepository.findOne({
+                where: { user: { id: user.id } },
+            });
+            const totalTransactions = await this.coinTransactionRepository.count({
+                where: { user: { id: user.id } },
+            });
+            return {
+                ...user,
+                totalCoins: coinBalance ? parseFloat(coinBalance.balance.toString()) : 0,
+                totalTransactions,
+            };
+        }));
         return {
-            data: users,
+            data: usersWithCoins,
             total,
             page,
             limit,
@@ -135,6 +149,12 @@ let UsersService = class UsersService {
             this.userRepository.count({ where: { isMobileVerified: true } }),
             this.userRepository.count({ where: { isEmailVerified: true } }),
         ]);
+        // Calculate total coins across all users
+        const totalCoinsResult = await this.coinBalanceRepository
+            .createQueryBuilder('coinBalance')
+            .select('SUM(CAST(coinBalance.balance AS DECIMAL))', 'totalCoins')
+            .getRawOne();
+        const totalCoins = totalCoinsResult?.totalCoins || 0;
         return {
             totalUsers,
             activeUsers,
@@ -142,6 +162,7 @@ let UsersService = class UsersService {
             suspendedUsers,
             mobileVerifiedUsers,
             emailVerifiedUsers,
+            totalCoins: parseFloat(totalCoins.toString()),
         };
     }
     async getUserTransactionHistory(userId, page = 1, limit = 20) {
@@ -295,6 +316,104 @@ let UsersService = class UsersService {
             queryBuilder.andWhere('user.createdAt <= :endDate', { endDate: filters.endDate });
         }
         return queryBuilder.getMany();
+    }
+    async createUser(userData) {
+        // Check if user already exists
+        const existingUser = await this.findByMobileNumber(userData.mobileNumber);
+        if (existingUser) {
+            throw new common_1.ConflictException('User with this mobile number already exists');
+        }
+        if (userData.email) {
+            const existingEmailUser = await this.findByEmail(userData.email);
+            if (existingEmailUser) {
+                throw new common_1.ConflictException('User with this email already exists');
+            }
+        }
+        // Create user
+        const user = this.userRepository.create({
+            mobileNumber: userData.mobileNumber,
+            email: userData.email,
+            status: user_entity_1.UserStatus.PENDING,
+            isMobileVerified: false,
+            isEmailVerified: false,
+        });
+        const savedUser = await this.userRepository.save(user);
+        // Create user profile
+        const profile = this.userProfileRepository.create({
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            user: { id: savedUser.id },
+        });
+        await this.userProfileRepository.save(profile);
+        // Create coin balance
+        const coinBalance = this.coinBalanceRepository.create({
+            balance: '0',
+            totalEarned: '0',
+            totalRedeemed: '0',
+            user: { id: savedUser.id },
+        });
+        await this.coinBalanceRepository.save(coinBalance);
+        // Return user with relations
+        return this.findById(savedUser.id);
+    }
+    async adjustUserCoins(userId, adjustment) {
+        const user = await this.findById(userId);
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        let coinBalance = await this.getUserBalance(userId);
+        if (!coinBalance) {
+            // Create coin balance if it doesn't exist
+            coinBalance = this.coinBalanceRepository.create({
+                balance: '0',
+                totalEarned: '0',
+                totalRedeemed: '0',
+                user: { id: userId },
+            });
+            coinBalance = await this.coinBalanceRepository.save(coinBalance);
+        }
+        const oldBalance = parseInt(coinBalance.balance);
+        let newBalance;
+        if (adjustment.newBalance !== undefined) {
+            newBalance = adjustment.newBalance;
+        }
+        else if (adjustment.delta !== undefined) {
+            newBalance = oldBalance + adjustment.delta;
+        }
+        else {
+            throw new common_1.BadRequestException('Either newBalance or delta must be provided');
+        }
+        // Update coin balance
+        coinBalance.balance = newBalance.toString();
+        await this.coinBalanceRepository.save(coinBalance);
+        // Create transaction record
+        const transaction = this.coinTransactionRepository.create({
+            type: newBalance > oldBalance ? 'EARN' : 'REDEEM',
+            amount: Math.abs(newBalance - oldBalance).toString(),
+            status: 'COMPLETED',
+            user: { id: userId },
+        });
+        await this.coinTransactionRepository.save(transaction);
+        return {
+            oldBalance,
+            newBalance,
+            delta: newBalance - oldBalance,
+            reason: adjustment.reason,
+        };
+    }
+    async deleteUser(userId) {
+        const user = await this.userRepository.findOne({ where: { id: userId } });
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        // Soft delete by updating status to DELETED
+        user.status = user_entity_1.UserStatus.DELETED;
+        await this.userRepository.save(user);
+        return {
+            success: true,
+            message: 'User deleted successfully',
+            data: { userId, deletedAt: new Date() }
+        };
     }
 };
 exports.UsersService = UsersService;

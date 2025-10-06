@@ -271,10 +271,10 @@ export function CoinOverview({
                   <TableRow key={transaction.id} className="hover:bg-gray-50">
                     <TableCell>
                       <div className="text-sm font-medium text-gray-900">
-                        {transaction.userName}
+                        {transaction.userName || 'Unknown User'}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {transaction.userId.slice(0, 8)}...
+                        {transaction.userId ? transaction.userId.slice(0, 8) + '...' : 'N/A'}
                       </div>
                     </TableCell>
                     <TableCell>

@@ -44,6 +44,12 @@ export class Brand extends BaseEntity {
   @Column({ type: 'int', default: 2000 })
   brandwiseMaxCap!: number
 
+  @Column({ type: 'int', nullable: true })
+  maxRedemptionPerTransaction?: number
+
+  @Column({ type: 'int', nullable: true })
+  maxEarningPerTransaction?: number
+
   @Column({ type: 'boolean', default: true })
   isActive!: boolean
 

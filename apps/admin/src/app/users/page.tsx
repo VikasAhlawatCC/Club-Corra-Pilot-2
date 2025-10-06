@@ -545,7 +545,7 @@ export default function UsersPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Total Coins</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {userStats.totalCoins.toLocaleString()}
+                {(userStats.totalCoins || 0).toLocaleString()}
               </p>
             </div>
           </div>
@@ -665,7 +665,7 @@ export default function UsersPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900 font-medium">
-                      {user.totalCoins.toLocaleString()}
+                      {(user.totalCoins || 0).toLocaleString()}
                     </div>
                     <div className="text-xs text-gray-500">
                       {user.totalTransactions} transactions

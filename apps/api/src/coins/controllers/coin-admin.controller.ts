@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Param, Body, Query, UseGuards, Req } from '
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
 import { AdminGuard } from '../../common/guards/admin.guard'
 import { CoinsService } from '../coins.service'
+import { TransactionApprovalDto, TransactionRejectionDto, MarkAsPaidDto } from '../dto/reward-request-response.dto'
 
 @UseGuards(JwtAuthGuard, AdminGuard)
 @Controller('admin/coins')
@@ -38,25 +39,24 @@ export class CoinAdminController {
     return transaction;
   }
 
-  @Put('transactions/:id/approve')
+  @Post('transactions/:id/approve')
   async approveTransaction(
     @Param('id') id: string,
-    @Body() body: { adminNotes?: string },
+    @Body() approvalDto: TransactionApprovalDto,
     @Req() req: any,
   ) {
-    const adminUserId = req.user.id;
-    return this.coinsService.approveTransaction(id, adminUserId, body.adminNotes);
+    return this.coinsService.approveTransaction(id, req.user.id, approvalDto.adminNotes);
   }
 
-  @Put('transactions/:id/reject')
+  @Post('transactions/:id/reject')
   async rejectTransaction(
     @Param('id') id: string,
-    @Body() body: { adminNotes: string },
+    @Body() rejectionDto: TransactionRejectionDto,
     @Req() req: any,
   ) {
-    const adminUserId = req.user.id;
-    return this.coinsService.rejectTransaction(id, adminUserId, body.adminNotes);
+    return this.coinsService.rejectTransaction(id, req.user.id, rejectionDto.reason);
   }
+
 
   @Post('users/:userId/adjust')
   async adjustUserBalance(
@@ -68,12 +68,36 @@ export class CoinAdminController {
 
   @Get('stats')
   async getStats() {
-    return this.coinsService.getTransactionStats();
+    return this.coinsService.getCoinSystemStats();
   }
 
   @Get('stats/transactions')
   async getTransactionStats() {
     return this.coinsService.getTransactionStats();
+  }
+
+  @Post('transactions/earn')
+  async createEarnTransaction(
+    @Body() body: { userId: string; brandId: string; billAmount: number },
+  ) {
+    return this.coinsService.createEarnTransaction(body.userId, body.brandId, body.billAmount);
+  }
+
+  @Post('transactions/redeem')
+  async createRedeemTransaction(
+    @Body() body: { userId: string; brandId: string; billAmount: number },
+  ) {
+    return this.coinsService.createRedeemTransaction(body.userId, body.brandId, body.billAmount);
+  }
+
+  @Get('balance/:userId')
+  async getUserBalance(@Param('userId') userId: string) {
+    const balance = await this.coinsService.getUserBalance(userId);
+    return {
+      success: true,
+      message: 'User balance fetched successfully',
+      data: { balance }
+    };
   }
 }
 

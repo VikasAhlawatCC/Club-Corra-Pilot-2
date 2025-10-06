@@ -15,7 +15,7 @@ export function useBrands(params: BrandSearchParams = {}) {
   const { showError } = useToast();
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['brands', params],
     queryFn: async () => {
       const response = await brandApi.getAllBrands(
@@ -57,6 +57,13 @@ export function useBrands(params: BrandSearchParams = {}) {
       showError('Failed to update brand status');
     },
   });
+
+  // Create a fetchBrands function that updates the query parameters and refetches
+  const fetchBrands = async (newParams: BrandSearchParams) => {
+    // Update the query key to trigger a refetch with new parameters
+    await queryClient.invalidateQueries({ queryKey: ['brands'] });
+    // The query will automatically refetch with the new params when they change
+  };
   
   const brands = data?.brands || [];
   const totalPages = data?.totalPages || 1;
@@ -67,6 +74,8 @@ export function useBrands(params: BrandSearchParams = {}) {
     isLoading,
     totalPages,
     totalBrands,
+    fetchBrands,
+    refetch,
     deleteBrand: deleteBrandMutation.mutateAsync,
     toggleBrandStatus: toggleBrandStatusMutation.mutateAsync,
   };

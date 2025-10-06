@@ -66,6 +66,14 @@ __decorate([
     __metadata("design:type", Number)
 ], Brand.prototype, "brandwiseMaxCap", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    __metadata("design:type", Number)
+], Brand.prototype, "maxRedemptionPerTransaction", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    __metadata("design:type", Number)
+], Brand.prototype, "maxEarningPerTransaction", void 0);
+__decorate([
     (0, typeorm_1.Column)({ type: 'boolean', default: true }),
     __metadata("design:type", Boolean)
 ], Brand.prototype, "isActive", void 0);

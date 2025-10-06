@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const jwt_auth_guard_1 = require("../../common/guards/jwt-auth.guard");
 const admin_guard_1 = require("../../common/guards/admin.guard");
 const coins_service_1 = require("../coins.service");
+const reward_request_response_dto_1 = require("../dto/reward-request-response.dto");
 let CoinAdminController = class CoinAdminController {
     constructor(coinsService) {
         this.coinsService = coinsService;
@@ -35,22 +36,34 @@ let CoinAdminController = class CoinAdminController {
         }
         return transaction;
     }
-    async approveTransaction(id, body, req) {
-        const adminUserId = req.user.id;
-        return this.coinsService.approveTransaction(id, adminUserId, body.adminNotes);
+    async approveTransaction(id, approvalDto, req) {
+        return this.coinsService.approveTransaction(id, req.user.id, approvalDto.adminNotes);
     }
-    async rejectTransaction(id, body, req) {
-        const adminUserId = req.user.id;
-        return this.coinsService.rejectTransaction(id, adminUserId, body.adminNotes);
+    async rejectTransaction(id, rejectionDto, req) {
+        return this.coinsService.rejectTransaction(id, req.user.id, rejectionDto.reason);
     }
     async adjustUserBalance(userId, body) {
         return this.coinsService.adminAdjustUserBalance(userId, body.delta, body.reason);
     }
     async getStats() {
-        return this.coinsService.getTransactionStats();
+        return this.coinsService.getCoinSystemStats();
     }
     async getTransactionStats() {
         return this.coinsService.getTransactionStats();
+    }
+    async createEarnTransaction(body) {
+        return this.coinsService.createEarnTransaction(body.userId, body.brandId, body.billAmount);
+    }
+    async createRedeemTransaction(body) {
+        return this.coinsService.createRedeemTransaction(body.userId, body.brandId, body.billAmount);
+    }
+    async getUserBalance(userId) {
+        const balance = await this.coinsService.getUserBalance(userId);
+        return {
+            success: true,
+            message: 'User balance fetched successfully',
+            data: { balance }
+        };
     }
 };
 exports.CoinAdminController = CoinAdminController;
@@ -82,21 +95,21 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], CoinAdminController.prototype, "getTransactionById", null);
 __decorate([
-    (0, common_1.Put)('transactions/:id/approve'),
+    (0, common_1.Post)('transactions/:id/approve'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __param(2, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object, Object]),
+    __metadata("design:paramtypes", [String, reward_request_response_dto_1.TransactionApprovalDto, Object]),
     __metadata("design:returntype", Promise)
 ], CoinAdminController.prototype, "approveTransaction", null);
 __decorate([
-    (0, common_1.Put)('transactions/:id/reject'),
+    (0, common_1.Post)('transactions/:id/reject'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __param(2, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object, Object]),
+    __metadata("design:paramtypes", [String, reward_request_response_dto_1.TransactionRejectionDto, Object]),
     __metadata("design:returntype", Promise)
 ], CoinAdminController.prototype, "rejectTransaction", null);
 __decorate([
@@ -119,6 +132,27 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], CoinAdminController.prototype, "getTransactionStats", null);
+__decorate([
+    (0, common_1.Post)('transactions/earn'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], CoinAdminController.prototype, "createEarnTransaction", null);
+__decorate([
+    (0, common_1.Post)('transactions/redeem'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], CoinAdminController.prototype, "createRedeemTransaction", null);
+__decorate([
+    (0, common_1.Get)('balance/:userId'),
+    __param(0, (0, common_1.Param)('userId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], CoinAdminController.prototype, "getUserBalance", null);
 exports.CoinAdminController = CoinAdminController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, admin_guard_1.AdminGuard),
     (0, common_1.Controller)('admin/coins'),

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { PlusIcon, MagnifyingGlassIcon, FunnelIcon, ArrowPathIcon } from '@/components/icons/SvgIcons'
 import { BrandTable } from '@/components/brands/BrandTable'
@@ -23,18 +23,6 @@ function BrandsPageContent() {
   const { isAuthenticated, isLoading: authLoading } = useAuth()
   
   const {
-    brands,
-    isLoading,
-    totalPages,
-    totalBrands,
-    fetchBrands,
-    toggleBrandStatus,
-  } = useBrands()
-
-  // Ensure brands is always an array to prevent crashes
-  const safeBrands = brands || []
-  
-  const {
     searchTerm,
     categoryFilter,
     currentPage,
@@ -46,38 +34,39 @@ function BrandsPageContent() {
     hasActiveFilters,
   } = useBrandFilters()
 
-  // No status filter: display all brands
-  const displayBrands = safeBrands
-
   // Debounce search term to prevent excessive API calls
   const debouncedSearchTerm = useDebounce(searchTerm, 500)
 
+  const {
+    brands,
+    isLoading,
+    totalPages,
+    totalBrands,
+    fetchBrands,
+    refetch,
+    toggleBrandStatus,
+  } = useBrands({
+    page: currentPage,
+    pageSize,
+    searchTerm: debouncedSearchTerm || undefined,
+    categoryId: categoryFilter === 'all' ? undefined : categoryFilter,
+  })
+
+  // Ensure brands is always an array to prevent crashes
+  const safeBrands = brands || []
+
+  // No status filter: display all brands
+  const displayBrands = safeBrands
+
   useEffect(() => {
-    // Only fetch data when authenticated and not loading
+    // Only fetch categories when authenticated and not loading
     if (isAuthenticated && !authLoading) {
       fetchCategories()
       console.log('Initial fetch for brands')
-      fetchBrands({
-        page: currentPage,
-        pageSize,
-        searchTerm: searchTerm || undefined,
-        categoryId: categoryFilter === 'all' ? undefined : categoryFilter,
-      })
     }
   }, [isAuthenticated, authLoading]) // Run when auth status changes
 
-  useEffect(() => {
-    // Only fetch brands when dependencies actually change, not on every render
-    if (currentPage > 0) {
-      console.log('Fetching brands')
-      fetchBrands({
-        page: currentPage,
-        pageSize,
-        searchTerm: debouncedSearchTerm || undefined,
-        categoryId: categoryFilter === 'all' ? undefined : categoryFilter,
-      })
-    }
-  }, [currentPage, pageSize, debouncedSearchTerm, categoryFilter]) // Use debounced search term
+  // React Query will automatically handle fetching brands when parameters change
 
   const fetchCategories = async () => {
     try {
@@ -87,11 +76,8 @@ function BrandsPageContent() {
       console.log('Categories type:', typeof response)
       console.log('Categories is array:', Array.isArray(response))
       
-      // Handle the API response structure: {success: true, data: Array}
-      if (response && response.success && Array.isArray(response.data)) {
-        setCategories(response.data)
-      } else if (Array.isArray(response)) {
-        // Fallback for direct array response
+      // Handle the API response - categoryApi.getAllCategories returns BrandCategory[] directly
+      if (Array.isArray(response)) {
         setCategories(response)
       } else {
         console.error('Categories response is not an array:', response)
@@ -136,12 +122,7 @@ function BrandsPageContent() {
     if (isLoading) return // Prevent multiple API calls while loading
     
     setCurrentPage(1)
-    fetchBrands({
-      page: 1,
-      pageSize,
-      searchTerm: searchTerm || undefined,
-      categoryId: categoryFilter === 'all' ? undefined : categoryFilter,
-    })
+    // React Query will automatically refetch when currentPage changes
   }
 
   const handleToggleStatus = async (brandId: string) => {
@@ -150,12 +131,7 @@ function BrandsPageContent() {
     const success = await toggleBrandStatus(brandId)
     if (success) {
       showSuccess('Brand status updated successfully')
-      fetchBrands({
-        page: currentPage,
-        pageSize,
-        searchTerm: debouncedSearchTerm || undefined,
-        categoryId: categoryFilter === 'all' ? undefined : categoryFilter,
-      })
+      // React Query will automatically refetch after the mutation
     }
   }
 
@@ -209,12 +185,7 @@ function BrandsPageContent() {
           <button
             onClick={() => {
               if (isLoading) return // Prevent multiple API calls while loading
-              fetchBrands({
-                page: currentPage,
-                pageSize,
-                searchTerm: debouncedSearchTerm || undefined,
-                categoryId: categoryFilter === 'all' ? undefined : categoryFilter,
-              })
+              refetch()
             }}
             disabled={isLoading}
             className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
