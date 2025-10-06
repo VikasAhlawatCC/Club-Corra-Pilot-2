@@ -19,18 +19,28 @@ export class UpdateCoinTransactionForRewardRequests1759783000000 implements Migr
       ADD COLUMN status_updated_at TIMESTAMP NULL
     `)
 
-    // Update status enum to include new values
+    // Create enum type first (since it doesn't exist)
     await queryRunner.query(`
-      ALTER TYPE coin_transaction_status ADD VALUE 'APPROVED'
+      CREATE TYPE coin_transaction_status AS ENUM('PENDING', 'COMPLETED', 'FAILED', 'APPROVED', 'REJECTED', 'PROCESSED', 'PAID')
     `)
+    
+    // Remove the default value first
     await queryRunner.query(`
-      ALTER TYPE coin_transaction_status ADD VALUE 'REJECTED'
+      ALTER TABLE coin_transactions 
+      ALTER COLUMN status DROP DEFAULT
     `)
+    
+    // Update the column to use the enum
     await queryRunner.query(`
-      ALTER TYPE coin_transaction_status ADD VALUE 'PROCESSED'
+      ALTER TABLE coin_transactions 
+      ALTER COLUMN status TYPE coin_transaction_status 
+      USING status::coin_transaction_status
     `)
+    
+    // Set the default value back
     await queryRunner.query(`
-      ALTER TYPE coin_transaction_status ADD VALUE 'PAID'
+      ALTER TABLE coin_transactions 
+      ALTER COLUMN status SET DEFAULT 'PENDING'
     `)
 
     // Add indexes for performance

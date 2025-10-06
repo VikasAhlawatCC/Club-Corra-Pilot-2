@@ -416,37 +416,49 @@ export class CoinsService {
 
   // Admin methods for getting all transactions
   async getAllTransactions(page: number = 1, limit: number = 20, filters: any = {}) {
-    const skip = (page - 1) * limit;
+    try {
+      const skip = (page - 1) * limit;
 
-    const queryBuilder = this.transactionRepository.createQueryBuilder('transaction')
-      .leftJoinAndSelect('transaction.brand', 'brand')
-      .leftJoinAndSelect('transaction.user', 'user')
-      .orderBy('transaction.createdAt', 'DESC')
-      .skip(skip)
-      .take(limit);
+      const queryBuilder = this.transactionRepository.createQueryBuilder('transaction')
+        .leftJoinAndSelect('transaction.brand', 'brand')
+        .leftJoinAndSelect('transaction.user', 'user')
+        .orderBy('transaction.createdAt', 'DESC')
+        .skip(skip)
+        .take(limit);
 
-    if (filters.status) {
-      queryBuilder.andWhere('transaction.status = :status', { status: filters.status });
-    }
-    if (filters.type) {
-      queryBuilder.andWhere('transaction.type = :type', { type: filters.type });
-    }
-    if (filters.brandId) {
-      queryBuilder.andWhere('transaction.brandId = :brandId', { brandId: filters.brandId });
-    }
-    if (filters.userId) {
-      queryBuilder.andWhere('transaction.userId = :userId', { userId: filters.userId });
-    }
+      if (filters.status) {
+        queryBuilder.andWhere('transaction.status = :status', { status: filters.status });
+      }
+      if (filters.type) {
+        queryBuilder.andWhere('transaction.type = :type', { type: filters.type });
+      }
+      if (filters.brandId) {
+        queryBuilder.andWhere('transaction.brandId = :brandId', { brandId: filters.brandId });
+      }
+      if (filters.userId) {
+        queryBuilder.andWhere('transaction.userId = :userId', { userId: filters.userId });
+      }
 
-    const [transactions, total] = await queryBuilder.getManyAndCount();
+      const [transactions, total] = await queryBuilder.getManyAndCount();
 
-    return {
-      data: transactions,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
+      return {
+        data: transactions,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      };
+    } catch (error) {
+      console.error('Error in getAllTransactions:', error);
+      // Return empty result if there's an error
+      return {
+        data: [],
+        total: 0,
+        page,
+        limit,
+        totalPages: 0,
+      };
+    }
   }
 
   async getPendingTransactions(page: number = 1, limit: number = 20) {

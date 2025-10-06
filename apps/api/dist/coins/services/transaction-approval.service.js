@@ -19,13 +19,12 @@ const typeorm_2 = require("typeorm");
 const coin_transaction_entity_1 = require("../entities/coin-transaction.entity");
 const coin_balance_entity_1 = require("../entities/coin-balance.entity");
 let TransactionApprovalService = class TransactionApprovalService {
-    constructor(transactionRepository, balanceRepository, dataSource) {
+    constructor(transactionRepository, balanceRepository) {
         this.transactionRepository = transactionRepository;
         this.balanceRepository = balanceRepository;
-        this.dataSource = dataSource;
     }
     async approveTransaction(transactionId, approvalDto) {
-        return await this.dataSource.transaction(async (manager) => {
+        return await this.transactionRepository.manager.transaction(async (manager) => {
             const transaction = await manager.findOne(coin_transaction_entity_1.CoinTransaction, {
                 where: { id: transactionId },
                 relations: ['user', 'brand']
@@ -57,7 +56,7 @@ let TransactionApprovalService = class TransactionApprovalService {
         });
     }
     async rejectTransaction(transactionId, rejectionDto) {
-        return await this.dataSource.transaction(async (manager) => {
+        return await this.transactionRepository.manager.transaction(async (manager) => {
             const transaction = await manager.findOne(coin_transaction_entity_1.CoinTransaction, {
                 where: { id: transactionId },
                 relations: ['user', 'brand']
@@ -86,7 +85,7 @@ let TransactionApprovalService = class TransactionApprovalService {
         });
     }
     async markRedeemTransactionAsPaid(transactionId, markPaidDto) {
-        return await this.dataSource.transaction(async (manager) => {
+        return await this.transactionRepository.manager.transaction(async (manager) => {
             const transaction = await manager.findOne(coin_transaction_entity_1.CoinTransaction, {
                 where: { id: transactionId },
                 relations: ['user', 'brand']
@@ -183,6 +182,5 @@ exports.TransactionApprovalService = TransactionApprovalService = __decorate([
     __param(0, (0, typeorm_1.InjectRepository)(coin_transaction_entity_1.CoinTransaction)),
     __param(1, (0, typeorm_1.InjectRepository)(coin_balance_entity_1.CoinBalance)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
-        typeorm_2.Repository,
-        typeorm_2.DataSource])
+        typeorm_2.Repository])
 ], TransactionApprovalService);

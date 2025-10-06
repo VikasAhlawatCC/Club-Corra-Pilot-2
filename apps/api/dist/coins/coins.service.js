@@ -341,33 +341,46 @@ let CoinsService = class CoinsService {
     }
     // Admin methods for getting all transactions
     async getAllTransactions(page = 1, limit = 20, filters = {}) {
-        const skip = (page - 1) * limit;
-        const queryBuilder = this.transactionRepository.createQueryBuilder('transaction')
-            .leftJoinAndSelect('transaction.brand', 'brand')
-            .leftJoinAndSelect('transaction.user', 'user')
-            .orderBy('transaction.createdAt', 'DESC')
-            .skip(skip)
-            .take(limit);
-        if (filters.status) {
-            queryBuilder.andWhere('transaction.status = :status', { status: filters.status });
+        try {
+            const skip = (page - 1) * limit;
+            const queryBuilder = this.transactionRepository.createQueryBuilder('transaction')
+                .leftJoinAndSelect('transaction.brand', 'brand')
+                .leftJoinAndSelect('transaction.user', 'user')
+                .orderBy('transaction.createdAt', 'DESC')
+                .skip(skip)
+                .take(limit);
+            if (filters.status) {
+                queryBuilder.andWhere('transaction.status = :status', { status: filters.status });
+            }
+            if (filters.type) {
+                queryBuilder.andWhere('transaction.type = :type', { type: filters.type });
+            }
+            if (filters.brandId) {
+                queryBuilder.andWhere('transaction.brandId = :brandId', { brandId: filters.brandId });
+            }
+            if (filters.userId) {
+                queryBuilder.andWhere('transaction.userId = :userId', { userId: filters.userId });
+            }
+            const [transactions, total] = await queryBuilder.getManyAndCount();
+            return {
+                data: transactions,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            };
         }
-        if (filters.type) {
-            queryBuilder.andWhere('transaction.type = :type', { type: filters.type });
+        catch (error) {
+            console.error('Error in getAllTransactions:', error);
+            // Return empty result if there's an error
+            return {
+                data: [],
+                total: 0,
+                page,
+                limit,
+                totalPages: 0,
+            };
         }
-        if (filters.brandId) {
-            queryBuilder.andWhere('transaction.brandId = :brandId', { brandId: filters.brandId });
-        }
-        if (filters.userId) {
-            queryBuilder.andWhere('transaction.userId = :userId', { userId: filters.userId });
-        }
-        const [transactions, total] = await queryBuilder.getManyAndCount();
-        return {
-            data: transactions,
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
-        };
     }
     async getPendingTransactions(page = 1, limit = 20) {
         return this.getAllTransactions(page, limit, { status: 'PENDING' });

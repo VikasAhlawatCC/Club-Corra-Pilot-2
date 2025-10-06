@@ -118,9 +118,10 @@ export default function UsersPage() {
       ])
       
       if (usersResponse.success && statsResponse.success) {
-        console.log('Users fetched successfully:', usersResponse.data.data.length, 'users')
+        console.log('Users fetched successfully:', usersResponse.data.data?.length || 0, 'users')
         // Transform the API response to match our User interface
-        const transformedUsers: User[] = usersResponse.data.data.map((user: any) => {
+        const usersArray = usersResponse.data.data || [];
+        const transformedUsers: User[] = usersArray.map((user: any) => {
           // Handle missing profile data gracefully
           const firstName = user.profile?.firstName || 'User';
           const lastName = user.profile?.lastName || user.mobileNumber.slice(-4) || 'User';

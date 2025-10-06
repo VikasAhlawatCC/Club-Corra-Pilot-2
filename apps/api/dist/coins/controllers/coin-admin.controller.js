@@ -23,8 +23,22 @@ let CoinAdminController = class CoinAdminController {
         this.coinsService = coinsService;
     }
     async getTransactions(page = 1, limit = 20, status, type, brandId, userId) {
-        const filters = { status, type, brandId, userId };
-        return this.coinsService.getAllTransactions(page, limit, filters);
+        try {
+            const filters = { status, type, brandId, userId };
+            return this.coinsService.getAllTransactions(page, limit, filters);
+        }
+        catch (error) {
+            console.error('Error in getTransactions:', error);
+            return {
+                success: false,
+                message: 'Failed to fetch transactions',
+                data: [],
+                total: 0,
+                page: 1,
+                limit: 20,
+                totalPages: 0
+            };
+        }
     }
     async getPendingTransactions(page = 1, limit = 20) {
         return this.coinsService.getPendingTransactions(page, limit);

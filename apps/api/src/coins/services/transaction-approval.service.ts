@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository, DataSource } from 'typeorm'
+import { Repository } from 'typeorm'
 import { CoinTransaction } from '../entities/coin-transaction.entity'
 import { CoinBalance } from '../entities/coin-balance.entity'
 import { User } from '../../users/entities/user.entity'
@@ -13,11 +13,10 @@ export class TransactionApprovalService {
     private readonly transactionRepository: Repository<CoinTransaction>,
     @InjectRepository(CoinBalance)
     private readonly balanceRepository: Repository<CoinBalance>,
-    private readonly dataSource: DataSource,
   ) {}
 
   async approveTransaction(transactionId: string, approvalDto: TransactionApprovalDto): Promise<CoinTransaction> {
-    return await this.dataSource.transaction(async (manager) => {
+    return await this.transactionRepository.manager.transaction(async (manager) => {
       const transaction = await manager.findOne(CoinTransaction, {
         where: { id: transactionId },
         relations: ['user', 'brand']
@@ -57,7 +56,7 @@ export class TransactionApprovalService {
   }
 
   async rejectTransaction(transactionId: string, rejectionDto: TransactionRejectionDto): Promise<CoinTransaction> {
-    return await this.dataSource.transaction(async (manager) => {
+    return await this.transactionRepository.manager.transaction(async (manager) => {
       const transaction = await manager.findOne(CoinTransaction, {
         where: { id: transactionId },
         relations: ['user', 'brand']
@@ -93,7 +92,7 @@ export class TransactionApprovalService {
   }
 
   async markRedeemTransactionAsPaid(transactionId: string, markPaidDto: MarkAsPaidDto): Promise<CoinTransaction> {
-    return await this.dataSource.transaction(async (manager) => {
+    return await this.transactionRepository.manager.transaction(async (manager) => {
       const transaction = await manager.findOne(CoinTransaction, {
         where: { id: transactionId },
         relations: ['user', 'brand']

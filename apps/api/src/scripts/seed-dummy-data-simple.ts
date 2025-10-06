@@ -178,8 +178,8 @@ async function seedDummyData() {
     await queryRunner.query(`
       INSERT INTO coin_transactions (
         "userId", "brandId", "amount", "type", "status", 
-        "billAmount", "coinsEarned", "coinsRedeemed", "receiptUrl", "billDate",
-        "createdAt", "statusUpdatedAt", "processedAt"
+        "bill_amount", "coins_earned", "coins_redeemed", "receipt_url", "bill_date",
+        "createdAt", "status_updated_at", "processed_at"
       )
       VALUES ${transactionInserts.join(', ')}
     `);

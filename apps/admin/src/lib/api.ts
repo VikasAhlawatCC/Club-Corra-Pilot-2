@@ -327,7 +327,7 @@ export const categoryApi = {
 export const userApi = {
   // Get all users
   getAllUsers: () =>
-    apiRequest<{ success: boolean, message: string, data: any[] }>(
+    apiRequest<{ success: boolean, message: string, data: { data: any[], total: number, page: number, limit: number, totalPages: number } }>(
       '/admin/users'
     ),
 

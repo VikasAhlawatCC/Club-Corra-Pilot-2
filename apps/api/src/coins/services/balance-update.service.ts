@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository, DataSource } from 'typeorm'
+import { Repository } from 'typeorm'
 import { CoinBalance } from '../entities/coin-balance.entity'
 import { CoinTransaction } from '../entities/coin-transaction.entity'
 import { User } from '../../users/entities/user.entity'
@@ -10,7 +10,6 @@ export class BalanceUpdateService {
   constructor(
     @InjectRepository(CoinBalance)
     private readonly balanceRepository: Repository<CoinBalance>,
-    private readonly dataSource: DataSource,
   ) {}
 
   async updateBalanceForRewardRequest(

@@ -18,9 +18,8 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const coin_balance_entity_1 = require("../entities/coin-balance.entity");
 let BalanceUpdateService = class BalanceUpdateService {
-    constructor(balanceRepository, dataSource) {
+    constructor(balanceRepository) {
         this.balanceRepository = balanceRepository;
-        this.dataSource = dataSource;
     }
     async updateBalanceForRewardRequest(manager, userId, coinsEarned, coinsRedeemed) {
         const netAmount = coinsEarned - coinsRedeemed;
@@ -86,6 +85,5 @@ exports.BalanceUpdateService = BalanceUpdateService;
 exports.BalanceUpdateService = BalanceUpdateService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(coin_balance_entity_1.CoinBalance)),
-    __metadata("design:paramtypes", [typeorm_2.Repository,
-        typeorm_2.DataSource])
+    __metadata("design:paramtypes", [typeorm_2.Repository])
 ], BalanceUpdateService);

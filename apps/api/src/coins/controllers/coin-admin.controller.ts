@@ -18,8 +18,21 @@ export class CoinAdminController {
     @Query('brandId') brandId?: string,
     @Query('userId') userId?: string,
   ) {
-    const filters = { status, type, brandId, userId };
-    return this.coinsService.getAllTransactions(page, limit, filters);
+    try {
+      const filters = { status, type, brandId, userId };
+      return this.coinsService.getAllTransactions(page, limit, filters);
+    } catch (error) {
+      console.error('Error in getTransactions:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch transactions',
+        data: [],
+        total: 0,
+        page: 1,
+        limit: 20,
+        totalPages: 0
+      };
+    }
   }
 
   @Get('transactions/pending')

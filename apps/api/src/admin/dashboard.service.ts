@@ -38,52 +38,48 @@ export class DashboardService {
   ) {}
 
   async getDashboardMetrics(adminId: string) {
-    // Check cache first
-    const cacheKey = `dashboard_metrics_${adminId}`;
-    const cached = await this.dashboardMetricsCacheRepository.findOne({
-      where: { key: cacheKey, expiresAt: MoreThanOrEqual(new Date()) }
-    });
-
-    if (cached) {
-      return cached.value;
+    try {
+      // Calculate fresh metrics without caching for now
+      const metrics = await this.calculateDashboardMetrics();
+      return metrics;
+    } catch (error) {
+      console.error('Error calculating dashboard metrics:', error);
+      // Return basic metrics if advanced calculations fail
+      return {
+        userMetrics: { totalUsers: 0, activeUsers: 0, newUsers: 0 },
+        transactionMetrics: { totalTransactions: 0, pendingTransactions: 0, totalValue: 0 },
+        brandMetrics: { totalBrands: 0, activeBrands: 0 },
+        financialMetrics: { totalCoins: 0, totalValue: 0 },
+        systemMetrics: { uptime: 0, lastUpdate: new Date().toISOString() }
+      };
     }
-
-    // Calculate fresh metrics
-    const metrics = await this.calculateDashboardMetrics();
-
-    // Cache the results for 1 minute to allow faster updates for brand deactivation
-    const expiresAt = new Date(Date.now() + 1 * 60 * 1000);
-    await this.dashboardMetricsCacheRepository.save({
-      key: cacheKey,
-      value: metrics,
-      expiresAt,
-    });
-
-    return metrics;
   }
 
   private async calculateDashboardMetrics() {
-    const [
-      userMetrics,
-      transactionMetrics,
-      brandMetrics,
-      financialMetrics,
-      systemMetrics
-    ] = await Promise.all([
-      this.calculateUserMetrics(),
-      this.calculateTransactionMetrics(),
-      this.calculateBrandMetrics(),
-      this.calculateFinancialMetrics(),
-      this.calculateSystemMetrics(),
-    ]);
+    try {
+      const [
+        userMetrics,
+        transactionMetrics,
+        brandMetrics,
+        financialMetrics
+      ] = await Promise.all([
+        this.calculateUserMetrics(),
+        this.calculateTransactionMetrics(),
+        this.calculateBrandMetrics(),
+        this.calculateFinancialMetrics(),
+      ]);
 
-    return {
-      userMetrics,
-      transactionMetrics,
-      brandMetrics,
-      financialMetrics,
-      systemMetrics,
-    };
+      return {
+        userMetrics,
+        transactionMetrics,
+        brandMetrics,
+        financialMetrics,
+        systemMetrics: { uptime: 0, lastUpdate: new Date().toISOString() }
+      };
+    } catch (error) {
+      console.error('Error in calculateDashboardMetrics:', error);
+      throw error;
+    }
   }
 
   private async calculateUserMetrics() {

@@ -95,15 +95,28 @@ describe('DashboardService', () => {
 
   it('should get dashboard metrics', async () => {
     const mockMetrics = {
-      totalUsers: 100,
-      activeUsers: 50,
-      totalTransactions: 200,
-      pendingTransactions: 10,
-      totalRevenue: 5000,
-      monthlyGrowth: 5.5,
-      userGrowth: 3.2,
-      transactionGrowth: 8.1,
-      revenueGrowth: 12.3,
+      userMetrics: {
+        totalUsers: 100,
+        activeUsers: 50,
+        newUsers: 10
+      },
+      transactionMetrics: {
+        totalTransactions: 200,
+        pendingTransactions: 10,
+        totalValue: 5000
+      },
+      brandMetrics: {
+        totalBrands: 20,
+        activeBrands: 18
+      },
+      systemMetrics: {
+        uptime: 99.9,
+        lastUpdate: new Date().toISOString()
+      },
+      financialMetrics: {
+        totalCoins: 50000,
+        totalValue: 10000
+      }
     };
 
     jest.spyOn(service, 'getDashboardMetrics').mockResolvedValue(mockMetrics);

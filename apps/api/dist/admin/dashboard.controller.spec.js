@@ -33,7 +33,30 @@ describe('DashboardController', () => {
         expect(controller).toBeDefined();
     });
     it('should call getDashboardMetrics', async () => {
-        const mockMetrics = { totalUsers: 100, activeUsers: 50 };
+        const mockMetrics = {
+            userMetrics: {
+                totalUsers: 100,
+                activeUsers: 50,
+                newUsers: 10
+            },
+            transactionMetrics: {
+                totalTransactions: 500,
+                pendingTransactions: 25,
+                totalValue: 10000
+            },
+            brandMetrics: {
+                totalBrands: 20,
+                activeBrands: 18
+            },
+            systemMetrics: {
+                uptime: 99.9,
+                lastUpdate: new Date().toISOString()
+            },
+            financialMetrics: {
+                totalCoins: 50000,
+                totalValue: 10000
+            }
+        };
         jest.spyOn(service, 'getDashboardMetrics').mockResolvedValue(mockMetrics);
         const req = { user: { id: 'admin-1' } };
         const result = await controller.metrics(req);
