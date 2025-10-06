@@ -1,0 +1,53 @@
+{
+  "name": "club-corra-pilot-2",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "start": "turbo run start",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:watch": "turbo run test:watch",
+    "test:coverage": "turbo run test:coverage",
+    "test:ci": "turbo run test:ci",
+    "test:integration": "turbo run test:integration",
+    "test:unit": "turbo run test:unit",
+    "test:admin": "turbo run test --filter=@club-corra/admin",
+    "test:api": "turbo run test --filter=@club-corra/api",
+    "test:admin:coverage": "turbo run test:coverage --filter=@club-corra/admin",
+    "test:api:coverage": "turbo run test:coverage --filter=@club-corra/api",
+    "test:admin:watch": "turbo run test:watch --filter=@club-corra/admin",
+    "test:api:watch": "turbo run test:watch --filter=@club-corra/api",
+    "test:components": "turbo run test:components --filter=@club-corra/admin",
+    "test:hooks": "turbo run test:hooks --filter=@club-corra/admin",
+    "test:pages": "turbo run test:pages --filter=@club-corra/admin",
+    "test:controllers": "turbo run test:controllers --filter=@club-corra/api",
+    "test:services": "turbo run test:services --filter=@club-corra/api",
+    "test:guards": "turbo run test:guards --filter=@club-corra/api",
+    "test:e2e": "turbo run test:e2e --filter=@club-corra/api",
+    "test:all": "npm run test:admin && npm run test:api",
+    "test:all:coverage": "npm run test:admin:coverage && npm run test:api:coverage",
+    "test:report": "npm run test:all:coverage && npm run test:report:generate",
+    "test:report:generate": "node scripts/generate-test-report.js",
+    "test:clean": "rm -rf apps/*/coverage apps/*/test-results",
+    "test:setup": "npm run test:clean && npm install",
+    "cursor:index": "echo 'Cursor indexing placeholder - implement as needed'"
+  },
+  "devDependencies": {
+    "turbo": "^1.10.0",
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "packageManager": "yarn@1.22.19"
+}

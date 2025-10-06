@@ -1,0 +1,117 @@
+"use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.CoinAdminController = void 0;
+const common_1 = require("@nestjs/common");
+const jwt_auth_guard_1 = require("../../common/guards/jwt-auth.guard");
+const admin_guard_1 = require("../../common/guards/admin.guard");
+const coins_service_1 = require("../coins.service");
+let CoinAdminController = class CoinAdminController {
+    constructor(coinsService) {
+        this.coinsService = coinsService;
+    }
+    async getTransactions(page = 1, limit = 20, status, type, brandId, userId) {
+        const filters = { status, type, brandId, userId };
+        return this.coinsService.getAllTransactions(page, limit, filters);
+    }
+    async getPendingTransactions(page = 1, limit = 20) {
+        return this.coinsService.getPendingTransactions(page, limit);
+    }
+    async getTransactionById(id) {
+        const transaction = await this.coinsService.getTransactionById(id);
+        if (!transaction) {
+            throw new Error('Transaction not found');
+        }
+        return transaction;
+    }
+    async approveTransaction(id, body, req) {
+        const adminUserId = req.user.id;
+        return this.coinsService.approveTransaction(id, adminUserId, body.adminNotes);
+    }
+    async rejectTransaction(id, body, req) {
+        const adminUserId = req.user.id;
+        return this.coinsService.rejectTransaction(id, adminUserId, body.adminNotes);
+    }
+    async adjustUserBalance(userId, body) {
+        return this.coinsService.adminAdjustUserBalance(userId, body.delta, body.reason);
+    }
+    async getStats() {
+        return this.coinsService.getTransactionStats();
+    }
+};
+exports.CoinAdminController = CoinAdminController;
+__decorate([
+    (0, common_1.Get)('transactions'),
+    __param(0, (0, common_1.Query)('page')),
+    __param(1, (0, common_1.Query)('limit')),
+    __param(2, (0, common_1.Query)('status')),
+    __param(3, (0, common_1.Query)('type')),
+    __param(4, (0, common_1.Query)('brandId')),
+    __param(5, (0, common_1.Query)('userId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Number, String, String, String, String]),
+    __metadata("design:returntype", Promise)
+], CoinAdminController.prototype, "getTransactions", null);
+__decorate([
+    (0, common_1.Get)('transactions/pending'),
+    __param(0, (0, common_1.Query)('page')),
+    __param(1, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Number]),
+    __metadata("design:returntype", Promise)
+], CoinAdminController.prototype, "getPendingTransactions", null);
+__decorate([
+    (0, common_1.Get)('transactions/:id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], CoinAdminController.prototype, "getTransactionById", null);
+__decorate([
+    (0, common_1.Put)('transactions/:id/approve'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, Object]),
+    __metadata("design:returntype", Promise)
+], CoinAdminController.prototype, "approveTransaction", null);
+__decorate([
+    (0, common_1.Put)('transactions/:id/reject'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, Object]),
+    __metadata("design:returntype", Promise)
+], CoinAdminController.prototype, "rejectTransaction", null);
+__decorate([
+    (0, common_1.Post)('users/:userId/adjust'),
+    __param(0, (0, common_1.Param)('userId')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], CoinAdminController.prototype, "adjustUserBalance", null);
+__decorate([
+    (0, common_1.Get)('stats'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], CoinAdminController.prototype, "getStats", null);
+exports.CoinAdminController = CoinAdminController = __decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, admin_guard_1.AdminGuard),
+    (0, common_1.Controller)('admin/coins'),
+    __metadata("design:paramtypes", [coins_service_1.CoinsService])
+], CoinAdminController);

@@ -1,0 +1,111 @@
+# Cursor Rules — Club Corra Pilot 2 (Advisory)
+
+version: 1
+
+notes:
+  - This file references conventions from the previous monorepo for guidance only.
+  - These rules are NOT binding; use engineering judgment per this lightweight setup.
+
+references:
+  - name: Old Monorepo Cursor Rules
+    location: https://github.com/clubcorra/club-corra-pilot/blob/main/.cursorrules
+    usage: "Reference for style and workflows; do not strictly enforce."
+
+workspaces:
+  - path: apps/admin
+    index:
+      include:
+        - src/**
+      deprioritize:
+        - node_modules/**
+    heuristics:
+      - prefer semantic search for features
+      - use exact search for symbols (DTOs, controller names)
+
+  - path: apps/api
+    index:
+      include:
+        - src/**
+      deprioritize:
+        - node_modules/**
+    heuristics:
+      - focus on modules used by Admin only
+      - prioritize config, common, and entry files
+
+documentation:
+  - docs/INDEX_MAP.md
+  - docs/WORKPLAN.md
+  - docs/CI_OVERVIEW.md
+  - docs/COMPONENT_INDEX.md
+  - docs/API_INDEX.md
+  - docs/HOOKS_INDEX.md
+  - docs/TYPES_INDEX.md
+  - docs/UTILITIES_INDEX.md
+  - docs/DEPLOYMENT_INDEX.md
+
+search:
+  - semantic_first: true
+  - prefer_scoped_search: true
+  - component_search: "Use COMPONENT_INDEX.md for UI components and React patterns"
+  - api_search: "Use API_INDEX.md for backend modules, controllers, and services"
+  - hooks_search: "Use HOOKS_INDEX.md for custom hooks and data fetching patterns"
+  - types_search: "Use TYPES_INDEX.md for TypeScript interfaces and type definitions"
+  - utilities_search: "Use UTILITIES_INDEX.md for utility functions and helpers"
+  - deployment_search: "Use DEPLOYMENT_INDEX.md for deployment scripts and infrastructure"
+
+indexes:
+  components:
+    - path: apps/admin/src/components
+    - index_file: docs/COMPONENT_INDEX.md
+    - patterns:
+      - "Search by functionality: auth, brands, charts, dashboard, transactions"
+      - "Search by UI pattern: forms, lists, modals, tables, cards"
+      - "Search by data type: brands, users, transactions, coins"
+  
+  api:
+    - path: apps/api/src
+    - index_file: docs/API_INDEX.md
+    - patterns:
+      - "Search by module: admin, auth, brands, coins, users"
+      - "Search by file type: controllers, services, entities, dto"
+      - "Search by functionality: CRUD, authentication, data processing"
+  
+  hooks:
+    - path: apps/admin/src/hooks
+    - index_file: docs/HOOKS_INDEX.md
+    - patterns:
+      - "Search by functionality: data fetching, filtering, utilities"
+      - "Search by data type: brands, coins, dashboard, charts"
+      - "Search by pattern: state management, side effects, performance"
+  
+  types:
+    - path: apps/admin/src/types
+    - index_file: docs/TYPES_INDEX.md
+    - patterns:
+      - "Search by category: entities, api, component props, utilities"
+      - "Search by functionality: user management, brand management, transactions"
+      - "Search by pattern: interfaces, types, enums, generics"
+  
+  utilities:
+    - path: apps/admin/src/utils
+    - index_file: docs/UTILITIES_INDEX.md
+    - patterns:
+      - "Search by functionality: date, string, number, array, object operations"
+      - "Search by pattern: formatting, validation, calculation, processing"
+      - "Search by category: date utils, s3 proxy, transaction utils"
+  
+  deployment:
+    - path: scripts/deployment
+    - index_file: docs/DEPLOYMENT_INDEX.md
+    - patterns:
+      - "Search by functionality: deployment, service management, monitoring"
+      - "Search by environment: production, development, staging"
+      - "Search by component: backend, frontend, database, storage"
+
+editor:
+  - preserve_indentation: true
+  - avoid_mass_reformat: true
+  - use_indexes_for_navigation: true
+  - prefer_semantic_search: true
+
+

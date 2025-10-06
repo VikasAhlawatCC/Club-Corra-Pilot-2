@@ -1,0 +1,19 @@
+{
+    "CORSRules": [
+        {
+            "AllowedHeaders": ["*"],
+            "AllowedMethods": ["GET", "HEAD"],
+            "AllowedOrigins": [
+                "https://admin.clubcorra.com",
+                "https://clubcorra.com",
+                "https://*.clubcorra.com",
+                "https://*.vercel.app",
+                "https://club-corra-pilot-admin-*.vercel.app",
+                "http://localhost:3000",
+                "http://localhost:3001"
+            ],
+            "ExposeHeaders": ["ETag"],
+            "MaxAgeSeconds": 3000
+        }
+    ]
+}
