@@ -223,10 +223,7 @@ cd club-corra-pilot
 # Install root dependencies
 yarn install
 
-# Build shared package first
-yarn workspace @club-corra/shared build
-
-# Build API
+# Build API (no shared packages in this repo)
 yarn workspace @club-corra/api build
 ```
 
@@ -256,10 +253,10 @@ CORS_ORIGIN=https://admin.clubcorra.com,https://clubcorra.com,https://*.clubcorr
 ### 6.1 Run Deployment Script
 ```bash
 # Make deployment script executable
-chmod +x scripts/deployment/deploy-production-ec2.sh
+chmod +x scripts/deployment/deploy-simple-ec2.sh
 
-# Run deployment
-./scripts/deployment/deploy-production-ec2.sh
+# Run simplified deployment (no shared packages)
+./scripts/deployment/deploy-simple-ec2.sh
 ```
 
 ### 6.2 Alternative Manual Deployment
@@ -276,9 +273,6 @@ sudo mkdir -p /opt/club-corra-api
 sudo cp -r apps/api/dist /opt/club-corra-api/
 sudo cp apps/api/package.json /opt/club-corra-api/
 sudo cp apps/api/.env.production /opt/club-corra-api/.env
-
-# Copy workspace structure
-sudo cp -r packages /opt/club-corra-api/
 
 # Set permissions
 sudo chown -R ec2-user:ec2-user /opt/club-corra-api
@@ -310,7 +304,7 @@ Type=simple
 User=ec2-user
 Group=ec2-user
 WorkingDirectory=/opt/club-corra-api
-ExecStart=/usr/bin/node dist/apps/api/src/main.js
+ExecStart=/usr/bin/node dist/main.js
 Restart=always
 RestartSec=10
 Environment=NODE_ENV=production
@@ -670,7 +664,7 @@ uptime
 If you encounter issues:
 1. Check the logs: `sudo journalctl -u club-corra-api -f`
 2. Verify service status: `sudo systemctl status club-corra-api`
-3. Test connectivity: `curl http://16.170.179.71/api/v1/health`
+3. Test connectivity: `curl http://16.170.179.71:8080/api/v1/health`
 4. Check security group settings in AWS Console
 
-Your backend should now be running at: `http://16.170.179.71/api/v1`
+Your backend should now be running at: `http://16.170.179.71:8080/api/v1`

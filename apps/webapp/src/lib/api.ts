@@ -191,12 +191,37 @@ export async function getUserTransactions(token: string): Promise<ApiResponse<Tr
 
   const result = await response.json();
   
-  // The API response interceptor wraps the data, so we need to extract the actual transaction data
-  return {
-    success: result.success,
-    message: result.message,
-    data: result.data?.data || [] // Extract the actual transaction array from the nested structure
-  };
+  // FIXED: Handle standardized API response format
+  // Check if it's a paginated response or direct data response
+  if (result.pagination) {
+    // Paginated response
+    return {
+      success: result.success,
+      message: result.message,
+      data: result.data || []
+    };
+  } else if (result.data && Array.isArray(result.data)) {
+    // Direct array response
+    return {
+      success: result.success,
+      message: result.message,
+      data: result.data
+    };
+  } else if (result.data && result.data.data && Array.isArray(result.data.data)) {
+    // Legacy nested response format (fallback)
+    return {
+      success: result.success,
+      message: result.message,
+      data: result.data.data
+    };
+  } else {
+    // Fallback to empty array
+    return {
+      success: result.success,
+      message: result.message,
+      data: []
+    };
+  }
 }
 
 // File upload API
