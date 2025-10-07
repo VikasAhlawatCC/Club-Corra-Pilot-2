@@ -73,7 +73,7 @@ export default function FormResponsesPage() {
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api/v1'
       
       // Fetch waitlist entries
-      const waitlistResponse = await fetch(`${apiBaseUrl}/admin/form-submissions/waitlist-entries`, {
+      const waitlistResponse = await fetch(`${apiBaseUrl}/waitlist/admin/entries`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
           'Content-Type': 'application/json'
@@ -86,22 +86,30 @@ export default function FormResponsesPage() {
       
       const waitlistData = await waitlistResponse.json()
       
-      // Fetch partner applications
-      const partnerResponse = await fetch(`${apiBaseUrl}/admin/form-submissions/partner-applications`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
-          'Content-Type': 'application/json'
+      // Fetch partner applications (with error handling)
+      let partnerData = { data: [] }
+      try {
+        const partnerResponse = await fetch(`${apiBaseUrl}/admin/form-submissions/partner-applications`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        if (partnerResponse.ok) {
+          partnerData = await partnerResponse.json()
+        } else {
+          console.warn('Failed to fetch partner applications:', partnerResponse.status, partnerResponse.statusText)
         }
-      })
-      
-      if (!partnerResponse.ok) {
-        throw new Error('Failed to fetch partner applications')
+      } catch (error) {
+        console.warn('Error fetching partner applications:', error)
+        // Continue with empty partner data
       }
       
-      const partnerData = await partnerResponse.json()
-      
       // Combine and transform data
-      const waitlistResponses: FormResponse[] = waitlistData.data.map((entry: WaitlistEntry) => ({
+      // The waitlist endpoint returns data in a nested structure: waitlistData.data.data
+      const waitlistEntries = waitlistData.data?.data || waitlistData.data || []
+      const waitlistResponses: FormResponse[] = waitlistEntries.map((entry: WaitlistEntry) => ({
         id: entry.id,
         type: 'waitlist' as const,
         data: entry,
@@ -125,7 +133,13 @@ export default function FormResponsesPage() {
       
     } catch (error) {
       console.error('Failed to fetch form responses:', error)
-      showError('Failed to fetch form responses')
+      // Only show error if waitlist entries also failed
+      if (waitlistData.data?.data?.length === 0 && waitlistData.data?.length === 0) {
+        showError('Failed to fetch form responses')
+      } else {
+        // Show warning if only partner applications failed
+        console.warn('Some form responses may not be available')
+      }
     } finally {
       setIsLoading(false)
     }

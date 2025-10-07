@@ -72,9 +72,9 @@ describe('Coin Lifecycle Integration Tests (Fixed Implementation)', () => {
     const mockBalance = {
         id: 'test-balance-id',
         user: mockUser,
-        balance: 100,
-        totalEarned: 100,
-        totalRedeemed: 0,
+        balance: '100',
+        totalEarned: '100',
+        totalRedeemed: '0',
         createdAt: new Date(),
         updatedAt: new Date()
     };
@@ -191,7 +191,7 @@ describe('Coin Lifecycle Integration Tests (Fixed Implementation)', () => {
             // Mock balance update service
             jest.spyOn(balanceUpdateService, 'updateBalanceForRewardRequest').mockResolvedValue();
             jest.spyOn(balanceUpdateService, 'getUserBalance').mockResolvedValue(mockUpdatedBalance);
-            jest.spyOn(balanceUpdateService, 'getOptimisticBalance').mockResolvedValue(200);
+            jest.spyOn(balanceUpdateService, 'getOptimisticBalance').mockResolvedValue('200');
             // Mock transaction repository for recent transactions
             jest.spyOn(coinsService, 'getAllTransactions').mockResolvedValue({
                 data: [{
@@ -280,7 +280,7 @@ describe('Coin Lifecycle Integration Tests (Fixed Implementation)', () => {
             jest.spyOn(balanceRepository, 'findOne').mockResolvedValue(mockBalance);
             jest.spyOn(balanceUpdateService, 'updateBalanceForRewardRequest').mockResolvedValue();
             jest.spyOn(balanceUpdateService, 'getUserBalance').mockResolvedValue(mockUpdatedBalance);
-            jest.spyOn(balanceUpdateService, 'getOptimisticBalance').mockResolvedValue(150);
+            jest.spyOn(balanceUpdateService, 'getOptimisticBalance').mockResolvedValue('150');
             jest.spyOn(coinsService, 'getAllTransactions').mockResolvedValue({
                 data: [mockTransaction],
                 total: 1,
@@ -371,7 +371,7 @@ describe('Coin Lifecycle Integration Tests (Fixed Implementation)', () => {
             });
             jest.spyOn(balanceUpdateService, 'updateBalanceForRewardRequest').mockResolvedValue();
             jest.spyOn(balanceUpdateService, 'getUserBalance').mockResolvedValue(mockBalance);
-            jest.spyOn(balanceUpdateService, 'getOptimisticBalance').mockResolvedValue(200);
+            jest.spyOn(balanceUpdateService, 'getOptimisticBalance').mockResolvedValue('200');
             jest.spyOn(coinsService, 'getAllTransactions').mockResolvedValue({
                 data: [mockTransaction],
                 total: 1,
@@ -402,7 +402,7 @@ describe('Coin Lifecycle Integration Tests (Fixed Implementation)', () => {
                 jest.spyOn(balanceRepository, 'save').mockImplementation((balance) => {
                     // Verify the invariant is maintained
                     if (balance.balance !== undefined && balance.totalEarned !== undefined && balance.totalRedeemed !== undefined) {
-                        expect(balance.balance).toBe(balance.totalEarned - balance.totalRedeemed);
+                        expect(BigInt(balance.balance)).toBe(BigInt(balance.totalEarned) - BigInt(balance.totalRedeemed));
                     }
                     // Update current balance for next iteration
                     currentBalance = balance;

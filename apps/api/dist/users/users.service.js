@@ -347,9 +347,9 @@ let UsersService = class UsersService {
         await this.userProfileRepository.save(profile);
         // Create coin balance
         const coinBalance = this.coinBalanceRepository.create({
-            balance: 0,
-            totalEarned: 0,
-            totalRedeemed: 0,
+            balance: '0',
+            totalEarned: '0',
+            totalRedeemed: '0',
             user: { id: savedUser.id },
         });
         await this.coinBalanceRepository.save(coinBalance);
@@ -365,9 +365,9 @@ let UsersService = class UsersService {
         if (!coinBalance) {
             // Create coin balance if it doesn't exist
             coinBalance = this.coinBalanceRepository.create({
-                balance: 0,
-                totalEarned: 0,
-                totalRedeemed: 0,
+                balance: '0',
+                totalEarned: '0',
+                totalRedeemed: '0',
                 user: { id: userId },
             });
             coinBalance = await this.coinBalanceRepository.save(coinBalance);
@@ -375,10 +375,10 @@ let UsersService = class UsersService {
         const oldBalance = coinBalance.balance;
         let newBalance;
         if (adjustment.newBalance !== undefined) {
-            newBalance = adjustment.newBalance;
+            newBalance = String(adjustment.newBalance);
         }
         else if (adjustment.delta !== undefined) {
-            newBalance = oldBalance + adjustment.delta;
+            newBalance = (BigInt(oldBalance) + BigInt(adjustment.delta)).toString();
         }
         else {
             throw new common_1.BadRequestException('Either newBalance or delta must be provided');
@@ -388,8 +388,8 @@ let UsersService = class UsersService {
         await this.coinBalanceRepository.save(coinBalance);
         // Create transaction record
         const transaction = this.coinTransactionRepository.create({
-            type: newBalance > oldBalance ? 'EARN' : 'REDEEM',
-            amount: Math.abs(newBalance - oldBalance).toString(),
+            type: BigInt(newBalance) > BigInt(oldBalance) ? 'EARN' : 'REDEEM',
+            amount: (BigInt(newBalance) - BigInt(oldBalance)).toString(),
             status: 'COMPLETED',
             user: { id: userId },
         });
@@ -397,7 +397,7 @@ let UsersService = class UsersService {
         return {
             oldBalance,
             newBalance,
-            delta: newBalance - oldBalance,
+            delta: (BigInt(newBalance) - BigInt(oldBalance)).toString(),
             reason: adjustment.reason,
         };
     }

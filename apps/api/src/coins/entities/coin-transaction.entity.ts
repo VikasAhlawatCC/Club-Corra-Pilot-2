@@ -34,14 +34,14 @@ export class CoinTransaction extends BaseEntity {
   coinsRedeemed?: number
 
   // Balance tracking fields for reversion on rejection
-  @Column({ type: 'int', nullable: true, name: 'previous_balance' })
-  previousBalance?: number
+  @Column({ type: 'bigint', nullable: true, name: 'previous_balance' })
+  previousBalance?: string
 
-  @Column({ type: 'int', nullable: true, name: 'balance_after_earn' })
-  balanceAfterEarn?: number
+  @Column({ type: 'bigint', nullable: true, name: 'balance_after_earn' })
+  balanceAfterEarn?: string
 
-  @Column({ type: 'int', nullable: true, name: 'balance_after_redeem' })
-  balanceAfterRedeem?: number
+  @Column({ type: 'bigint', nullable: true, name: 'balance_after_redeem' })
+  balanceAfterRedeem?: string
 
   @Column({ type: 'varchar', length: 500, nullable: true, name: 'receipt_url' })
   receiptUrl?: string

@@ -47,17 +47,13 @@ export class TransactionApprovalService {
         }
       }
 
-        // Enhanced validation: Check if user still has sufficient balance (if redemption involved)
-        if (transaction.coinsRedeemed && transaction.coinsRedeemed > 0 && transaction.user) {
-          const currentBalance = await manager.findOne(CoinBalance, {
-            where: { user: { id: transaction.user.id } }
-          })
+      // Enhanced validation: Check if user still has sufficient balance (if redemption involved)
+      if (transaction.coinsRedeemed && transaction.coinsRedeemed > 0 && transaction.user) {
+        const currentBalance = await manager.findOne(CoinBalance, {
+          where: { user: { id: transaction.user.id } }
+        })
         
-        if (!currentBalance) {
-          throw new BadRequestException('User balance not found')
-        }
-        
-        if (currentBalance.balance < transaction.coinsRedeemed) {
+        if (currentBalance && BigInt(currentBalance.balance) < BigInt(transaction.coinsRedeemed)) {
           throw new BadRequestException(
             `Cannot approve: User balance (${currentBalance.balance}) is less than redemption amount (${transaction.coinsRedeemed})`
           )
@@ -77,8 +73,9 @@ export class TransactionApprovalService {
           // Since balance was already updated at submission, we just need to verify
           // that the current balance is consistent with the transaction
           const expectedBalance = transaction.balanceAfterRedeem || transaction.balanceAfterEarn || transaction.previousBalance
+          const expectedBalanceNum = expectedBalance ? BigInt(expectedBalance) : undefined
           
-          if (expectedBalance !== undefined && Math.abs(currentBalance.balance - expectedBalance) > 0) {
+          if (expectedBalanceNum !== undefined && Math.abs(Number(BigInt(currentBalance.balance) - expectedBalanceNum)) > 0) {
             throw new BadRequestException(
               `Balance inconsistency detected. Current balance (${currentBalance.balance}) doesn't match expected balance (${expectedBalance})`
             )
@@ -260,13 +257,13 @@ export class TransactionApprovalService {
         .select('SUM(transaction.coinsEarned)', 'total')
         .where('transaction.coinsEarned IS NOT NULL')
         .getRawOne()
-        .then(result => parseInt(result.total) || 0),
+        .then(result => BigInt(result.total) || BigInt(0)),
       this.transactionRepository
         .createQueryBuilder('transaction')
         .select('SUM(transaction.coinsRedeemed)', 'total')
         .where('transaction.coinsRedeemed IS NOT NULL')
         .getRawOne()
-        .then(result => parseInt(result.total) || 0)
+        .then(result => BigInt(result.total) || BigInt(0))
     ])
 
     return {
@@ -276,8 +273,8 @@ export class TransactionApprovalService {
       processed,
       paid,
       totalTransactions,
-      totalCoinsEarned,
-      totalCoinsRedeemed
+      totalCoinsEarned: Number(totalCoinsEarned),
+      totalCoinsRedeemed: Number(totalCoinsRedeemed)
     }
   }
 

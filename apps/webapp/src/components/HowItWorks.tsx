@@ -599,10 +599,10 @@ export default function HowItWorks() {
                     if (isAuthed) {
                       router.push("/dashboard");
                     } else {
-                      router.push("/verify?redirect=dashboard");
+                      router.push("/login?redirect=dashboard");
                     }
                   } catch {
-                    router.push("/verify?redirect=dashboard");
+                    router.push("/login?redirect=dashboard");
                   }
                 }}
                 className="mt-3 w-full h-12 rounded-xl border border-black/15 text-green-700 font-medium hover:bg-green-50"

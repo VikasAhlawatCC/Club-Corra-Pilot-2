@@ -1,21 +1,21 @@
-import { Column, Entity, Index, ManyToOne } from 'typeorm'
+import { Column, Entity, Index, ManyToOne, OneToOne, JoinColumn } from 'typeorm'
 import { BaseEntity } from '../../common/entities/base.entity'
 import { User } from '../../users/entities/user.entity'
 
 @Entity('coin_balances')
 export class CoinBalance extends BaseEntity {
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @Index('idx_coin_balance_user_id')
+  @OneToOne(() => User, user => user.coinBalance, { onDelete: 'CASCADE' })
+  @JoinColumn()
   user!: User
 
-  @Column({ type: 'int', default: 0 })
-  balance!: number
+  @Column({ type: 'bigint', default: 0 })
+  balance!: string
 
-  @Column({ type: 'int', default: 0 })
-  totalEarned!: number
+  @Column({ type: 'bigint', default: 0, name: 'total_earned' })
+  totalEarned!: string
 
-  @Column({ type: 'int', default: 0 })
-  totalRedeemed!: number
+  @Column({ type: 'bigint', default: 0, name: 'total_redeemed' })
+  totalRedeemed!: string
 }
 
 

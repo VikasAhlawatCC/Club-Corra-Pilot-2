@@ -18,17 +18,19 @@ export class FormSubmissionsController {
 
   @Get('partner-applications')
   async getPartnerApplications(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 20,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
     @Query('status') status?: string,
   ) {
-    const skip = (page - 1) * limit;
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const limitNum = limit ? parseInt(limit, 10) : 20;
+    const skip = (pageNum - 1) * limitNum;
     
     const queryBuilder = this.partnerApplicationRepository
       .createQueryBuilder('application')
       .orderBy('application.createdAt', 'DESC')
       .skip(skip)
-      .take(limit);
+      .take(limitNum);
 
     if (status) {
       queryBuilder.andWhere('application.status = :status', { status });
@@ -39,9 +41,9 @@ export class FormSubmissionsController {
     return {
       data: applications,
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(total / limitNum),
     };
   }
 

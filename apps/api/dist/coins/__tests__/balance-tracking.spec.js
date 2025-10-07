@@ -65,9 +65,9 @@ describe('Coin Balance Tracking (Phase 1)', () => {
     const mockBalance = {
         id: 'test-balance-id',
         user: mockUser,
-        balance: 100,
-        totalEarned: 100,
-        totalRedeemed: 0,
+        balance: '100',
+        totalEarned: '100',
+        totalRedeemed: '0',
         createdAt: new Date(),
         updatedAt: new Date()
     };
@@ -146,9 +146,9 @@ describe('Coin Balance Tracking (Phase 1)', () => {
             // Assert
             expect(balanceRepository.save).toHaveBeenCalledWith({
                 ...currentBalance,
-                balance: 150, // 100 + 50 - 0
-                totalEarned: 150, // 100 + 50
-                totalRedeemed: 0 // unchanged
+                balance: '150', // 100 + 50 - 0
+                totalEarned: '150', // 100 + 50
+                totalRedeemed: '0' // unchanged
             });
         });
         it('should properly track totalEarned and totalRedeemed when redeeming coins only', async () => {
@@ -164,9 +164,9 @@ describe('Coin Balance Tracking (Phase 1)', () => {
             // Assert
             expect(balanceRepository.save).toHaveBeenCalledWith({
                 ...currentBalance,
-                balance: 70, // 100 + 0 - 30
-                totalEarned: 100, // unchanged
-                totalRedeemed: 30 // 0 + 30
+                balance: '70', // 100 + 0 - 30
+                totalEarned: '100', // unchanged
+                totalRedeemed: '30' // 0 + 30
             });
         });
         it('should properly track totalEarned and totalRedeemed when both earning and redeeming', async () => {
@@ -182,9 +182,9 @@ describe('Coin Balance Tracking (Phase 1)', () => {
             // Assert
             expect(balanceRepository.save).toHaveBeenCalledWith({
                 ...currentBalance,
-                balance: 120, // 100 + 40 - 20
-                totalEarned: 140, // 100 + 40
-                totalRedeemed: 20 // 0 + 20
+                balance: '120', // 100 + 40 - 20
+                totalEarned: '140', // 100 + 40
+                totalRedeemed: '20' // 0 + 20
             });
         });
     });
@@ -196,13 +196,13 @@ describe('Coin Balance Tracking (Phase 1)', () => {
                 id: 'test-transaction-id',
                 coinsEarned: 50,
                 coinsRedeemed: 20,
-                previousBalance: 100
+                previousBalance: '100'
             };
             const currentBalance = {
                 ...mockBalance,
-                balance: 130, // 100 + 50 - 20
-                totalEarned: 150, // 100 + 50
-                totalRedeemed: 20 // 0 + 20
+                balance: '130', // 100 + 50 - 20
+                totalEarned: '150', // 100 + 50
+                totalRedeemed: '20' // 0 + 20
             };
             jest.spyOn(balanceRepository, 'findOne').mockResolvedValue(currentBalance);
             jest.spyOn(balanceRepository, 'save').mockResolvedValue(currentBalance);
@@ -211,9 +211,9 @@ describe('Coin Balance Tracking (Phase 1)', () => {
             // Assert
             expect(balanceRepository.save).toHaveBeenCalledWith({
                 ...currentBalance,
-                balance: 100, // reverted to previousBalance
-                totalEarned: 100, // 150 - 50
-                totalRedeemed: 0 // 20 - 20
+                balance: '100', // reverted to previousBalance
+                totalEarned: '100', // 150 - 50
+                totalRedeemed: '0' // 20 - 20
             });
         });
         it('should handle reversion when only coins were earned', async () => {
@@ -223,13 +223,12 @@ describe('Coin Balance Tracking (Phase 1)', () => {
                 id: 'test-transaction-id',
                 coinsEarned: 50,
                 coinsRedeemed: 0,
-                previousBalance: 100
+                previousBalance: '100'
             };
             const currentBalance = {
                 ...mockBalance,
-                balance: 150, // 100 + 50
-                totalEarned: 150, // 100 + 50
-                totalRedeemed: 0 // unchanged
+                balance: '150', // 100 + 50
+                totalEarned: '150', // 100 + 50
             };
             jest.spyOn(balanceRepository, 'findOne').mockResolvedValue(currentBalance);
             jest.spyOn(balanceRepository, 'save').mockResolvedValue(currentBalance);
@@ -238,9 +237,9 @@ describe('Coin Balance Tracking (Phase 1)', () => {
             // Assert
             expect(balanceRepository.save).toHaveBeenCalledWith({
                 ...currentBalance,
-                balance: 100, // reverted to previousBalance
-                totalEarned: 100, // 150 - 50
-                totalRedeemed: 0 // unchanged
+                balance: '100', // reverted to previousBalance
+                totalEarned: '100', // 150 - 50
+                totalRedeemed: '0' // unchanged
             });
         });
         it('should handle reversion when only coins were redeemed', async () => {
@@ -250,13 +249,12 @@ describe('Coin Balance Tracking (Phase 1)', () => {
                 id: 'test-transaction-id',
                 coinsEarned: 0,
                 coinsRedeemed: 30,
-                previousBalance: 100
+                previousBalance: '100'
             };
             const currentBalance = {
                 ...mockBalance,
-                balance: 70, // 100 - 30
-                totalEarned: 100, // unchanged
-                totalRedeemed: 30 // 0 + 30
+                balance: '70', // 100 - 30
+                totalRedeemed: '30' // 0 + 30
             };
             jest.spyOn(balanceRepository, 'findOne').mockResolvedValue(currentBalance);
             jest.spyOn(balanceRepository, 'save').mockResolvedValue(currentBalance);
@@ -265,9 +263,9 @@ describe('Coin Balance Tracking (Phase 1)', () => {
             // Assert
             expect(balanceRepository.save).toHaveBeenCalledWith({
                 ...currentBalance,
-                balance: 100, // reverted to previousBalance
-                totalEarned: 100, // unchanged
-                totalRedeemed: 0 // 30 - 30
+                balance: '100', // reverted to previousBalance
+                totalEarned: '100', // unchanged
+                totalRedeemed: '0' // 30 - 30
             });
         });
     });
@@ -277,15 +275,15 @@ describe('Coin Balance Tracking (Phase 1)', () => {
             const userId = 'test-user-id';
             const initialBalance = {
                 ...mockBalance,
-                balance: 100,
-                totalEarned: 100,
-                totalRedeemed: 0
+                balance: '100',
+                totalEarned: '100',
+                totalRedeemed: '0'
             };
             jest.spyOn(balanceRepository, 'findOne').mockResolvedValue(initialBalance);
             jest.spyOn(balanceRepository, 'save').mockImplementation((balance) => {
                 // Verify the invariant is maintained
                 if (balance.balance !== undefined && balance.totalEarned !== undefined && balance.totalRedeemed !== undefined) {
-                    expect(balance.balance).toBe(balance.totalEarned - balance.totalRedeemed);
+                    expect(BigInt(balance.balance)).toBe(BigInt(balance.totalEarned) - BigInt(balance.totalRedeemed));
                 }
                 return Promise.resolve(balance);
             });
