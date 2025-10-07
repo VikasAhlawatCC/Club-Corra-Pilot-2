@@ -11,6 +11,7 @@ import type { AdminCoinTransaction } from '@/types/coins'
  * For REDEEM requests:
  * - PENDING: Show action required
  * - APPROVED: Keep action required (until paid)
+ * - UNPAID: Keep action required (payment pending)
  * - PROCESSED: Keep action required (until paid)
  * - PAID: Remove action required
  * - REJECTED: Remove action required
@@ -21,7 +22,7 @@ export const isTransactionActionRequired = (transaction: AdminCoinTransaction): 
   }
   
   if (transaction.type === 'REDEEM') {
-    return ['PENDING', 'APPROVED'].includes(transaction.status)
+    return ['PENDING', 'APPROVED', 'UNPAID'].includes(transaction.status)
   }
   
   return false
@@ -46,6 +47,9 @@ export const getActionRequiredText = (transaction: AdminCoinTransaction): string
     if (transaction.status === 'APPROVED') {
       return 'Payment Required'
     }
+    if (transaction.status === 'UNPAID') {
+      return 'Payment Pending'
+    }
   }
   
   return 'Action Required'
@@ -69,6 +73,9 @@ export const getActionRequiredColor = (transaction: AdminCoinTransaction): strin
     }
     if (transaction.status === 'APPROVED') {
       return 'text-orange-600 bg-orange-100'
+    }
+    if (transaction.status === 'UNPAID') {
+      return 'text-red-600 bg-red-100'
     }
   }
   

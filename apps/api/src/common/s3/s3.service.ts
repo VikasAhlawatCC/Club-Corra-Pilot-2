@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common'
-import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, GetObjectCommand, PutObjectCommand, PutBucketCorsCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
 export interface GenerateSignedUrlParams {
@@ -15,10 +15,10 @@ export class S3Service {
 
   constructor() {
     this.client = new S3Client({
-      region: process.env.AWS_REGION || 'us-east-1',
-      credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY ? {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      region: process.env.S3_REGION || 'eu-north-1',
+      credentials: process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY ? {
+        accessKeyId: process.env.S3_ACCESS_KEY_ID,
+        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
       } : undefined,
     })
   }
@@ -33,6 +33,35 @@ export class S3Service {
     const { bucket, key, expiresInSeconds = 300 } = params
     const command = new GetObjectCommand({ Bucket: bucket, Key: key })
     return getSignedUrl(this.client, command, { expiresIn: expiresInSeconds })
+  }
+
+  async configureCors(bucket: string): Promise<void> {
+    const corsConfiguration = {
+      CORSRules: [
+        {
+          AllowedHeaders: ['*'],
+          AllowedMethods: ['GET', 'PUT', 'POST', 'HEAD'],
+          AllowedOrigins: [
+            'http://localhost:3000',
+            'http://localhost:3001',
+            'http://localhost:3004',
+            'https://admin.clubcorra.com',
+            'https://clubcorra.com',
+            'https://*.clubcorra.com',
+            'https://*.vercel.app'
+          ],
+          ExposeHeaders: ['ETag', 'x-amz-version-id'],
+          MaxAgeSeconds: 3000
+        }
+      ]
+    }
+
+    const command = new PutBucketCorsCommand({
+      Bucket: bucket,
+      CORSConfiguration: corsConfiguration
+    })
+
+    await this.client.send(command)
   }
 }
 

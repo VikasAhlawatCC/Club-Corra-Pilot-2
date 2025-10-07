@@ -5,7 +5,8 @@
 
 // Prefer backend API routes to align with tests expecting /api/v1 endpoints
 const NEXT_LOCAL = false
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/+$/, '')
+// Default to local API v1 if env is missing to ensure previews work during local dev
+const API_BASE = ((process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api/v1')).replace(/\/+$/, '')
 
 function toBase64Url(input: string): string {
   try {
@@ -25,42 +26,18 @@ function toBase64Url(input: string): string {
  */
 export function getProxiedUrl(url: string): string {
   if (!url) return url;
-  
-  // If it's already a local API URL, return as is
-  if (url.startsWith('/api/') || url.includes('localhost:3001')) {
+
+  // If it's already using our Next.js proxy, return as is
+  if (url.startsWith('/api/s3-proxy')) {
     return url;
   }
-  
-  // For S3 URLs, if the path contains a file name with extension treat as receipt image;
-  // otherwise fall back to external-image proxy with encoded full URL
-  if (url.includes('s3.amazonaws.com') || url.includes('amazonaws.com')) {
-    try {
-      const u = new URL(url)
-      // Expect path like "/bucket-or-empty/uploads/..." or "/uploads/..."
-      // Our URLs are https://{bucket}.s3.{region}.amazonaws.com/uploads/...
-      const key = u.pathname.replace(/^\//, '')
-      if (key) {
-        const hasExtension = /\.[a-zA-Z0-9]+$/.test(key)
-        if (hasExtension) {
-          // Tests expect plain filename, not base64
-          const filename = key.split('/').pop() as string
-          return `${API_BASE ? `${API_BASE}/files/public/receipt-image/${filename}` : `/api/v1/files/public/receipt-image/${filename}`}`
-        }
-        // No extension → treat as external to preserve path
-        const full = encodeURIComponent(url)
-        return `${API_BASE ? `${API_BASE}/files/public/external-image?url=${full}` : `/api/v1/files/public/external-image?url=${full}`}`
-      }
-    } catch {
-      // Fallback below
-    }
+
+  // For any external HTTP/HTTPS URL (including S3), proxy via Next.js route to handle CORS and content-types
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return `/api/s3-proxy?url=${encodeURIComponent(url)}`
   }
-  
-  // For other external URLs, use the external image proxy endpoint
-  if (url.startsWith('http')) {
-    return `${API_BASE ? `${API_BASE}/files/public/external-image?url=${encodeURIComponent(url)}` : `/api/v1/files/public/external-image?url=${encodeURIComponent(url)}`}`
-  }
-  
-  // Fallback: return as is but handle CORS errors gracefully
+
+  // Otherwise, return as is (local/static paths)
   return url;
 }
 

@@ -40,8 +40,8 @@ class WebSocketManager {
     this.connectionState = 'connecting'
 
     try {
-      // For now, disable WebSocket connection since backend doesn't have Socket.IO
-      console.log('WebSocket connection disabled - backend does not have Socket.IO configured')
+      // Check if backend supports Socket.IO by attempting to connect
+      // For now, disable WebSocket connection since backend doesn't have Socket.IO configured
       this.connectionState = 'disconnected'
       return
 

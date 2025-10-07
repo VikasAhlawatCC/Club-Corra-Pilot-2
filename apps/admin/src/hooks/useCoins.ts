@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { transactionApi, userApi, welcomeBonusApi } from '@/lib/api'
 import { 
   CoinSystemStats, 
@@ -14,6 +14,7 @@ export const useCoins = (skipInitialFetch = false) => {
   const [transactions, setTransactions] = useState<AdminCoinTransaction[]>([])
   const [transactionStats, setTransactionStats] = useState<TransactionStats | null>(null)
   const [paymentStats, setPaymentStats] = useState<PaymentStats | null>(null)
+  const [processingOrder, setProcessingOrder] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pagination, setPagination] = useState({
@@ -69,6 +70,22 @@ export const useCoins = (skipInitialFetch = false) => {
     }
   }, [])
 
+  // Fetch processing order for sequential transaction processing
+  const fetchProcessingOrder = useCallback(async () => {
+    try {
+      setError(null)
+      
+      const response = await transactionApi.getProcessingOrder()
+      if (response.success) {
+        setProcessingOrder(response.data)
+      } else {
+        setError('Failed to fetch processing order')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch processing order')
+    }
+  }, [])
+
   // Fetch transactions with filters
   const fetchTransactions = useCallback(async (filters: TransactionFilters = {}) => {
     try {
@@ -100,9 +117,19 @@ export const useCoins = (skipInitialFetch = false) => {
       
       const response = await transactionApi.getAllTransactions(undefined, undefined, undefined, queryParams.toString())
       if (response.success) {
-        const { data, total, totalPages } = response.data
+        const { data: responseData, total, totalPages } = response.data
+        
+        // The actual array is nested inside data.data
+        const data = responseData.data || responseData
         
         // Transform backend data to admin format
+        if (!Array.isArray(data)) {
+          console.error('Data is not an array:', data)
+          setTransactions([])
+          setPagination({ page: 1, limit: 20, total: 0, totalPages: 0 })
+          return
+        }
+        
         const adminTransactions: AdminCoinTransaction[] = data.map((tx: any) => ({
           id: tx.id,
           userId: tx.userId,
@@ -143,10 +170,10 @@ export const useCoins = (skipInitialFetch = false) => {
         
         setTransactions(adminTransactions)
         setPagination({
-          page,
-          limit,
-          total,
-          totalPages
+          page: responseData.page || page,
+          limit: responseData.limit || limit,
+          total: responseData.total || total,
+          totalPages: responseData.totalPages || totalPages
         })
       }
     } catch (err) {
@@ -196,17 +223,32 @@ export const useCoins = (skipInitialFetch = false) => {
     }
   }, [])
 
-  // Approve transaction
+  // Approve transaction (unified for all types)
   const approveTransaction = useCallback(async (transactionId: string, adminNotes?: string) => {
     try {
       setError(null)
       
-      const response = await transactionApi.approveEarnTransaction(transactionId, 'current-admin-id', adminNotes)
+      // Get the transaction to determine its type
+      const transaction = transactions.find((tx: AdminCoinTransaction) => tx.id === transactionId)
+      if (!transaction) {
+        setError('Transaction not found')
+        return false
+      }
+      
+      let response
+      if (transaction.type === 'EARN') {
+        response = await transactionApi.approveEarnTransaction(transactionId, 'current-admin-id', adminNotes)
+      } else if (transaction.type === 'REDEEM') {
+        response = await transactionApi.approveRedeemTransaction(transactionId, 'current-admin-id', adminNotes)
+      } else {
+        // For other types, use the earn endpoint as fallback
+        response = await transactionApi.approveEarnTransaction(transactionId, 'current-admin-id', adminNotes)
+      }
       
       if (response.success) {
         // Update the local transaction state instead of refetching
-        setTransactions(prevTransactions => 
-          prevTransactions.map(tx => 
+        setTransactions((prevTransactions: AdminCoinTransaction[]) => 
+          prevTransactions.map((tx: AdminCoinTransaction) => 
             tx.id === transactionId 
               ? { ...tx, status: 'APPROVED', updatedAt: new Date() }
               : tx
@@ -219,19 +261,34 @@ export const useCoins = (skipInitialFetch = false) => {
       setError(err instanceof Error ? err.message : 'Failed to approve transaction')
       return false
     }
-  }, [])
+  }, [transactions])
 
-  // Reject transaction
+  // Reject transaction (unified for all types)
   const rejectTransaction = useCallback(async (transactionId: string, adminNotes: string) => {
     try {
       setError(null)
       
-      const response = await transactionApi.rejectEarnTransaction(transactionId, 'current-admin-id', adminNotes)
+      // Get the transaction to determine its type
+      const transaction = transactions.find((tx: AdminCoinTransaction) => tx.id === transactionId)
+      if (!transaction) {
+        setError('Transaction not found')
+        return false
+      }
+      
+      let response
+      if (transaction.type === 'EARN') {
+        response = await transactionApi.rejectEarnTransaction(transactionId, 'current-admin-id', adminNotes)
+      } else if (transaction.type === 'REDEEM') {
+        response = await transactionApi.rejectRedeemTransaction(transactionId, 'current-admin-id', adminNotes)
+      } else {
+        // For other types, use the earn endpoint as fallback
+        response = await transactionApi.rejectEarnTransaction(transactionId, 'current-admin-id', adminNotes)
+      }
       
       if (response.success) {
         // Update the local transaction state instead of refetching
-        setTransactions(prevTransactions => 
-          prevTransactions.map(tx => 
+        setTransactions((prevTransactions: AdminCoinTransaction[]) => 
+          prevTransactions.map((tx: AdminCoinTransaction) => 
             tx.id === transactionId 
               ? { ...tx, status: 'REJECTED', updatedAt: new Date() }
               : tx
@@ -244,7 +301,7 @@ export const useCoins = (skipInitialFetch = false) => {
       setError(err instanceof Error ? err.message : 'Failed to reject transaction')
       return false
     }
-  }, [])
+  }, [transactions])
 
   // Process payment
   const processPayment = useCallback(async (
@@ -268,8 +325,8 @@ export const useCoins = (skipInitialFetch = false) => {
       
       if (response.success) {
         // Update the local transaction state instead of refetching
-        setTransactions(prevTransactions => 
-          prevTransactions.map(tx => 
+        setTransactions((prevTransactions: AdminCoinTransaction[]) => 
+          prevTransactions.map((tx: AdminCoinTransaction) => 
             tx.id === transactionId 
               ? { ...tx, status: 'PAID', updatedAt: new Date() }
               : tx
@@ -330,6 +387,7 @@ export const useCoins = (skipInitialFetch = false) => {
     transactions,
     transactionStats,
     paymentStats,
+    processingOrder,
     loading,
     error,
     pagination,
@@ -337,6 +395,7 @@ export const useCoins = (skipInitialFetch = false) => {
     // Actions
     fetchStats,
     fetchTransactions,
+    fetchProcessingOrder,
     fetchPaymentStats,
     getUserSummary,
     approveTransaction,

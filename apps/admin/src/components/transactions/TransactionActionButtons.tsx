@@ -93,7 +93,12 @@ export function TransactionActionButtons({
   })
 
   const canApprove = transaction.status === 'PENDING' && 
-                     (transaction.type === 'EARN' || transaction.type === 'REDEEM')
+                     (transaction.type === 'EARN' || transaction.type === 'REDEEM') &&
+                     // Prevent approval if user has negative balance and trying to redeem
+                     !(transaction.userBalance !== undefined && 
+                       transaction.userBalance < 0 && 
+                       transaction.coinsRedeemed && 
+                       transaction.coinsRedeemed > 0)
 
   const canReject = transaction.status === 'PENDING' && 
                     (transaction.type === 'EARN' || transaction.type === 'REDEEM')
@@ -136,6 +141,12 @@ export function TransactionActionButtons({
         return <CurrencyDollarIcon className="w-4 h-4" />
       case 'PAID':
         return <CheckCircleIcon className="w-4 h-4" />
+      case 'UNPAID':
+        return <ExclamationTriangleIcon className="w-4 h-4" />
+      case 'COMPLETED':
+        return <CheckCircleIcon className="w-4 h-4" />
+      case 'FAILED':
+        return <XCircleIcon className="w-4 h-4" />
       default:
         return <ExclamationTriangleIcon className="w-4 h-4" />
     }
@@ -153,6 +164,12 @@ export function TransactionActionButtons({
         return 'text-status-success bg-green-theme-secondary'
       case 'PAID':
         return 'text-silver-theme-primary bg-silver-theme-secondary'
+      case 'UNPAID':
+        return 'text-status-error bg-red-100'
+      case 'COMPLETED':
+        return 'text-status-success bg-green-theme-secondary'
+      case 'FAILED':
+        return 'text-status-error bg-red-100'
       default:
         return 'text-gray-600 bg-gray-100'
     }
@@ -189,6 +206,25 @@ export function TransactionActionButtons({
             <CheckCircleIcon className="w-3 h-3 mr-1" />
             Approve
             <div className="w-1.5 h-1.5 bg-white rounded-full ml-1 opacity-75" title="User will be notified"></div>
+          </Button>
+        )}
+        
+        {/* Show disabled approve button with warning for negative balance users */}
+        {transaction.status === 'PENDING' && 
+         (transaction.type === 'EARN' || transaction.type === 'REDEEM') &&
+         !canApprove && 
+         transaction.userBalance !== undefined && 
+         transaction.userBalance < 0 && 
+         transaction.coinsRedeemed && 
+         transaction.coinsRedeemed > 0 && (
+          <Button
+            disabled={true}
+            size="sm"
+            className="bg-gray-400 text-white cursor-not-allowed"
+            title="Cannot approve: User has negative balance. Adjust redeem amount first."
+          >
+            <ExclamationTriangleIcon className="w-3 h-3 mr-1" />
+            Approve (Disabled)
           </Button>
         )}
 

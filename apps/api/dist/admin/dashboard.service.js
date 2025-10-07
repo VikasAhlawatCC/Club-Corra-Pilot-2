@@ -190,7 +190,7 @@ let DashboardService = class DashboardService {
         };
     }
     async calculateFinancialMetrics() {
-        const [totalCoinsInCirculation, totalLiability, monthlyRevenue, averageRevenuePerUser, coinBreakageRate,] = await Promise.all([
+        const [totalCoinsInCirculation, totalLiability, totalEarned, totalRedeemed, monthlyRevenue, averageRevenuePerUser, coinBreakageRate,] = await Promise.all([
             this.coinBalanceRepository
                 .createQueryBuilder('b')
                 .select('SUM(b.balance)', 'total')
@@ -199,6 +199,16 @@ let DashboardService = class DashboardService {
             this.coinBalanceRepository
                 .createQueryBuilder('b')
                 .select('SUM(b.totalEarned)', 'total')
+                .getRawOne()
+                .then(result => parseFloat(result.total) || 0),
+            this.coinBalanceRepository
+                .createQueryBuilder('b')
+                .select('SUM(b.totalEarned)', 'total')
+                .getRawOne()
+                .then(result => parseFloat(result.total) || 0),
+            this.coinBalanceRepository
+                .createQueryBuilder('b')
+                .select('SUM(b.totalRedeemed)', 'total')
                 .getRawOne()
                 .then(result => parseFloat(result.total) || 0),
             0, // Placeholder - would need actual revenue calculation
@@ -223,6 +233,8 @@ let DashboardService = class DashboardService {
         return {
             totalCoinsInCirculation,
             totalLiability,
+            totalEarned,
+            totalRedeemed,
             monthlyRevenue,
             averageRevenuePerUser,
             coinBreakageRate,

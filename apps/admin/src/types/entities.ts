@@ -218,7 +218,7 @@ export interface CoinBalance {
   updatedAt: Date
 }
 
-export type CoinTransactionStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'PROCESSED' | 'PAID'
+export type CoinTransactionStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'PROCESSED' | 'PAID' | 'UNPAID' | 'COMPLETED' | 'FAILED'
 
 export interface CoinTransaction {
   id: string
@@ -274,7 +274,7 @@ export interface CreateAdjustmentRequest {
 }
 
 export interface UpdateTransactionStatusRequest {
-  status: 'APPROVED' | 'REJECTED' | 'PROCESSED' | 'PAID'
+  status: 'APPROVED' | 'REJECTED' | 'PROCESSED' | 'PAID' | 'UNPAID' | 'COMPLETED' | 'FAILED'
   adminNotes?: string
 }
 

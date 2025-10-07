@@ -36,6 +36,7 @@ export class UsersService {
       .leftJoinAndSelect('user.profile', 'profile')
       .leftJoinAndSelect('user.paymentDetails', 'paymentDetails')
       .leftJoinAndSelect('user.authProviders', 'authProviders')
+      .leftJoinAndSelect('user.coinBalance', 'coinBalance')
       .orderBy('user.createdAt', 'DESC')
       .skip(skip)
       .take(limit);
@@ -61,17 +62,15 @@ export class UsersService {
     // Add coin balance information to each user
     const usersWithCoins = await Promise.all(
       users.map(async (user) => {
-        const coinBalance = await this.coinBalanceRepository.findOne({
-          where: { user: { id: user.id } },
-        });
-        
         const totalTransactions = await this.coinTransactionRepository.count({
           where: { user: { id: user.id } },
         });
 
         return {
           ...user,
-          totalCoins: coinBalance ? parseFloat(coinBalance.balance.toString()) : 0,
+          totalCoins: user.coinBalance ? parseFloat(user.coinBalance.balance.toString()) : 0,
+          totalEarned: user.coinBalance ? parseFloat(user.coinBalance.totalEarned.toString()) : 0,
+          totalRedeemed: user.coinBalance ? parseFloat(user.coinBalance.totalRedeemed.toString()) : 0,
           totalTransactions,
         };
       })
@@ -89,7 +88,7 @@ export class UsersService {
   async findById(id: string): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { id },
-      relations: ['profile', 'paymentDetails', 'authProviders'],
+      relations: ['profile', 'paymentDetails', 'authProviders', 'coinBalance'],
     });
 
     if (!user) {
@@ -419,9 +418,9 @@ export class UsersService {
 
     // Create coin balance
     const coinBalance = this.coinBalanceRepository.create({
-      balance: '0',
-      totalEarned: '0',
-      totalRedeemed: '0',
+      balance: 0,
+      totalEarned: 0,
+      totalRedeemed: 0,
       user: { id: savedUser.id },
     });
 
@@ -441,15 +440,15 @@ export class UsersService {
     if (!coinBalance) {
       // Create coin balance if it doesn't exist
       coinBalance = this.coinBalanceRepository.create({
-        balance: '0',
-        totalEarned: '0',
-        totalRedeemed: '0',
+        balance: 0,
+        totalEarned: 0,
+        totalRedeemed: 0,
         user: { id: userId },
       });
       coinBalance = await this.coinBalanceRepository.save(coinBalance);
     }
 
-    const oldBalance = parseInt(coinBalance.balance);
+    const oldBalance = coinBalance.balance;
     let newBalance: number;
 
     if (adjustment.newBalance !== undefined) {
@@ -461,7 +460,7 @@ export class UsersService {
     }
 
     // Update coin balance
-    coinBalance.balance = newBalance.toString();
+    coinBalance.balance = newBalance;
     await this.coinBalanceRepository.save(coinBalance);
 
     // Create transaction record

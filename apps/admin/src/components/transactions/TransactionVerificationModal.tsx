@@ -59,12 +59,16 @@ interface UserDetails {
     mobileNumber?: string
     upiId?: string
   }
+  coinBalance?: number
+  totalEarned?: number
+  totalRedeemed?: number
 }
 
 interface PendingRequest {
   id: string
   type: 'EARN' | 'REDEEM'
-  amount: number // Coins to be earned/redeemed
+  coinsEarned: number
+  coinsRedeemed: number
   billAmount: number
   billDate: Date
   receiptUrl?: string
@@ -124,7 +128,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
   // Define currentRequest early to avoid declaration order issues
   const currentRequest = useMemo(() => {
     // Filter to only include truly pending transactions
-    const filteredPendingRequestsLocal = pendingRequests.filter(req => req.status === 'PENDING')
+    const filteredPendingRequestsLocal = pendingRequests.filter((req: PendingRequest) => req.status === 'PENDING')
     const fromList = filteredPendingRequestsLocal[currentRequestIndex] || filteredPendingRequestsLocal[0]
     if (fromList) return fromList
     // Fallback to the initially selected transaction until data loads
@@ -132,7 +136,8 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
       return {
         id: transaction.id,
         type: transaction.type,
-        amount: transaction.amount || transaction.coinsEarned || transaction.coinsRedeemed || 0, // Coins to be earned/redeemed
+        coinsEarned: transaction.coinsEarned || 0, // Coins to be earned/redeemed
+        coinsRedeemed: transaction.coinsRedeemed || 0, // Coins to be earned/redeemed
         billAmount: transaction.billAmount,
         billDate: transaction.billDate as any,
         receiptUrl: (transaction as any).receiptUrl,
@@ -146,7 +151,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
 
   // Also filter the pendingRequests array to only include PENDING transactions
   const filteredPendingRequests = useMemo(() => 
-    pendingRequests.filter(req => req.status === 'PENDING')
+    pendingRequests.filter((req: PendingRequest) => req.status === 'PENDING')
   , [pendingRequests])
 
   // Update currentRequestIndex if it's now out of bounds after filtering
@@ -199,7 +204,9 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
     setIsLoadingUserData(true)
     setError(null)
     try {
+      console.log('Fetching user verification data for userId:', userId)
       const response = await transactionApi.getUserVerificationData(userId)
+      console.log('User verification data response:', response)
       if (response?.success) {
         // Primary: use consolidated verification data
         const user = response.data?.user
@@ -214,7 +221,8 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
           .map((req: any) => ({
             id: req.id,
             type: req.type,
-            amount: req.amount || req.coinsEarned || req.coinsRedeemed || 0, // Coins to be earned/redeemed
+            coinsEarned: req.coinsEarned || 0,
+            coinsRedeemed: req.coinsRedeemed || 0,
             billAmount: req.billAmount,
             billDate: req.billDate,
             receiptUrl: req.receiptUrl,
@@ -237,7 +245,8 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
                 .map((req: any) => ({
                   id: req.id,
                   type: req.type,
-                  amount: req.amount || req.coinsEarned || req.coinsRedeemed || 0, // Coins to be earned/redeemed
+                  coinsEarned: req.coinsEarned || 0,
+                  coinsRedeemed: req.coinsRedeemed || 0,
                   billAmount: req.billAmount,
                   billDate: req.billDate,
                   receiptUrl: req.receiptUrl,
@@ -251,12 +260,13 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
               setCurrentRequestIndex(Math.max(0, currentIndex >= 0 ? currentIndex : 0))
             } else {
               setPendingRequests([])
-              setError('Failed to fetch user pending requests')
+              setError(`Failed to fetch user pending requests: ${pendingResp?.message || 'Unknown error'}`)
             }
           } catch (pendingError) {
             console.error('Error fetching user pending requests:', pendingError)
             setPendingRequests([])
-            setError('Failed to fetch user pending requests')
+            const pendingErrorMessage = pendingError instanceof Error ? pendingError.message : 'Unknown error'
+            setError(`Failed to fetch user pending requests: ${pendingErrorMessage}`)
           }
         } else {
           setPendingRequests(pendingList)
@@ -264,11 +274,20 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
           setCurrentRequestIndex(Math.max(0, currentIndex >= 0 ? currentIndex : 0))
         }
       } else {
-        setError('Failed to load user verification data')
+        setError(`Failed to load user verification data: ${response?.message || 'Unknown error'}`)
       }
     } catch (error) {
       console.error('Error fetching user verification data:', error)
-      setError('Failed to load user data. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      
+      // Check if it's an authentication error
+      if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+        setError('Authentication required. Please log in again to continue.')
+      } else if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+        setError('User data not found. The user may not exist or you may not have permission to view their data.')
+      } else {
+        setError(`Failed to load user data: ${errorMessage}`)
+      }
       
       // Fallback: try to fetch user details separately
       try {
@@ -279,7 +298,12 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
         }
       } catch (userError) {
         console.error('Error fetching user details:', userError)
-        setError('Unable to load user information. Please refresh and try again.')
+        const userErrorMessage = userError instanceof Error ? userError.message : 'Unknown error'
+        if (userErrorMessage.includes('401') || userErrorMessage.includes('Unauthorized')) {
+          setError('Authentication required. Please log in again to continue.')
+        } else {
+          setError(`Unable to load user information: ${userErrorMessage}. Please refresh and try again.`)
+        }
       }
     } finally {
       setIsLoadingUserData(false)
@@ -288,7 +312,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
   }
 
   const handleVerificationChange = useCallback((field: keyof VerificationFormData, value: any) => {
-    setVerificationData(prev => ({
+    setVerificationData((prev: VerificationFormData) => ({
       ...prev,
       [field]: value
     }))
@@ -298,6 +322,11 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
       setError(null)
     }
   }, [error])
+
+  const isOldestRequest = useMemo(() => {
+    if (!currentRequest || filteredPendingRequests.length === 0) return false;
+    return filteredPendingRequests[0].id === currentRequest.id;
+  }, [currentRequest, filteredPendingRequests]);
 
 
 
@@ -342,9 +371,9 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
 
   const handleZoom = useCallback((direction: 'in' | 'out') => {
     if (direction === 'in') {
-      setImageScale(prev => Math.min(prev * 1.2, 3))
+      setImageScale((prev: number) => Math.min(prev * 1.2, 3))
     } else {
-      setImageScale(prev => Math.max(prev / 1.2, 0.5))
+      setImageScale((prev: number) => Math.max(prev / 1.2, 0.5))
     }
   }, [])
 
@@ -353,6 +382,12 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
   }, [])
 
   const handleApprove = useCallback(async () => {
+    // Check if this is the oldest pending request
+    if (!isOldestRequest) {
+      setError('You must process the oldest pending request for this user first. Use Alt + ← / Alt + → to navigate to the oldest pending request.')
+      return
+    }
+    
     // Triple-check that we're approving the correct transaction
     if (!currentRequest || !verificationData.verificationConfirmed || currentRequest.status !== 'PENDING') {
       setError('Cannot approve this transaction. Only pending transactions can be approved.')
@@ -360,7 +395,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
     }
     
     // Additional validation: ensure this transaction is in the filtered pending list
-    const isInPendingList = filteredPendingRequests.some(req => req.id === currentRequest.id)
+    const isInPendingList = filteredPendingRequests.some((req: PendingRequest) => req.id === currentRequest.id)
     if (!isInPendingList) {
       setError('This transaction is no longer pending and cannot be approved.')
       return
@@ -372,7 +407,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
     try {
       // Ensure observedAmount is a number and convert if necessary
       const observedAmount = typeof verificationData.observedAmount === 'string' 
-        ? parseFloat(verificationData.observedAmount) || 0 
+        ? parseInt(verificationData.observedAmount.toString()) || 0 
         : verificationData.observedAmount
 
       // Validate form data using Zod schema with proper type conversion
@@ -389,10 +424,10 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
         await onApprove(currentRequest.id, { adminNotes: validatedData.adminNotes, type: currentRequest.type })
       }
       // Update local state to reflect approval and auto-advance to next pending request
-      setPendingRequests(prev => prev.map(req => req.id === currentRequest.id ? { ...req, status: 'APPROVED' } : req))
+      setPendingRequests((prev: PendingRequest[]) => prev.map((req: PendingRequest) => req.id === currentRequest.id ? { ...req, status: 'APPROVED' } : req))
       // Auto-advance to next pending request if available, otherwise close
       setTimeout(() => {
-        const refreshed = pendingRequestsRef.current.filter(req => req.status === 'PENDING')
+        const refreshed = pendingRequestsRef.current.filter((req: PendingRequest) => req.status === 'PENDING')
         if (refreshed.length === 0) {
           onCloseRef.current()
         } else {
@@ -431,7 +466,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
     } finally {
       setIsSubmitting(false)
     }
-  }, [verificationData, onApprove, currentRequest?.id, currentRequest?.type, transaction, filteredPendingRequests])
+  }, [verificationData, onApprove, currentRequest?.id, currentRequest?.type, transaction, filteredPendingRequests, isOldestRequest])
 
   const handleReject = useCallback(async () => {
     // Triple-check that we're rejecting the correct transaction
@@ -443,10 +478,18 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
     if (!verificationData.rejectionNote?.trim()) return
     
     // Additional validation: ensure this transaction is in the filtered pending list
-    const isInPendingList = filteredPendingRequests.some(req => req.id === currentRequest.id)
+    const isInPendingList = filteredPendingRequests.some((req: PendingRequest) => req.id === currentRequest.id)
     if (!isInPendingList) {
       setError('This transaction is no longer pending and cannot be rejected.')
       return
+    }
+
+    const confirmed = window.confirm(
+      'Are you sure you want to reject this transaction? This action cannot be undone.'
+    );
+
+    if (!confirmed) {
+      return;
     }
     
     setIsSubmitting(true)
@@ -462,9 +505,9 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
         )
       }
       // Update local state to reflect rejection and auto-advance to next pending request
-      setPendingRequests(prev => prev.map(req => req.id === currentRequest.id ? { ...req, status: 'REJECTED' } : req))
+      setPendingRequests((prev: PendingRequest[]) => prev.map((req: PendingRequest) => req.id === currentRequest.id ? { ...req, status: 'REJECTED' } : req))
       setTimeout(() => {
-        const refreshed = pendingRequestsRef.current.filter(req => req.status === 'PENDING')
+        const refreshed = pendingRequestsRef.current.filter((req: PendingRequest) => req.status === 'PENDING')
         if (refreshed.length === 0) {
           onCloseRef.current()
         } else {
@@ -491,10 +534,10 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
       await onApproveAndPay(currentRequest.id, verificationData)
       
       // Update local state and auto-advance similar to approve
-      setPendingRequests(prev => prev.map(req => req.id === currentRequest.id ? { ...req, status: 'APPROVED' } : req))
+      setPendingRequests((prev: PendingRequest[]) => prev.map((req: PendingRequest) => req.id === currentRequest.id ? { ...req, status: 'APPROVED' } : req))
       setShowSuccessMessage(true)
       setTimeout(() => {
-        const refreshed = pendingRequestsRef.current.filter(req => req.status === 'PENDING')
+        const refreshed = pendingRequestsRef.current.filter((req: PendingRequest) => req.status === 'PENDING')
         if (refreshed.length === 0) {
           onCloseRef.current()
         } else {
@@ -510,7 +553,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
     } finally {
       setIsSubmitting(false)
     }
-  }, [onApproveAndPay, verificationData.verificationConfirmed, currentRequest?.id])
+  }, [onApproveAndPay, verificationData.verificationConfirmed, currentRequest?.id, isOldestRequest])
 
   const hasMultipleRequests = useMemo(() => 
     filteredPendingRequests.length > 1
@@ -546,26 +589,37 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
       return false
     }
     
-    // Check if this is a redeem request and has pending earn requests
+    // Check for sufficient balance for redeem transactions
     if (currentRequest.type === 'REDEEM') {
-      const hasPendingEarnRequests = filteredPendingRequests.some(
-        req => req.type === 'EARN' && req.status === 'PENDING' && req.id !== currentRequest.id
-      )
-      if (hasPendingEarnRequests) {
-        return false
+      const balance = userDetails?.coinBalance ?? 0;
+      const redeemedAmount = currentRequest.coinsRedeemed || 0;
+      if (balance < redeemedAmount) {
+        return false;
       }
     }
     
     return verificationData.verificationConfirmed && 
            verificationData.observedAmount > 0 &&
            verificationData.receiptDate
-  }, [currentRequest?.id, currentRequest?.type, currentRequest?.status, filteredPendingRequests, verificationData.verificationConfirmed, verificationData.observedAmount, verificationData.receiptDate])
+  }, [currentRequest?.id, currentRequest?.type, currentRequest?.status, verificationData.verificationConfirmed, verificationData.observedAmount, verificationData.receiptDate, userDetails?.coinBalance])
 
   // Enhanced approval button tooltip and feedback
   const getApprovalButtonTooltip = useMemo(() => {
+    if (!isOldestRequest) {
+      return 'Process the oldest pending request first (use Alt + ← / Alt + → to navigate).';
+    }
+
+    if (currentRequest?.type === 'REDEEM') {
+      const balance = userDetails?.coinBalance ?? 0;
+      const redeemedAmount = currentRequest.coinsRedeemed || 0;
+      if (balance < redeemedAmount) {
+        return `Insufficient balance. User has ${balance} coins but needs ${redeemedAmount}.`;
+      }
+    }
+
     if (verificationData.verificationConfirmed && verificationData.observedAmount > 0 && verificationData.receiptDate) {
       if (currentRequest?.type === 'REDEEM') {
-        const hasPendingEarnRequests = filteredPendingRequests.some(req => req.type === 'EARN' && req.status === 'PENDING' && req.id !== currentRequest.id)
+        const hasPendingEarnRequests = filteredPendingRequests.some((req: PendingRequest) => req.type === 'EARN' && req.status === 'PENDING' && req.id !== currentRequest.id)
         if (hasPendingEarnRequests) {
           return 'Cannot approve: User has pending earn requests that must be processed first'
         }
@@ -573,14 +627,15 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
       return 'Enter observed amount and confirm verification'
     }
     return 'Enter observed amount and confirm verification'
-  }, [verificationData, currentRequest?.type, filteredPendingRequests])
+  }, [verificationData, currentRequest?.type, filteredPendingRequests, isOldestRequest, userDetails?.coinBalance])
 
   const canReject = useMemo(() => {
     // Only allow rejection for PENDING transactions
     if (!currentRequest || currentRequest.status !== 'PENDING') {
       return false
     }
-    
+
+    // Allow rejection for any pending request, not just the oldest
     return (verificationData.rejectionNote || '').trim().length > 0
   }, [currentRequest?.id, currentRequest?.status, verificationData.rejectionNote])
 
@@ -603,6 +658,12 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
       timeZoneName: 'short'
     })
   }, [])
+
+  const formatInteger = useCallback((amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      maximumFractionDigits: 0,
+    }).format(amount);
+  }, []);
 
 
 
@@ -699,7 +760,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
     }
     
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, hasMultipleRequests, showKeyboardFeedback]) // Added hasMultipleRequests dependency
+  }, [isOpen, hasMultipleRequests, showKeyboardFeedback, isOldestRequest]) // Added isOldestRequest dependency
 
   // Ensure modal scaffold renders for tests; if no transaction yet, render skeleton within modal frame
   if (!isOpen) {
@@ -812,8 +873,10 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
             )}
             
             <div className="flex flex-col gap-2 text-center sm:text-left space-y-1">
-              <h2 id="verification-modal-title" className="text-lg leading-none font-semibold">Verify receipt</h2>
-              <p id="verification-modal-description" className="text-muted-foreground text-sm">Compare the attached bill with the claim before deciding.</p>
+              <h2 id="verification-modal-title" className="text-lg leading-none font-semibold">Verify Receipt</h2>
+              <p id="verification-modal-description" className="text-muted-foreground text-sm">
+                Compare the attached bill with the claim before deciding. Ensure the receipt is legible and the amount matches the claim.
+              </p>
               
               {/* User Request Navigation Slider */}
               {hasMultipleRequests && (
@@ -833,6 +896,16 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
                   
                   <div className="flex items-center gap-1 text-sm text-muted-foreground" aria-live="polite" aria-atomic="true">
                     <span>Request {currentRequestIndex + 1} of {filteredPendingRequests.length}</span>
+                    {!isOldestRequest && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-yellow-800 bg-yellow-100">
+                        Not Oldest
+                      </span>
+                    )}
+                    {isOldestRequest && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-blue-800 bg-blue-100">
+                        Ready for Processing
+                      </span>
+                    )}
                     {currentRequest?.type && (
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                         currentRequest.type === 'EARN' ? 'text-green-600 bg-green-100' : 'text-orange-600 bg-orange-100'
@@ -880,23 +953,56 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
 
           {/* Error Display */}
           {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex items-start">
-                <div className="flex-shrink-0">
-                  <XCircleIcon className="h-5 w-5 text-red-400" aria-hidden="true" />
-                </div>
-                <div className="ml-3 flex-1">
-                  <h3 className="text-sm font-medium text-red-800">Action Required</h3>
-                  <p className="mt-1 text-sm text-red-700">{error}</p>
-                  <div className="mt-2">
-                    <button
-                      type="button"
-                      onClick={() => setError(null)}
-                      className="text-sm text-red-600 hover:text-red-500 font-medium"
-                      aria-label="Dismiss error message"
-                    >
-                      Dismiss
-                    </button>
+            <div className="px-6 mb-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <XCircleIcon className="h-5 w-5 text-red-400" aria-hidden="true" />
+                  </div>
+                  <div className="ml-3 flex-1">
+                    <h3 className="text-sm font-medium text-red-800">Action Required</h3>
+                    <p className="mt-1 text-sm text-red-700">
+                      {error.includes('Failed to fetch user pending requests') 
+                        ? 'Unable to load user transaction data. Please check your connection and try refreshing the page.'
+                        : error
+                      }
+                    </p>
+                    <div className="mt-3 flex gap-2">
+                      {error.includes('Authentication required') ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            window.location.href = '/login';
+                          }}
+                          className="text-sm bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 font-medium"
+                          aria-label="Go to login page"
+                        >
+                          Go to Login
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setError(null);
+                            if (transaction?.userId) {
+                              fetchUserVerificationData(transaction.userId);
+                            }
+                          }}
+                          className="text-sm text-red-600 hover:text-red-500 font-medium underline"
+                          aria-label="Retry loading user data"
+                        >
+                          Retry
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setError(null)}
+                        className="text-sm text-red-600 hover:text-red-500 font-medium"
+                        aria-label="Dismiss error message"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -997,17 +1103,19 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
                       )}
                       
                       {imageLoadError ? (
-                        <div className="text-center text-gray-500">
-                          <div className="w-16 h-16 mx-auto mb-2 bg-gray-200 rounded-full flex items-center justify-center">
+                        <div className="text-center text-gray-500 p-4">
+                          <div className="w-16 h-16 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
                             <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                             </svg>
                           </div>
-                          <p className="text-sm mb-2">Image failed to load</p>
-                          <p className="text-xs text-gray-400 mb-3">This may be due to CORS restrictions</p>
+                          <p className="text-sm font-medium mb-1">Receipt image failed to load</p>
+                          <p className="text-xs text-gray-400 mb-4">
+                            This may be due to CORS restrictions or network issues. Try the options below.
+                          </p>
                           <div className="space-y-2">
                             <button 
-                               className="block w-full text-xs text-status-info hover:text-status-info/80 underline"
+                               className="block w-full px-3 py-2 text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-md border border-blue-200 transition-colors"
                                onClick={() => {
                                  if (currentRequest.receiptUrl) {
                                    window.open(getProxiedUrl(currentRequest.receiptUrl), '_blank')
@@ -1018,22 +1126,45 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
                                Open in new tab
                              </button>
                              <button 
-                               className="block w-full text-xs text-gray-600 hover:text-gray-800 underline"
+                               className="block w-full px-3 py-2 text-xs bg-gray-50 text-gray-700 hover:bg-gray-100 rounded-md border border-gray-200 transition-colors"
                                onClick={() => {
                                  setImageLoadError(false)
                                  setIsImageLoading(true)
-                                 // Force image reload by adding timestamp
+                                 // Force reload by adding timestamp
                                  if (currentRequest.receiptUrl) {
-                                   const img = document.querySelector(`img[alt*="${currentRequest.id}"]`) as HTMLImageElement
-                                   if (img) {
-                                     img.src = `${getProxiedUrl(currentRequest.receiptUrl)}?t=${Date.now()}`
+                                   const url = getProxiedUrl(currentRequest.receiptUrl)
+                                   const isPdf = currentRequest.receiptUrl.toLowerCase().includes('.pdf')
+                                   if (isPdf) {
+                                     // For PDFs, reload the object
+                                     const object = document.querySelector('object[data*="' + currentRequest.id + '"]') as HTMLObjectElement
+                                     if (object) {
+                                       object.data = `${url}?t=${Date.now()}`
+                                     }
+                                   } else {
+                                     // For images, reload the img
+                                     const img = document.querySelector(`img[alt*="${currentRequest.id}"]`) as HTMLImageElement
+                                     if (img) {
+                                       img.src = `${url}?t=${Date.now()}`
+                                     }
                                    }
                                  }
                                }}
                                disabled={!currentRequest.receiptUrl}
                              >
-                               Retry
+                               Retry loading
                              </button>
+                             {currentRequest.receiptUrl && (
+                               <button 
+                                 className="block w-full px-3 py-2 text-xs bg-green-50 text-green-700 hover:bg-green-100 rounded-md border border-green-200 transition-colors"
+                                 onClick={() => {
+                                   if (currentRequest.receiptUrl) {
+                                     window.open(currentRequest.receiptUrl, '_blank')
+                                   }
+                                 }}
+                               >
+                                 Try direct link
+                               </button>
+                             )}
                           </div>
                         </div>
                       ) : (
@@ -1041,15 +1172,37 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
                           const url = currentRequest.receiptUrl as string
                           const proxied = getProxiedUrl(url)
                           const isPdf = url.toLowerCase().includes('.pdf')
+                          
                           if (isPdf) {
                             return (
-                              <object data={proxied} type="application/pdf" className="w-full h-full">
-                                <p className="p-3 text-sm text-gray-500">
-                                  Preview not available. <a href={proxied} target="_blank" className="text-status-info underline" rel="noreferrer">Open file</a>
-                                </p>
+                              <object 
+                                data={proxied} 
+                                type="application/pdf" 
+                                className="w-full h-full"
+                                onLoad={() => {
+                                  setIsImageLoading(false)
+                                  setImageLoadError(false)
+                                }}
+                                onError={() => {
+                                  setIsImageLoading(false)
+                                  setImageLoadError(true)
+                                }}
+                              >
+                                <div className="p-3 text-sm text-gray-500 text-center">
+                                  <p className="mb-2">PDF preview not available in this browser.</p>
+                                  <a 
+                                    href={proxied} 
+                                    target="_blank" 
+                                    className="text-status-info underline hover:text-status-info/80"
+                                    rel="noreferrer"
+                                  >
+                                    Open PDF in new tab
+                                  </a>
+                                </div>
                               </object>
                             )
                           }
+                          
                           return (
                             <img 
                               alt={`Receipt image ${currentImageIndex + 1} for request ${currentRequest.id}`}
@@ -1057,7 +1210,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
                               src={proxied}
                               loading="lazy"
                               style={{ 
-                                transform: `scale(${imageScale})` // Removed imageRotation from style
+                                transform: `scale(${imageScale})`
                               }}
                               onLoad={() => {
                                 setIsImageLoading(false)
@@ -1116,6 +1269,13 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
                             : userDetails.name || `User ${userDetails.id.slice(0, 8)}...`
                           }
                         </div>
+                        <div className="text-muted-foreground font-semibold">
+                          Balance: {formatInteger(userDetails.coinBalance ?? 0)} coins
+                        </div>
+                        <div className="text-muted-foreground text-sm space-y-1">
+                          <div>Total Earned: {formatInteger(userDetails.totalEarned ?? 0)} coins</div>
+                          <div>Total Redeemed: {formatInteger(userDetails.totalRedeemed ?? 0)} coins</div>
+                        </div>
                         <div className="text-muted-foreground space-y-1">
                           {userDetails.email && (
                             <div className="flex items-center gap-1">
@@ -1147,24 +1307,39 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
                 {/* Claim Details */}
                 <div className="grid gap-2">
                   <label className="flex items-center gap-2 text-sm leading-none font-medium select-none">
-                    Claim
+                    Claim Details
                   </label>
-                  <div className="flex items-center justify-between rounded-md border px-3 py-2" aria-live="polite">
-                    <div className="text-sm text-muted-foreground">
-                      {currentRequest?.type === 'EARN' ? 'Coins to earn' : 'Coins to redeem'}
+                  <div className="rounded-md border p-3 space-y-2" aria-live="polite">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-muted-foreground">Bill Amount</div>
+                      <div className="font-medium">{formatCurrency(currentRequest?.billAmount || 0)}</div>
                     </div>
-                    <div className="font-medium">
-                      {currentRequest?.type === 'EARN' ? (
-                        <span className="text-green-600">+{currentRequest?.amount || 0} coins</span>
-                      ) : (
-                        <span className="text-orange-600">-{Math.abs(currentRequest?.amount || 0)} coins</span>
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-muted-foreground">Coins Earned</div>
+                      <div className="font-medium text-green-600">
+                        +{formatInteger(currentRequest?.coinsEarned || 0)}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-muted-foreground">Coins Redeemed</div>
+                      <div className="font-medium text-orange-600">
+                        -{formatInteger(currentRequest?.coinsRedeemed || 0)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {currentRequest?.type === 'REDEEM' && userDetails?.coinBalance !== undefined && (
+                    <div className={`mt-2 text-xs ${
+                      (userDetails.coinBalance ?? 0) < (currentRequest.coinsRedeemed || 0)
+                        ? 'text-red-600 font-bold'
+                        : 'text-muted-foreground'
+                    }`}>
+                      User balance: {formatInteger(userDetails.coinBalance ?? 0)} coins.
+                      {(userDetails.coinBalance ?? 0) < (currentRequest.coinsRedeemed || 0) && (
+                        <span> Insufficient funds for this redemption.</span>
                       )}
                     </div>
-                  </div>
-                  {/* Show bill amount as additional info */}
-                  <div className="text-xs text-muted-foreground">
-                    Bill amount: ₹{currentRequest?.billAmount || 0}
-                  </div>
+                  )}
                 </div>
 
                 {/* Observed Amount Input */}
@@ -1187,11 +1362,11 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
                         required
                         type="number"
                         value={verificationData.observedAmount}
-                        onChange={(e) => handleVerificationChange('observedAmount', parseFloat(e.target.value) || 0)}
+                        onChange={(e) => handleVerificationChange('observedAmount', Math.round(Number(e.target.value)) || 0)}
                       />
                     </div>
                     <div id="observed-help" className="text-xs text-muted-foreground">
-                      Enter the final payable amount seen on the receipt
+                      Enter the final payable amount seen on the receipt (whole numbers only).
                     </div>
                   </div>
                 </div>
@@ -1236,8 +1411,14 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
                     <span className="text-sm">I have verified the receipt details</span>
                   </label>
                   <p className="text-xs text-muted-foreground">
-                    By confirming, you acknowledge that the bill is legible and the observed amount matches the receipt.
+                    By confirming, you acknowledge that:
                   </p>
+                  <ul className="text-xs text-muted-foreground ml-4 space-y-1">
+                    <li>• The receipt is legible and clearly shows the transaction details</li>
+                    <li>• The observed amount matches the claimed amount</li>
+                    <li>• The receipt date is accurate</li>
+                    <li>• The transaction appears to be legitimate</li>
+                  </ul>
                   
                   {/* Redeem-specific approval requirements message */}
                   {currentRequest?.type === 'REDEEM' && (
@@ -1255,7 +1436,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
                             <li>User must have sufficient coin balance</li>
                             <li>Receipt verification must be completed</li>
                           </ul>
-                          {filteredPendingRequests.some(req => req.type === 'EARN' && req.status === 'PENDING') && (
+                          {filteredPendingRequests.some((req: PendingRequest) => req.type === 'EARN' && req.status === 'PENDING') && (
                             <p className="mt-2 font-medium text-orange-700">
                               ⚠️ Cannot approve: User has pending earn requests
                             </p>
@@ -1310,6 +1491,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
                   disabled={!canReject || isSubmitting}
                   className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive hover:bg-accent dark:hover:bg-accent/50 h-9 px-4 py-2 has-[>svg]:px-3 gap-2 text-red-600 hover:text-red-700 sm:mr-auto disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label="Reject"
+                  title="Reject this transaction"
                 >
                   {isSubmitting ? (
                     <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
@@ -1324,7 +1506,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
                   disabled={!canApprove || isSubmitting}
                   className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 h-9 px-4 py-2 has-[>svg]:px-3 gap-2 bg-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label="Approve"
-                  title="Enter observed amount and confirm verification"
+                  title={getApprovalButtonTooltip}
                 >
                   {isSubmitting ? (
                     <div className="w-4 h-4 border-2 border-status-info border-t-transparent rounded-full animate-spin" />
@@ -1340,7 +1522,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
                     disabled={!canApprove || isSubmitting}
                     className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3 gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label="Approve and proceed to payment"
-                    title="Enter observed amount matching the claim and confirm verification"
+                    title={getApprovalButtonTooltip}
                   >
                     {isSubmitting ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

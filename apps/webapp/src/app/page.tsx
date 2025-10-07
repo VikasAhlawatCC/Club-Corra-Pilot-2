@@ -1,10 +1,15 @@
-export default function HomePage() {
+import Hero from "@/components/Hero";
+import HowItWorks from "@/components/HowItWorks";
+import SelectedBrands from "@/components/SelectedBrands";
+
+export default function Home() {
   return (
-    <main style={{ padding: 24 }}>
-      <h1>Club Corra Webapp</h1>
-      <p>This is a placeholder for the future webapp.</p>
-    </main>
-  )
+    <div className="font-sans">
+      <main className="relative overflow-hidden bg-gradient-to-br from-green-50 via-white to-blue-50">
+        <Hero />
+        <SelectedBrands />
+        <HowItWorks />
+      </main>
+    </div>
+  );
 }
-
-

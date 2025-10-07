@@ -15,8 +15,6 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const pathname = usePathname()
   const isLoginRoute = pathname === '/login'
 
-  // Temporary debugging
-  console.log('AuthGuard Debug:', { pathname, isLoginRoute, isLoading, isAuthenticated })
 
   useEffect(() => {
     if (!isLoading && isAuthenticated && isLoginRoute) {
@@ -28,7 +26,6 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   // PRIORITY 1: Always render the login page immediately without any gating
   if (isLoginRoute) {
-    console.log('AuthGuard: Rendering login page, isAuthenticated:', isAuthenticated)
     if (isAuthenticated) {
       return null // Will redirect to dashboard
     }
@@ -37,7 +34,6 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   // PRIORITY 2: Show loading skeleton only for protected routes that are not login
   if (isLoading && !isLoginRoute) {
-    console.log('AuthGuard: Showing loading skeleton')
     return (
       <div role="main" className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-soft-gold">
         <div className="space-y-4 w-full max-w-md">
@@ -51,11 +47,9 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   // PRIORITY 3: Handle other routes based on authentication status
   if (!isAuthenticated && !isLoginRoute && pathname !== '/') {
-    console.log('AuthGuard: Not authenticated, not on login or home, returning null')
     return null // Will redirect to login
   }
 
   // PRIORITY 4: Render protected content
-  console.log('AuthGuard: Rendering protected content')
   return <>{children}</>
 }

@@ -100,7 +100,7 @@ export default function CoinsPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-lg font-medium text-gray-900">Total Coins in Circulation</h3>
           <p className="text-3xl font-bold text-status-info">
@@ -123,6 +123,45 @@ export default function CoinsPage() {
             {stats ? stats.pendingRedemptions.toLocaleString() : '...'}
           </p>
           <p className="text-sm text-gray-500">Awaiting approval</p>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-lg font-medium text-gray-900">Total Transactions</h3>
+          <p className="text-3xl font-bold text-blue-600">
+            {transactions ? transactions.length.toLocaleString() : '...'}
+          </p>
+          <p className="text-sm text-gray-500">All time</p>
+        </div>
+      </div>
+
+      {/* Additional Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-lg font-medium text-gray-900">Recent Activity</h3>
+          <p className="text-3xl font-bold text-purple-600">
+            {transactions ? transactions.filter(tx => {
+              const txDate = new Date(tx.createdAt)
+              const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+              return txDate > oneDayAgo
+            }).length : '...'}
+          </p>
+          <p className="text-sm text-gray-500">Transactions in last 24h</p>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-lg font-medium text-gray-900">Approved Transactions</h3>
+          <p className="text-3xl font-bold text-green-600">
+            {transactions ? transactions.filter(tx => tx.status === 'APPROVED').length : '...'}
+          </p>
+          <p className="text-sm text-gray-500">Successfully processed</p>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-lg font-medium text-gray-900">Pending Transactions</h3>
+          <p className="text-3xl font-bold text-yellow-600">
+            {transactions ? transactions.filter(tx => tx.status === 'PENDING').length : '...'}
+          </p>
+          <p className="text-sm text-gray-500">Awaiting review</p>
         </div>
       </div>
       

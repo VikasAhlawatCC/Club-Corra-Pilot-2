@@ -21,75 +21,37 @@ let TransactionController = class TransactionController {
     constructor(coinsService) {
         this.coinsService = coinsService;
     }
-    async createRewardRequest(createRewardRequestDto, req) {
+    async getUserTransactions(req, page = '1', limit = '20') {
         const userId = req.user.id;
-        return this.coinsService.createRewardRequest(userId, createRewardRequestDto);
+        const pageNum = parseInt(page, 10) || 1;
+        const limitNum = parseInt(limit, 10) || 20;
+        return this.coinsService.getAllTransactions(pageNum, limitNum, { userId });
     }
-    async getUserTransactions(page = 1, limit = 20, status, type, brandId, req) {
+    async createRewardRequest(req, body) {
         const userId = req.user.id;
-        const filters = { status, type, brandId, userId };
-        return this.coinsService.getAllTransactions(page, limit, filters);
-    }
-    async getMyTransactions(page = 1, limit = 20, status, type, req) {
-        const userId = req.user.id;
-        const filters = { status, type, userId };
-        return this.coinsService.getAllTransactions(page, limit, filters);
-    }
-    async getTransactionById(id, req) {
-        const userId = req.user.id;
-        const transaction = await this.coinsService.getTransactionById(id);
-        if (!transaction) {
-            throw new Error('Transaction not found');
-        }
-        // Ensure user can only access their own transactions
-        if (transaction.user && transaction.user.id !== userId) {
-            throw new Error('Unauthorized access to transaction');
-        }
-        return transaction;
+        return this.coinsService.createRewardRequest(userId, body);
     }
 };
 exports.TransactionController = TransactionController;
 __decorate([
-    (0, common_1.Post)('rewards'),
-    __param(0, (0, common_1.Body)()),
-    __param(1, (0, common_1.Req)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_reward_request_dto_1.CreateRewardRequestDto, Object]),
-    __metadata("design:returntype", Promise)
-], TransactionController.prototype, "createRewardRequest", null);
-__decorate([
     (0, common_1.Get)(),
-    __param(0, (0, common_1.Query)('page')),
-    __param(1, (0, common_1.Query)('limit')),
-    __param(2, (0, common_1.Query)('status')),
-    __param(3, (0, common_1.Query)('type')),
-    __param(4, (0, common_1.Query)('brandId')),
-    __param(5, (0, common_1.Req)()),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Query)('page')),
+    __param(2, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Number, String, String, String, Object]),
+    __metadata("design:paramtypes", [Object, String, String]),
     __metadata("design:returntype", Promise)
 ], TransactionController.prototype, "getUserTransactions", null);
 __decorate([
-    (0, common_1.Get)('my'),
-    __param(0, (0, common_1.Query)('page')),
-    __param(1, (0, common_1.Query)('limit')),
-    __param(2, (0, common_1.Query)('status')),
-    __param(3, (0, common_1.Query)('type')),
-    __param(4, (0, common_1.Req)()),
+    (0, common_1.Post)('reward-request'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Number, String, String, Object]),
+    __metadata("design:paramtypes", [Object, create_reward_request_dto_1.CreateRewardRequestDto]),
     __metadata("design:returntype", Promise)
-], TransactionController.prototype, "getMyTransactions", null);
-__decorate([
-    (0, common_1.Get)(':id'),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Req)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", Promise)
-], TransactionController.prototype, "getTransactionById", null);
+], TransactionController.prototype, "createRewardRequest", null);
 exports.TransactionController = TransactionController = __decorate([
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('transactions'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __metadata("design:paramtypes", [coins_service_1.CoinsService])
 ], TransactionController);

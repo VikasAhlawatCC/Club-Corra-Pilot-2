@@ -21,7 +21,7 @@ export class UpdateCoinTransactionForRewardRequests1759783000000 implements Migr
 
     // Create enum type first (since it doesn't exist)
     await queryRunner.query(`
-      CREATE TYPE coin_transaction_status AS ENUM('PENDING', 'COMPLETED', 'FAILED', 'APPROVED', 'REJECTED', 'PROCESSED', 'PAID')
+      CREATE TYPE coin_transaction_status AS ENUM('PENDING', 'COMPLETED', 'FAILED', 'APPROVED', 'REJECTED', 'PROCESSED', 'PAID', 'UNPAID')
     `)
     
     // Remove the default value first

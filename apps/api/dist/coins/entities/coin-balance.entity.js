@@ -22,16 +22,16 @@ __decorate([
     __metadata("design:type", user_entity_1.User)
 ], CoinBalance.prototype, "user", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'bigint', default: 0 }),
-    __metadata("design:type", String)
+    (0, typeorm_1.Column)({ type: 'int', default: 0 }),
+    __metadata("design:type", Number)
 ], CoinBalance.prototype, "balance", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'bigint', default: 0 }),
-    __metadata("design:type", String)
+    (0, typeorm_1.Column)({ type: 'int', default: 0 }),
+    __metadata("design:type", Number)
 ], CoinBalance.prototype, "totalEarned", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'bigint', default: 0 }),
-    __metadata("design:type", String)
+    (0, typeorm_1.Column)({ type: 'int', default: 0 }),
+    __metadata("design:type", Number)
 ], CoinBalance.prototype, "totalRedeemed", void 0);
 exports.CoinBalance = CoinBalance = __decorate([
     (0, typeorm_1.Entity)('coin_balances')

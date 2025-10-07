@@ -43,10 +43,15 @@ async function apiRequest<T>(
   const token = getAuthToken()
   if (token) {
     config.headers = { ...config.headers, Authorization: `Bearer ${token}` }
+    console.log('API Request with token:', url, 'Token length:', token.length)
+  } else {
+    console.log('API Request without token:', url)
+    console.warn('No authentication token found. User may need to log in again.')
   }
 
   try {
     const response = await fetch(url, config)
+    console.log('API Response status:', response.status, 'for URL:', url)
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
@@ -78,16 +83,22 @@ export const transactionApi = {
       `/admin/coins/transactions${queryParams ? `?${queryParams}` : `?page=${page}&limit=${limit}`}`
     ),
 
+  // Get processing order for sequential transaction processing
+  getProcessingOrder: () =>
+    apiRequest<{ success: boolean, message: string, data: any[] }>(
+      '/admin/coins/transactions/processing-order'
+    ),
+
   // Get user pending requests for verification navigation
   getUserPendingRequests: (userId: string) =>
     apiRequest<{ success: boolean, message: string, data: { data: CoinTransaction[], total: number, page: number, limit: number, totalPages: number } }>(
-      `/admin/coins/users/${userId}/pending-requests`
+      `/admin/coins/users/${userId}/pending-transactions`
     ),
 
   // Get user details for verification form
   getUserDetails: (userId: string) =>
     apiRequest<{ success: boolean, message: string, data: { user: any } }>(
-      `/admin/coins/users/${userId}/details`
+      `/admin/users/${userId}` // Corrected path to admin/users from admin/coins/users
     ),
 
   // Get complete user verification data (user details + pending requests)
@@ -109,33 +120,43 @@ export const transactionApi = {
       `/admin/coins/users/${userId}/verification-data`
     ),
 
-  // Approve transaction (unified for all types)
-  approveTransaction: (id: string, adminNotes?: string) =>
+  // Approve earn transaction
+  approveEarnTransaction: (id: string, adminUserId: string, adminNotes?: string) =>
     apiRequest<{ success: boolean, message: string, data: { transaction: CoinTransaction } }>(
       `/admin/coins/transactions/${id}/approve`,
       {
-        method: 'POST',
-        body: JSON.stringify({ adminNotes }),
+        method: 'PUT',
+        body: JSON.stringify({ adminUserId, adminNotes }),
       }
     ),
 
-  // Reject transaction (unified for all types)
-  rejectTransaction: (id: string, reason: string, adminNotes?: string) =>
-    apiRequest<{ success: boolean, message: string, data: { transaction: CoinTransaction } }>(
+  // Reject earn transaction
+  rejectEarnTransaction: (id: string, adminUserId: string, adminNotes: string) =>
+    apiRequest<{ success: boolean, message: string, data: { transactionId: string, adminNotes: string } }>(
       `/admin/coins/transactions/${id}/reject`,
       {
-        method: 'POST',
-        body: JSON.stringify({ reason, adminNotes }),
+        method: 'PUT',
+        body: JSON.stringify({ adminUserId, adminNotes }),
       }
     ),
 
-  // Mark transaction as paid
-  markTransactionAsPaid: (id: string, transactionId: string, adminNotes?: string) =>
+  // Approve redeem transaction
+  approveRedeemTransaction: (id: string, adminUserId: string, adminNotes?: string) =>
     apiRequest<{ success: boolean, message: string, data: { transaction: CoinTransaction } }>(
-      `/admin/coins/transactions/${id}/mark-paid`,
+      `/admin/coins/transactions/${id}/approve-redeem`,
       {
-        method: 'POST',
-        body: JSON.stringify({ transactionId, adminNotes }),
+        method: 'PUT',
+        body: JSON.stringify({ adminUserId, adminNotes }),
+      }
+    ),
+
+  // Reject redeem transaction
+  rejectRedeemTransaction: (id: string, adminUserId: string, adminNotes: string) =>
+    apiRequest<{ success: boolean, message: string, data: { transaction: CoinTransaction } }>(
+      `/admin/coins/transactions/${id}/reject-redeem`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ adminUserId, adminNotes }),
       }
     ),
 

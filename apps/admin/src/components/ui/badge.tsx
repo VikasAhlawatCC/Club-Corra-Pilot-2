@@ -28,6 +28,9 @@ const badgeVariants = cva(
         "rejected": "bg-red-100 text-red-800 border-red-300",
         "processed": "bg-green-theme-secondary text-green-theme-primary border-green-theme-accent",
         "paid": "bg-silver-theme-secondary text-silver-theme-primary border-silver-theme-accent",
+        "unpaid": "bg-red-100 text-red-800 border-red-300",
+        "completed": "bg-green-theme-secondary text-green-theme-primary border-green-theme-accent",
+        "failed": "bg-red-100 text-red-800 border-red-300",
       },
     },
     defaultVariants: {

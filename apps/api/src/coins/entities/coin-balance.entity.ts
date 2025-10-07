@@ -8,14 +8,14 @@ export class CoinBalance extends BaseEntity {
   @Index('idx_coin_balance_user_id')
   user!: User
 
-  @Column({ type: 'bigint', default: 0 })
-  balance!: string
+  @Column({ type: 'int', default: 0 })
+  balance!: number
 
-  @Column({ type: 'bigint', default: 0 })
-  totalEarned!: string
+  @Column({ type: 'int', default: 0 })
+  totalEarned!: number
 
-  @Column({ type: 'bigint', default: 0 })
-  totalRedeemed!: string
+  @Column({ type: 'int', default: 0 })
+  totalRedeemed!: number
 }
 
 

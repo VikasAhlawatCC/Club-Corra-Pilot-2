@@ -7,10 +7,25 @@ import { AuthService } from './auth.service'
 import { JwtStrategy } from './jwt.strategy'
 import { Admin } from '../admin/entities/admin.entity'
 import { AdminService } from '../admin/admin.service'
+import { User } from '../users/entities/user.entity'
+import { UsersService } from '../users/users.service'
+import { UserProfile } from '../users/entities/user-profile.entity'
+import { PaymentDetails } from '../users/entities/payment-details.entity'
+import { AuthProviderLink } from '../users/entities/auth-provider.entity'
+import { CoinBalance } from '../coins/entities/coin-balance.entity'
+import { CoinTransaction } from '../coins/entities/coin-transaction.entity'
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Admin]),
+    TypeOrmModule.forFeature([
+      Admin,
+      User,
+      UserProfile,
+      PaymentDetails,
+      AuthProviderLink,
+      CoinBalance,
+      CoinTransaction,
+    ]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       useFactory: () => ({
@@ -20,7 +35,7 @@ import { AdminService } from '../admin/admin.service'
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, AdminService],
+  providers: [AuthService, JwtStrategy, AdminService, UsersService],
   exports: [AuthService],
 })
 export class AuthModule {}

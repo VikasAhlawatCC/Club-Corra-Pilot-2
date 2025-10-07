@@ -1,11 +1,11 @@
-import { IsUUID, IsNumber, IsDateString, IsUrl, IsOptional, IsString, IsInt, Min, Max, MaxLength } from 'class-validator'
+import { IsUUID, IsNumber, IsDateString, IsUrl, IsOptional, IsString, IsInt, Min, Max, MaxLength, IsEmail } from 'class-validator'
 
 export class CreateRewardRequestDto {
   @IsUUID()
   brandId!: string
 
-  @IsNumber()
-  @Min(0.01)
+  @IsInt()
+  @Min(1)
   @Max(100000)
   billAmount!: number
 
@@ -24,4 +24,14 @@ export class CreateRewardRequestDto {
   @IsString()
   @MaxLength(1000)
   notes?: string
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  upiId?: string
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  tempUserId?: string
 }

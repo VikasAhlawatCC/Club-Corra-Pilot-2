@@ -67,23 +67,35 @@ let FormSubmissionsController = class FormSubmissionsController {
         return this.partnerApplicationRepository.save(application);
     }
     async getWaitlistEntries(page = 1, limit = 20, status) {
-        const skip = (page - 1) * limit;
-        const queryBuilder = this.waitlistEntryRepository
-            .createQueryBuilder('entry')
-            .orderBy('entry.createdAt', 'DESC')
-            .skip(skip)
-            .take(limit);
-        if (status) {
-            queryBuilder.andWhere('entry.status = :status', { status });
+        try {
+            const skip = (page - 1) * limit;
+            const queryBuilder = this.waitlistEntryRepository
+                .createQueryBuilder('entry')
+                .orderBy('entry.createdAt', 'DESC')
+                .skip(skip)
+                .take(limit);
+            if (status) {
+                queryBuilder.andWhere('entry.status = :status', { status });
+            }
+            const [entries, total] = await queryBuilder.getManyAndCount();
+            return {
+                data: entries,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            };
         }
-        const [entries, total] = await queryBuilder.getManyAndCount();
-        return {
-            data: entries,
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
-        };
+        catch (error) {
+            console.error('Error fetching waitlist entries:', error);
+            return {
+                data: [],
+                total: 0,
+                page: 1,
+                limit: 20,
+                totalPages: 0,
+            };
+        }
     }
     async getWaitlistEntry(id) {
         const entry = await this.waitlistEntryRepository.findOne({

@@ -85,27 +85,38 @@ export class FormSubmissionsController {
     @Query('limit') limit: number = 20,
     @Query('status') status?: string,
   ) {
-    const skip = (page - 1) * limit;
-    
-    const queryBuilder = this.waitlistEntryRepository
-      .createQueryBuilder('entry')
-      .orderBy('entry.createdAt', 'DESC')
-      .skip(skip)
-      .take(limit);
+    try {
+      const skip = (page - 1) * limit;
+      
+      const queryBuilder = this.waitlistEntryRepository
+        .createQueryBuilder('entry')
+        .orderBy('entry.createdAt', 'DESC')
+        .skip(skip)
+        .take(limit);
 
-    if (status) {
-      queryBuilder.andWhere('entry.status = :status', { status });
+      if (status) {
+        queryBuilder.andWhere('entry.status = :status', { status });
+      }
+
+      const [entries, total] = await queryBuilder.getManyAndCount();
+
+      return {
+        data: entries,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      };
+    } catch (error) {
+      console.error('Error fetching waitlist entries:', error);
+      return {
+        data: [],
+        total: 0,
+        page: 1,
+        limit: 20,
+        totalPages: 0,
+      };
     }
-
-    const [entries, total] = await queryBuilder.getManyAndCount();
-
-    return {
-      data: entries,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
   }
 
   @Get('waitlist-entries/:id')
