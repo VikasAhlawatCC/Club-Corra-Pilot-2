@@ -93,6 +93,7 @@ export default function TransactionsPage() {
   const handleApproveTransaction = async (transactionId: string, adminNotes?: string) => {
     try {
       const success = await approveTransaction(transactionId, adminNotes)
+      
       if (success) {
         showSuccess('Transaction Processed Successfully! The redeem request has been processed. If approved, you can now process the payment.')
         
@@ -104,9 +105,11 @@ export default function TransactionsPage() {
         
         // Show additional message about next transaction if available
         setTimeout(() => {
-          const remainingReadyTransactions = processingOrder.filter(order => order.transactionId !== transactionId)
-          if (remainingReadyTransactions.length > 0) {
-            showSuccess('The next transaction in line will automatically become the oldest and ready to get verified next!')
+          if (Array.isArray(processingOrder)) {
+            const remainingReadyTransactions = processingOrder.filter(order => order.transactionId !== transactionId)
+            if (remainingReadyTransactions.length > 0) {
+              showSuccess('The next transaction in line will automatically become the oldest and ready to get verified next!')
+            }
           }
         }, 1000)
       } else {

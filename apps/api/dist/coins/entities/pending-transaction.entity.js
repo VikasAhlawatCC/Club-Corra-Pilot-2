@@ -11,33 +11,36 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PendingTransaction = void 0;
 const typeorm_1 = require("typeorm");
-const base_entity_1 = require("../../common/entities/base.entity");
-let PendingTransaction = class PendingTransaction extends base_entity_1.BaseEntity {
+let PendingTransaction = class PendingTransaction {
 };
 exports.PendingTransaction = PendingTransaction;
 __decorate([
-    (0, typeorm_1.Column)({ type: 'varchar', length: 100 }),
+    (0, typeorm_1.Column)({ type: 'uuid', primary: true, generated: 'uuid' }),
+    __metadata("design:type", String)
+], PendingTransaction.prototype, "id", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 100, name: 'session_id' }),
     (0, typeorm_1.Index)('idx_pending_tx_session_id'),
     __metadata("design:type", String)
 ], PendingTransaction.prototype, "sessionId", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'uuid' }),
+    (0, typeorm_1.Column)({ type: 'uuid', name: 'brand_id' }),
     __metadata("design:type", String)
 ], PendingTransaction.prototype, "brandId", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'int' }),
+    (0, typeorm_1.Column)({ type: 'int', name: 'bill_amount' }),
     __metadata("design:type", Number)
 ], PendingTransaction.prototype, "billAmount", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'varchar', length: 500 }),
+    (0, typeorm_1.Column)({ type: 'varchar', length: 500, name: 'receipt_url' }),
     __metadata("design:type", String)
 ], PendingTransaction.prototype, "receiptUrl", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'varchar', length: 255, nullable: true }),
+    (0, typeorm_1.Column)({ type: 'varchar', length: 255, nullable: true, name: 'file_name' }),
     __metadata("design:type", String)
 ], PendingTransaction.prototype, "fileName", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' }),
+    (0, typeorm_1.Column)({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP', name: 'expires_at' }),
     __metadata("design:type", Date)
 ], PendingTransaction.prototype, "expiresAt", void 0);
 __decorate([
@@ -45,14 +48,22 @@ __decorate([
     __metadata("design:type", Boolean)
 ], PendingTransaction.prototype, "claimed", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'uuid', nullable: true }),
+    (0, typeorm_1.Column)({ type: 'uuid', nullable: true, name: 'claimed_by' }),
     (0, typeorm_1.Index)('idx_pending_tx_claimed_by'),
     __metadata("design:type", String)
 ], PendingTransaction.prototype, "claimedBy", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'timestamptz', nullable: true }),
+    (0, typeorm_1.Column)({ type: 'timestamptz', nullable: true, name: 'claimed_at' }),
     __metadata("design:type", Date)
 ], PendingTransaction.prototype, "claimedAt", void 0);
+__decorate([
+    (0, typeorm_1.CreateDateColumn)({ type: 'timestamptz', name: 'created_at' }),
+    __metadata("design:type", Date)
+], PendingTransaction.prototype, "createdAt", void 0);
+__decorate([
+    (0, typeorm_1.UpdateDateColumn)({ type: 'timestamptz', name: 'updated_at' }),
+    __metadata("design:type", Date)
+], PendingTransaction.prototype, "updatedAt", void 0);
 exports.PendingTransaction = PendingTransaction = __decorate([
     (0, typeorm_1.Entity)('pending_transactions')
 ], PendingTransaction);

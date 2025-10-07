@@ -421,35 +421,42 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
       
       // Pass the current request ID, not the original transaction ID
       if (onApprove) {
-        await onApprove(currentRequest.id, { adminNotes: validatedData.adminNotes, type: currentRequest.type })
-      }
-      // Update local state to reflect approval and auto-advance to next pending request
-      setPendingRequests((prev: PendingRequest[]) => prev.map((req: PendingRequest) => req.id === currentRequest.id ? { ...req, status: 'APPROVED' } : req))
-      // Auto-advance to next pending request if available, otherwise close
-      setTimeout(() => {
-        const refreshed = pendingRequestsRef.current.filter((req: PendingRequest) => req.status === 'PENDING')
-        if (refreshed.length === 0) {
-          onCloseRef.current()
-        } else {
-          // Keep the same index to naturally show the next item after filtering out the approved one
-          const nextIndex = Math.min(currentRequestIndexRef.current, Math.max(0, refreshed.length - 1))
-          setCurrentRequestIndex(nextIndex)
-          const targetRequest = refreshed[nextIndex]
-          if (targetRequest) {
-            setVerificationData({
-              observedAmount: targetRequest.billAmount || 0,
-              receiptDate: targetRequest.billDate ? new Date(targetRequest.billDate).toISOString().split('T')[0] : '',
-              verificationConfirmed: false,
-              rejectionNote: '',
-              adminNotes: ''
-            })
-            setCurrentImageIndex(0)
-            setImageScale(1)
-            setError(null)
-          }
-          setShowSuccessMessage(true)
+        try {
+          await onApprove(currentRequest.id, { adminNotes: validatedData.adminNotes, type: currentRequest.type })
+          
+          // Only update local state if API call succeeded
+          setPendingRequests((prev: PendingRequest[]) => prev.map((req: PendingRequest) => req.id === currentRequest.id ? { ...req, status: 'APPROVED' } : req))
+          
+          // Auto-advance to next pending request if available, otherwise close
+          setTimeout(() => {
+            const refreshed = pendingRequestsRef.current.filter((req: PendingRequest) => req.status === 'PENDING')
+            if (refreshed.length === 0) {
+              onCloseRef.current()
+            } else {
+              // Keep the same index to naturally show the next item after filtering out the approved one
+              const nextIndex = Math.min(currentRequestIndexRef.current, Math.max(0, refreshed.length - 1))
+              setCurrentRequestIndex(nextIndex)
+              const targetRequest = refreshed[nextIndex]
+              if (targetRequest) {
+                setVerificationData({
+                  observedAmount: targetRequest.billAmount || 0,
+                  receiptDate: targetRequest.billDate ? new Date(targetRequest.billDate).toISOString().split('T')[0] : '',
+                  verificationConfirmed: false,
+                  rejectionNote: '',
+                  adminNotes: ''
+                })
+                setCurrentImageIndex(0)
+                setImageScale(1)
+                setError(null)
+              }
+              setShowSuccessMessage(true)
+            }
+          }, 100)
+        } catch (approveError) {
+          console.error('Error in onApprove:', approveError)
+          throw approveError // Re-throw to be caught by outer catch
         }
-      }, 100)
+      }
     } catch (error) {
       if (error instanceof Error) {
         // Check if it's a Zod validation error
@@ -600,7 +607,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
     
     return verificationData.verificationConfirmed && 
            verificationData.observedAmount > 0 &&
-           verificationData.receiptDate
+           verificationData.receiptDate;
   }, [currentRequest?.id, currentRequest?.type, currentRequest?.status, verificationData.verificationConfirmed, verificationData.observedAmount, verificationData.receiptDate, userDetails?.coinBalance])
 
   // Enhanced approval button tooltip and feedback

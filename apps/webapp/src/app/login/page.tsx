@@ -67,6 +67,24 @@ function LoginContent() {
       if (response.success && response.data) {
         login(response.data.token, response.data.user);
         toast.success("Login successful!");
+        
+        // Check for pending transaction and claim it
+        const sessionId = localStorage.getItem('pendingTransactionSessionId');
+        if (sessionId) {
+          try {
+            const { claimPendingTransaction } = await import("@/lib/api");
+            const claimResponse = await claimPendingTransaction(sessionId, response.data.token);
+            
+            if (claimResponse.success && claimResponse.data) {
+              toast.success("Reward request submitted successfully!");
+              localStorage.removeItem('pendingTransactionSessionId');
+            }
+          } catch (error) {
+            console.error("Error claiming pending transaction:", error);
+            // Don't block login flow if claim fails
+          }
+        }
+        
         setStage("redirecting");
         setTimeout(() => {
           router.push(redirect);

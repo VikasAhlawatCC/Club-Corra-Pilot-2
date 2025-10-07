@@ -1012,7 +1012,20 @@ export class CoinAdminController {
     @Body() approvalDto: TransactionApprovalDto,
     @Req() req: any,
   ) {
-    return this.coinsService.approveTransaction(id, req.user.id, approvalDto.adminNotes);
+    try {
+      console.log('[Controller] approveTransaction called:', { id, adminNotes: approvalDto.adminNotes, userId: req.user?.id });
+      const transaction = await this.coinsService.approveTransaction(id, req.user.id, approvalDto.adminNotes);
+      console.log('[Controller] Transaction approved successfully:', { id: transaction.id, status: transaction.status });
+      
+      return {
+        success: true,
+        message: 'Transaction approved successfully',
+        data: { transaction }
+      };
+    } catch (error) {
+      console.error('[Controller] Error approving transaction:', error);
+      throw error;
+    }
   }
 
   @Post('transactions/:id/reject')
@@ -1021,7 +1034,12 @@ export class CoinAdminController {
     @Body() rejectionDto: TransactionRejectionDto,
     @Req() req: any,
   ) {
-    return this.coinsService.rejectTransaction(id, req.user.id, rejectionDto.reason);
+    const transaction = await this.coinsService.rejectTransaction(id, req.user.id, rejectionDto.reason);
+    return {
+      success: true,
+      message: 'Transaction rejected successfully',
+      data: { transaction }
+    };
   }
 
   @Post('transactions/:id/mark-paid')
@@ -1030,7 +1048,12 @@ export class CoinAdminController {
     @Body() markPaidDto: MarkAsPaidDto,
     @Req() req: any,
   ) {
-    return this.coinsService.markRedeemTransactionAsPaid(id, markPaidDto);
+    const transaction = await this.coinsService.markRedeemTransactionAsPaid(id, markPaidDto);
+    return {
+      success: true,
+      message: 'Transaction marked as paid successfully',
+      data: { transaction }
+    };
   }
 
   @Get('transactions/:id/next')

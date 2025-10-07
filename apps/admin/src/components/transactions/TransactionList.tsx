@@ -103,10 +103,14 @@ export const TransactionList = memo(function TransactionList({
               onClose={onVerificationModalClose}
               onApprove={async (transactionId: string, verificationData: any) => {
                 const txType = verificationData?.type || (transactions.find(t => t.id === transactionId) || selectedTransaction)?.type
+                
                 if (txType === 'EARN') {
                   await onApproveEarn(transactionId, verificationData.adminNotes)
                 } else if (txType === 'REDEEM') {
                   await onApproveRedeem(transactionId, verificationData.adminNotes)
+                } else {
+                  // For REWARD_REQUEST and other types, use onApproveEarn as fallback
+                  await onApproveEarn(transactionId, verificationData.adminNotes)
                 }
               }}
               onReject={async (transactionId: string, reason: string, adminNotes?: string, type?: 'EARN' | 'REDEEM') => {

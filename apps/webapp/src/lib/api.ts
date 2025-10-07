@@ -311,3 +311,70 @@ export async function createRewardRequest(
 
   return response.json();
 }
+
+// Pending Transaction API
+export interface PendingTransaction {
+  id: string;
+  sessionId: string;
+  brandId: string;
+  billAmount: number;
+  receiptUrl: string;
+  fileName?: string;
+  expiresAt: string;
+  claimed: boolean;
+  claimedBy?: string;
+  claimedAt?: string;
+  createdAt: string;
+}
+
+/**
+ * Create a pending transaction for unauthenticated users
+ * This stores the transaction data temporarily until the user authenticates
+ */
+export async function createPendingTransaction(data: {
+  sessionId: string;
+  brandId: string;
+  billAmount: number;
+  receiptUrl: string;
+  fileName?: string;
+}): Promise<ApiResponse<PendingTransaction>> {
+  const response = await fetch(`${API_BASE_URL}/transactions/pending`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to create pending transaction');
+  }
+
+  return response.json();
+}
+
+/**
+ * Claim a pending transaction after authentication
+ * This converts the pending transaction into an actual reward request
+ */
+export async function claimPendingTransaction(
+  sessionId: string,
+  token: string
+): Promise<ApiResponse<{ pendingTransaction: PendingTransaction; rewardRequest: Transaction }>> {
+  const response = await fetch(`${API_BASE_URL}/transactions/pending/claim`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ sessionId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to claim pending transaction');
+  }
+
+  return response.json();
+}

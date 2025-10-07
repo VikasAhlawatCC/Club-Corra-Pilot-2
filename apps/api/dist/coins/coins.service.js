@@ -427,14 +427,24 @@ let CoinsService = class CoinsService {
     }
     // Admin approval methods
     async approveTransaction(transactionId, adminUserId, adminNotes) {
+        console.log('[Service] approveTransaction called:', { transactionId, adminUserId, adminNotes });
         const transaction = await this.transactionRepository.findOne({
             where: { id: transactionId },
             relations: ['user', 'brand', 'user.paymentDetails'],
         });
         if (!transaction) {
+            console.error('[Service] Transaction not found:', transactionId);
             throw new common_1.NotFoundException('Transaction not found');
         }
+        console.log('[Service] Found transaction:', {
+            id: transaction.id,
+            status: transaction.status,
+            coinsRedeemed: transaction.coinsRedeemed,
+            coinsEarned: transaction.coinsEarned,
+            type: transaction.type
+        });
         if (transaction.status !== 'PENDING') {
+            console.error('[Service] Transaction is not pending:', transaction.status);
             throw new common_1.BadRequestException('Transaction is not pending');
         }
         // Check if there are older pending transactions for the same user
@@ -453,16 +463,37 @@ let CoinsService = class CoinsService {
         }
         // Validate that user has sufficient balance for redemption (prevent negative balances)
         if (transaction.coinsRedeemed && transaction.coinsRedeemed > 0 && transaction.user) {
-            const userBalance = await this.balanceRepository.findOne({ where: { user: { id: transaction.user.id } } });
-            const currentBalance = BigInt(userBalance?.balance || '0');
-            if (currentBalance < BigInt(transaction.coinsRedeemed)) {
-                throw new common_1.BadRequestException(`Cannot approve transaction. User has ${currentBalance} coins but trying to redeem ${transaction.coinsRedeemed} coins. This would result in a negative balance.`);
+            console.log('[Service] Checking user balance for redemption:', {
+                userId: transaction.user.id,
+                coinsRedeemed: transaction.coinsRedeemed
+            });
+            try {
+                const userBalance = await this.balanceRepository.findOne({ where: { user: { id: transaction.user.id } } });
+                console.log('[Service] User balance found:', {
+                    balance: userBalance?.balance,
+                    userId: transaction.user.id
+                });
+                const currentBalance = BigInt(userBalance?.balance || '0');
+                const redeemAmount = BigInt(transaction.coinsRedeemed);
+                console.log('[Service] Balance comparison:', {
+                    currentBalance: currentBalance.toString(),
+                    redeemAmount: redeemAmount.toString()
+                });
+                if (currentBalance < redeemAmount) {
+                    console.error('[Service] Insufficient balance for redemption');
+                    throw new common_1.BadRequestException(`Cannot approve transaction. User has ${currentBalance} coins but trying to redeem ${transaction.coinsRedeemed} coins. This would result in a negative balance.`);
+                }
+            }
+            catch (balanceError) {
+                console.error('[Service] Error checking user balance:', balanceError);
+                throw balanceError;
             }
         }
         // Determine the new status based on redemption amount
         let newStatus;
         if (transaction.coinsRedeemed && transaction.coinsRedeemed > 0) {
-            newStatus = 'UNPAID'; // Needs payment processing
+            // TODO: Change to 'UNPAID' once the enum value is added to the database
+            newStatus = 'APPROVED'; // Needs payment processing (temporary - should be UNPAID)
         }
         else {
             newStatus = 'PAID'; // No redemption, automatically paid
@@ -474,11 +505,19 @@ let CoinsService = class CoinsService {
         if (adminNotes) {
             transaction.adminNotes = adminNotes;
         }
-        await this.transactionRepository.save(transaction);
+        console.log('[Service] Saving transaction with new status:', newStatus);
+        try {
+            const savedTransaction = await this.transactionRepository.save(transaction);
+            console.log('[Service] Transaction saved successfully:', { id: savedTransaction.id, status: savedTransaction.status });
+            return savedTransaction;
+        }
+        catch (saveError) {
+            console.error('[Service] Error saving transaction:', saveError);
+            throw saveError;
+        }
         // CRITICAL FIX: Remove duplicate balance update
         // Balance is already updated at submission time (Business Rule #2)
         // No need to update balance again on approval since it was already applied
-        return transaction;
     }
     async rejectTransaction(transactionId, adminUserId, adminNotes) {
         const transaction = await this.transactionRepository.findOne({

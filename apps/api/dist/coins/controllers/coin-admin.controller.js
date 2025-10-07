@@ -911,13 +911,36 @@ let CoinAdminController = class CoinAdminController {
         return transaction;
     }
     async approveTransaction(id, approvalDto, req) {
-        return this.coinsService.approveTransaction(id, req.user.id, approvalDto.adminNotes);
+        try {
+            console.log('[Controller] approveTransaction called:', { id, adminNotes: approvalDto.adminNotes, userId: req.user?.id });
+            const transaction = await this.coinsService.approveTransaction(id, req.user.id, approvalDto.adminNotes);
+            console.log('[Controller] Transaction approved successfully:', { id: transaction.id, status: transaction.status });
+            return {
+                success: true,
+                message: 'Transaction approved successfully',
+                data: { transaction }
+            };
+        }
+        catch (error) {
+            console.error('[Controller] Error approving transaction:', error);
+            throw error;
+        }
     }
     async rejectTransaction(id, rejectionDto, req) {
-        return this.coinsService.rejectTransaction(id, req.user.id, rejectionDto.reason);
+        const transaction = await this.coinsService.rejectTransaction(id, req.user.id, rejectionDto.reason);
+        return {
+            success: true,
+            message: 'Transaction rejected successfully',
+            data: { transaction }
+        };
     }
     async markTransactionAsPaid(id, markPaidDto, req) {
-        return this.coinsService.markRedeemTransactionAsPaid(id, markPaidDto);
+        const transaction = await this.coinsService.markRedeemTransactionAsPaid(id, markPaidDto);
+        return {
+            success: true,
+            message: 'Transaction marked as paid successfully',
+            data: { transaction }
+        };
     }
     async getNextUserTransaction(id, userId) {
         const nextTransaction = await this.coinsService.getNextUserTransaction(id, userId);

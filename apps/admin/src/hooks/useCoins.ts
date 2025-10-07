@@ -247,15 +247,20 @@ export const useCoins = (skipInitialFetch = false) => {
       
       if (response.success) {
         // Update the local transaction state instead of refetching
+        // Determine new status based on whether there's redemption
+        // TODO: Change to 'UNPAID' once the enum value is added to the database
+        const newStatus = transaction.coinsRedeemed && transaction.coinsRedeemed > 0 ? 'APPROVED' : 'PAID'
+        
         setTransactions((prevTransactions: AdminCoinTransaction[]) => 
           prevTransactions.map((tx: AdminCoinTransaction) => 
             tx.id === transactionId 
-              ? { ...tx, status: 'APPROVED', updatedAt: new Date() }
+              ? { ...tx, status: newStatus, updatedAt: new Date() }
               : tx
           )
         )
         return true
       }
+      
       return false
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to approve transaction')
