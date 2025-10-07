@@ -10,6 +10,7 @@ import type { AdminCoinTransaction } from '../../types/coins'
 
 interface TransactionListProps {
   transactions: AdminCoinTransaction[]
+  processingOrder?: any[]
   isLoading: boolean
   selectedTransaction: AdminCoinTransaction | null
   showDetailModal: boolean
@@ -37,6 +38,7 @@ interface TransactionListProps {
 
 export const TransactionList = memo(function TransactionList({
   transactions,
+  processingOrder = [],
   isLoading,
   selectedTransaction,
   showDetailModal,
@@ -76,6 +78,7 @@ export const TransactionList = memo(function TransactionList({
     <>
       <TransactionTable
         transactions={transactions}
+        processingOrder={processingOrder}
         onTransactionSelect={onTransactionSelect}
         onApproveEarn={onApproveEarn}
         onRejectEarn={onRejectEarn}

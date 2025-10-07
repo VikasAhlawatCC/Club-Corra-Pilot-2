@@ -89,65 +89,6 @@ let CoinPublicController = class CoinPublicController {
             throw error;
         }
     }
-    async createPublicRewardRequest(body) {
-        try {
-            console.log('Received reward request:', body);
-            // Create a temporary user ID for unauthenticated users
-            const tempUserId = 'temp_' + Date.now();
-            // Create the reward request using the coins service
-            const result = await this.coinsService.createRewardRequest(tempUserId, {
-                brandId: body.brandId,
-                billAmount: body.billAmount,
-                billDate: body.billDate,
-                receiptUrl: body.receiptUrl,
-                coinsToRedeem: body.coinsToRedeem || 0,
-                upiId: body.upiId,
-            });
-            return {
-                success: true,
-                message: 'Reward request submitted successfully. Please log in to complete the process.',
-                data: {
-                    transactionId: result.transaction.id,
-                    tempTransactionId: tempUserId,
-                    requiresLogin: true,
-                    redirectUrl: '/login',
-                    coinsEarned: result.transaction.coinsEarned,
-                    coinsRedeemed: result.transaction.coinsRedeemed,
-                }
-            };
-        }
-        catch (error) {
-            console.error('Error creating reward request:', error);
-            throw error;
-        }
-    }
-    async createWebappRewardRequest(body) {
-        try {
-            // For now, return a simple success response to test the endpoint
-            // This will help us isolate whether the issue is with the endpoint or database operations
-            console.log('Received request:', body);
-            return {
-                message: 'Reward request submitted successfully.',
-                transaction: {
-                    id: 'temp_' + Date.now(),
-                    brandId: body.brandId,
-                    billAmount: body.billAmount,
-                    coinsRedeemed: body.coinsRedeemed || 0,
-                    receiptUrl: body.receiptUrl,
-                    status: 'PENDING',
-                    createdAt: new Date().toISOString(),
-                },
-                tempTransactionId: 'temp_' + Date.now(),
-            };
-        }
-        catch (error) {
-            console.error('Error creating reward request:', error);
-            throw error;
-        }
-    }
-    async simpleTest(body) {
-        return { message: 'Simple test endpoint works', received: body };
-    }
     async getActiveBrands() {
         try {
             // Get active brands from database
@@ -201,27 +142,6 @@ __decorate([
     __metadata("design:paramtypes", [GenerateUploadUrlDto]),
     __metadata("design:returntype", Promise)
 ], CoinPublicController.prototype, "generateUploadUrl", null);
-__decorate([
-    (0, common_1.Post)('reward-request'),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [CreatePublicRewardRequestDto]),
-    __metadata("design:returntype", Promise)
-], CoinPublicController.prototype, "createPublicRewardRequest", null);
-__decorate([
-    (0, common_1.Post)(),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], CoinPublicController.prototype, "createWebappRewardRequest", null);
-__decorate([
-    (0, common_1.Post)('simple-test'),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], CoinPublicController.prototype, "simpleTest", null);
 __decorate([
     (0, common_1.Get)('brands'),
     __metadata("design:type", Function),

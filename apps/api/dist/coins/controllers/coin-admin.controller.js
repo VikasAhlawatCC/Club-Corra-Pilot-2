@@ -58,6 +58,24 @@ let CoinAdminController = class CoinAdminController {
     async debugTransactions() {
         return this.coinsService.debugTransactions();
     }
+    async getProcessingOrder() {
+        try {
+            const result = await this.coinsService.getProcessingOrder();
+            return {
+                success: true,
+                message: 'Processing order fetched successfully',
+                data: result
+            };
+        }
+        catch (error) {
+            console.error('Error in getProcessingOrder:', error);
+            return {
+                success: false,
+                message: 'Failed to fetch processing order',
+                data: []
+            };
+        }
+    }
     async getRawTransactions() {
         try {
             // Use direct database query
@@ -927,6 +945,24 @@ let CoinAdminController = class CoinAdminController {
             data: oldestPending,
         };
     }
+    async getUserVerificationData(userId) {
+        try {
+            const result = await this.coinsService.getUserVerificationData(userId);
+            return {
+                success: true,
+                message: 'User verification data fetched successfully',
+                data: result,
+            };
+        }
+        catch (error) {
+            console.error(`Error fetching verification data for user ${userId}:`, error);
+            return {
+                success: false,
+                message: 'Failed to fetch user verification data',
+                error: error.message,
+            };
+        }
+    }
     async adjustUserBalance(userId, body) {
         return this.coinsService.adminAdjustUserBalance(userId, body.delta, body.reason);
     }
@@ -971,6 +1007,12 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], CoinAdminController.prototype, "debugTransactions", null);
+__decorate([
+    (0, common_1.Get)('transactions/processing-order'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], CoinAdminController.prototype, "getProcessingOrder", null);
 __decorate([
     (0, common_1.Get)('transactions/raw'),
     __metadata("design:type", Function),
@@ -1244,6 +1286,13 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], CoinAdminController.prototype, "getOldestPendingTransactionForUser", null);
+__decorate([
+    (0, common_1.Get)('users/:userId/verification-data'),
+    __param(0, (0, common_1.Param)('userId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], CoinAdminController.prototype, "getUserVerificationData", null);
 __decorate([
     (0, common_1.Post)('users/:userId/adjust'),
     __param(0, (0, common_1.Param)('userId')),

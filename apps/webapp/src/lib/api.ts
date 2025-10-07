@@ -140,7 +140,10 @@ export async function getUserProfile(token: string): Promise<ApiResponse<User>> 
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
     },
+    cache: 'no-store',
   });
 
   if (!response.ok) {
@@ -148,7 +151,22 @@ export async function getUserProfile(token: string): Promise<ApiResponse<User>> 
     throw new Error(error.message || 'Failed to get user profile');
   }
 
-  return response.json();
+  const result = await response.json();
+  
+  // The API response contains a nested user object, so we extract it.
+  if (result.success && result.data && result.data.user) {
+    return {
+      success: result.success,
+      message: result.message,
+      data: result.data.user,
+    };
+  }
+  
+  // Return the original response if the structure is not as expected or if it's an error response
+  return {
+    ...result,
+    data: result.data?.user || result.data, // Fallback for safety
+  };
 }
 
 // Transaction API
@@ -158,7 +176,10 @@ export async function getUserTransactions(token: string): Promise<ApiResponse<Tr
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
     },
+    cache: 'no-store',
   });
 
   if (!response.ok) {
@@ -166,7 +187,14 @@ export async function getUserTransactions(token: string): Promise<ApiResponse<Tr
     throw new Error(error.message || 'Failed to fetch transactions');
   }
 
-  return response.json();
+  const result = await response.json();
+  
+  // The API response interceptor wraps the data, so we need to extract the actual transaction data
+  return {
+    success: result.success,
+    message: result.message,
+    data: result.data?.data || [] // Extract the actual transaction array from the nested structure
+  };
 }
 
 // File upload API
@@ -233,7 +261,7 @@ export async function createRewardRequest(
     upiId: data.upiId,
   };
 
-  const response = await fetch(`${API_BASE_URL}/public/transactions/reward-request`, {
+  const response = await fetch(`${API_BASE_URL}/transactions/reward-request`, {
     method: 'POST',
     headers,
     body: JSON.stringify(requestData),

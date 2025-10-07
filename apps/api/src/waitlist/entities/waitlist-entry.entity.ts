@@ -9,11 +9,11 @@ export class WaitlistEntry extends BaseEntity {
   @Column({ type: 'varchar', nullable: true })
   source!: string | null
 
-  @Column({ type: 'varchar', default: 'pending' })
-  status!: string
+  @Column({ type: 'varchar', default: 'pending', nullable: true })
+  status?: string
 
   @Column({ type: 'text', nullable: true })
-  adminNotes!: string | null
+  adminNotes?: string | null
 }
 
 

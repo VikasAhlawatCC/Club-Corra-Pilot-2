@@ -46,6 +46,11 @@ async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule, { bufferLogs: true });
     app.useLogger(app.get(nestjs_pino_1.Logger));
     app.setGlobalPrefix('api/v1');
+    // Disable ETag to avoid 304 Not Modified responses for JSON APIs
+    const httpInstance = app.getHttpAdapter().getInstance();
+    if (httpInstance && typeof httpInstance.set === 'function') {
+        httpInstance.set('etag', false);
+    }
     app.useGlobalPipes(new common_1.ValidationPipe({ whitelist: true, transform: true }));
     app.useGlobalInterceptors(new response_interceptor_1.ResponseInterceptor());
     const allowedOriginRegexes = [

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User } from '@/lib/api';
+import { User, getUserProfile } from '@/lib/api';
 
 interface AuthContextType {
   user: User | null;
@@ -9,6 +9,8 @@ interface AuthContextType {
   isLoading: boolean;
   login: (token: string, user: User) => void;
   logout: () => void;
+  clearAuthData: () => void;
+  refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -27,22 +29,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (storedToken && storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
-        // Validate user data structure
-        if (parsedUser && typeof parsedUser === 'object' && parsedUser.id && parsedUser.mobileNumber) {
+        // Validate user data structure - be more lenient
+        if (parsedUser && typeof parsedUser === 'object' && parsedUser.id) {
           setToken(storedToken);
           setUser(parsedUser);
+          // Fetch fresh user data from API
+          fetchUserProfile(storedToken);
         } else {
-          throw new Error('Invalid user data structure');
+          console.warn('Invalid user data structure, clearing auth data');
+          clearAuthData();
         }
       } catch (error) {
         console.error('Error parsing stored user data:', error);
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
+        clearAuthData();
       }
+    } else {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   }, []);
+
+  const fetchUserProfile = async (authToken: string) => {
+    try {
+      const response = await getUserProfile(authToken);
+      if (response.success && response.data) {
+        setUser(response.data);
+        localStorage.setItem('auth_user', JSON.stringify(response.data));
+      } else {
+        console.warn('Failed to fetch user profile, keeping existing data');
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      // Don't clear auth data on API failure, just keep existing data
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const login = (newToken: string, newUser: User) => {
     // Validate token and user data
@@ -55,6 +76,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(newUser);
     localStorage.setItem('auth_token', newToken);
     localStorage.setItem('auth_user', JSON.stringify(newUser));
+    
+    // Fetch fresh user data from API
+    fetchUserProfile(newToken);
   };
 
   const logout = () => {
@@ -62,6 +86,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
+  };
+
+  const clearAuthData = () => {
+    console.log('Clearing corrupted auth data');
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    setIsLoading(false);
+  };
+
+  const refreshUser = async () => {
+    if (!token) return;
+    
+    try {
+      const response = await getUserProfile(token);
+      if (response.success && response.data) {
+        setUser(response.data);
+        localStorage.setItem('auth_user', JSON.stringify(response.data));
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+    }
   };
 
   const isAuthenticated = !!token && !!user;
@@ -74,6 +121,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         login,
         logout,
+        clearAuthData,
+        refreshUser,
         isAuthenticated,
       }}
     >

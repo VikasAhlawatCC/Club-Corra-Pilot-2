@@ -38,24 +38,28 @@ function SuccessContent() {
             />
           </svg>
         </div>
-        <h1 className="text-center text-2xl sm:text-3xl font-bold">Coins Credited!</h1>
+        <h1 className="text-center text-2xl sm:text-3xl font-bold">Request Submitted!</h1>
         <p className="text-center text-black/60 mt-3">
-          You earned Corra Coins for <span className="font-medium">{brand || "your purchase"}</span>.
+          Your request for <span className="font-medium">{brand || "your purchase"}</span> has been successfully submitted for verification.
         </p>
         <div className="mt-8 rounded-xl border border-green-200 bg-green-50 px-6 py-6 text-green-900 text-sm">
-          <p className="font-semibold text-green-800">Receipt Verified & Wallet Updated</p>
+          <p className="font-semibold text-green-800">What Happens Next?</p>
           <ul className="mt-4 space-y-2">
             <li className="flex items-start gap-2">
               <span className="text-green-600">✓</span>
-              <span>Amount: ₹{amount || "—"}</span>
+              <span>Transaction Amount: ₹{amount || "—"}</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-green-600">✓</span>
-              <span>Coins Added: ₹{amount || "—"}</span>
+              <span>Our team will verify your receipt within 24-48 hours.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-green-600">✓</span>
-              <span>Track & redeem in your dashboard</span>
+              <span>Once approved, Corra Coins will be credited to your account.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-green-600">✓</span>
+              <span>You can track the status and redeem your coins from the dashboard.</span>
             </li>
           </ul>
         </div>

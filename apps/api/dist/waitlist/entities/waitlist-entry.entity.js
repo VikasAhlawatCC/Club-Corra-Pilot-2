@@ -24,7 +24,7 @@ __decorate([
     __metadata("design:type", Object)
 ], WaitlistEntry.prototype, "source", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'varchar', default: 'pending' }),
+    (0, typeorm_1.Column)({ type: 'varchar', default: 'pending', nullable: true }),
     __metadata("design:type", String)
 ], WaitlistEntry.prototype, "status", void 0);
 __decorate([

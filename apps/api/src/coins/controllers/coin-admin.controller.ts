@@ -57,6 +57,25 @@ export class CoinAdminController {
     return this.coinsService.debugTransactions();
   }
 
+  @Get('transactions/processing-order')
+  async getProcessingOrder() {
+    try {
+      const result = await this.coinsService.getProcessingOrder();
+      return {
+        success: true,
+        message: 'Processing order fetched successfully',
+        data: result
+      };
+    } catch (error) {
+      console.error('Error in getProcessingOrder:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch processing order',
+        data: []
+      };
+    }
+  }
+
   @Get('transactions/raw')
   async getRawTransactions() {
     try {
@@ -1048,6 +1067,24 @@ export class CoinAdminController {
     };
   }
 
+  @Get('users/:userId/verification-data')
+  async getUserVerificationData(@Param('userId') userId: string) {
+    try {
+      const result = await this.coinsService.getUserVerificationData(userId);
+      return {
+        success: true,
+        message: 'User verification data fetched successfully',
+        data: result,
+      };
+    } catch (error) {
+      console.error(`Error fetching verification data for user ${userId}:`, error);
+      return {
+        success: false,
+        message: 'Failed to fetch user verification data',
+        error: (error as Error).message,
+      };
+    }
+  }
 
   @Post('users/:userId/adjust')
   async adjustUserBalance(

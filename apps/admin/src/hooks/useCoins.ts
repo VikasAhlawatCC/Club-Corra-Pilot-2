@@ -14,6 +14,7 @@ export const useCoins = (skipInitialFetch = false) => {
   const [transactions, setTransactions] = useState<AdminCoinTransaction[]>([])
   const [transactionStats, setTransactionStats] = useState<TransactionStats | null>(null)
   const [paymentStats, setPaymentStats] = useState<PaymentStats | null>(null)
+  const [processingOrder, setProcessingOrder] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pagination, setPagination] = useState({
@@ -66,6 +67,22 @@ export const useCoins = (skipInitialFetch = false) => {
       setError(err instanceof Error ? err.message : 'Failed to fetch stats')
     } finally {
       setLoading(false)
+    }
+  }, [])
+
+  // Fetch processing order for sequential transaction processing
+  const fetchProcessingOrder = useCallback(async () => {
+    try {
+      setError(null)
+      
+      const response = await transactionApi.getProcessingOrder()
+      if (response.success) {
+        setProcessingOrder(response.data)
+      } else {
+        setError('Failed to fetch processing order')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch processing order')
     }
   }, [])
 
@@ -370,6 +387,7 @@ export const useCoins = (skipInitialFetch = false) => {
     transactions,
     transactionStats,
     paymentStats,
+    processingOrder,
     loading,
     error,
     pagination,
@@ -377,6 +395,7 @@ export const useCoins = (skipInitialFetch = false) => {
     // Actions
     fetchStats,
     fetchTransactions,
+    fetchProcessingOrder,
     fetchPaymentStats,
     getUserSummary,
     approveTransaction,

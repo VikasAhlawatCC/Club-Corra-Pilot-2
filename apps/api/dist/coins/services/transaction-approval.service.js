@@ -63,10 +63,8 @@ let TransactionApprovalService = class TransactionApprovalService {
                 transaction.adminNotes = approvalDto.adminNotes;
             }
             const updatedTransaction = await manager.save(coin_transaction_entity_1.CoinTransaction, transaction);
-            // Update user balance if coins were earned
-            if (transaction.coinsEarned && transaction.coinsEarned > 0 && transaction.user) {
-                await this.updateUserBalance(manager, transaction.user.id, transaction.coinsEarned);
-            }
+            // Note: Balance updates are now handled immediately when transaction is submitted
+            // No need to update balance again on approval since it was already updated
             // TODO: Send real-time notification via WebSocket
             // await this.notificationService.notifyUser(transaction.user.id, {
             //   type: 'TRANSACTION_APPROVED',
@@ -86,6 +84,12 @@ let TransactionApprovalService = class TransactionApprovalService {
             }
             if (transaction.status !== 'PENDING') {
                 throw new common_1.BadRequestException('Transaction is not in pending status');
+            }
+            // BUSINESS RULE: Revert balance changes when transaction is rejected
+            // Only revert if the transaction had balance changes (authenticated user)
+            if (transaction.user && transaction.previousBalance !== undefined) {
+                // Revert the user's balance back to the previous state
+                await this.revertUserBalance(manager, transaction.user.id, transaction.previousBalance);
             }
             // Update transaction status
             transaction.status = 'REJECTED';
@@ -193,6 +197,21 @@ let TransactionApprovalService = class TransactionApprovalService {
         }
         const currentBalance = parseInt(balance.balance);
         balance.balance = (currentBalance + amount).toString();
+        await manager.save(coin_balance_entity_1.CoinBalance, balance);
+    }
+    async revertUserBalance(manager, userId, targetBalance) {
+        let balance = await manager.findOne(coin_balance_entity_1.CoinBalance, {
+            where: { user: { id: userId } }
+        });
+        if (!balance) {
+            balance = manager.create(coin_balance_entity_1.CoinBalance, {
+                user: { id: userId },
+                balance: targetBalance.toString()
+            });
+        }
+        else {
+            balance.balance = targetBalance.toString();
+        }
         await manager.save(coin_balance_entity_1.CoinBalance, balance);
     }
 };

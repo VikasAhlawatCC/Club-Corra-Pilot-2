@@ -57,6 +57,7 @@ interface TransactionTableProps {
   // Performance-test optional props (no-op UI stubs)
   pageSize?: number
   currentPage?: number
+  processingOrder?: any[]
   totalPages?: number
   onPageChange?: (page: number) => void
   filters?: any
@@ -77,7 +78,8 @@ export const TransactionTable = memo(function TransactionTable({
   onView, 
   onTransactionSelect,
   onApprove, 
-  onReject, 
+  onReject,
+  processingOrder = [], 
   onApproveEarn,
   onRejectEarn,
   onApproveRedeem,
@@ -230,6 +232,14 @@ export const TransactionTable = memo(function TransactionTable({
     
     // Default case
     return <NotificationStatusIndicator status="pending" />
+  }
+
+  // Check if a transaction is ready for processing (oldest pending for the user)
+  const isReadyForProcessing = (transaction: AdminCoinTransaction) => {
+    if (transaction.status !== 'PENDING') return false
+    
+    // Check if this transaction is in the processing order (oldest for the user)
+    return processingOrder.some(order => order.transactionId === transaction.id)
   }
 
   const getStatusIcon = (status: AdminCoinTransaction['status'] | 'PROCESSED') => {
@@ -610,9 +620,12 @@ export const TransactionTable = memo(function TransactionTable({
               <TableRow 
                 key={transaction.id} 
                 className={`transition-all duration-150 ${
-                  transaction.type === 'EARN' && transaction.status === 'PENDING' ? 'border-l-4 border-l-soft-gold-accent bg-soft-gold-muted' : ''
+                  // Special styling for transactions ready for processing (oldest pending for user)
+                  isReadyForProcessing(transaction) ? 'border-l-4 border-l-blue-500 bg-blue-50/50 ring-2 ring-blue-200' : ''
                 } ${
-                  transaction.type === 'REDEEM' && transaction.status === 'PENDING' ? 'border-l-4 border-l-silver-fluorescent-accent bg-silver-fluorescent-muted' : ''
+                  transaction.type === 'EARN' && transaction.status === 'PENDING' && !isReadyForProcessing(transaction) ? 'border-l-4 border-l-soft-gold-accent bg-soft-gold-muted' : ''
+                } ${
+                  transaction.type === 'REDEEM' && transaction.status === 'PENDING' && !isReadyForProcessing(transaction) ? 'border-l-4 border-l-silver-fluorescent-accent bg-silver-fluorescent-muted' : ''
                 } ${
                   transaction.type === 'EARN' && transaction.status === 'APPROVED' ? 'border-l-4 border-l-green-theme-accent bg-green-theme-muted' : ''
                 } ${
@@ -695,6 +708,14 @@ export const TransactionTable = memo(function TransactionTable({
                         <span className="ml-2 text-gray-500 text-xs">(Processing...)</span>
                       )}
                     </Badge>
+                    
+                    {/* Processing Order Indicator */}
+                    {isReadyForProcessing(transaction) && (
+                      <Badge variant="secondary" className="text-blue-700 bg-blue-100 border-blue-300">
+                        <ClockIcon className="w-3 h-3 mr-1" />
+                        Ready for Processing
+                      </Badge>
+                    )}
                     
                     {/* Action Required Tag */}
                     {isTransactionActionRequired(transaction) && (

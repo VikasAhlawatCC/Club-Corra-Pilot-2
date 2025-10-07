@@ -64,10 +64,8 @@ export class TransactionApprovalService {
 
       const updatedTransaction = await manager.save(CoinTransaction, transaction)
 
-      // Update user balance if coins were earned
-      if (transaction.coinsEarned && transaction.coinsEarned > 0 && transaction.user) {
-        await this.updateUserBalance(manager, transaction.user.id, transaction.coinsEarned)
-      }
+      // Note: Balance updates are now handled immediately when transaction is submitted
+      // No need to update balance again on approval since it was already updated
 
       // TODO: Send real-time notification via WebSocket
       // await this.notificationService.notifyUser(transaction.user.id, {
@@ -92,6 +90,13 @@ export class TransactionApprovalService {
 
       if (transaction.status !== 'PENDING') {
         throw new BadRequestException('Transaction is not in pending status')
+      }
+
+      // BUSINESS RULE: Revert balance changes when transaction is rejected
+      // Only revert if the transaction had balance changes (authenticated user)
+      if (transaction.user && transaction.previousBalance !== undefined) {
+        // Revert the user's balance back to the previous state
+        await this.revertUserBalance(manager, transaction.user.id, transaction.previousBalance)
       }
 
       // Update transaction status
@@ -241,6 +246,23 @@ export class TransactionApprovalService {
 
     const currentBalance = parseInt(balance.balance)
     balance.balance = (currentBalance + amount).toString()
+    await manager.save(CoinBalance, balance)
+  }
+
+  private async revertUserBalance(manager: any, userId: string, targetBalance: number): Promise<void> {
+    let balance = await manager.findOne(CoinBalance, {
+      where: { user: { id: userId } }
+    })
+
+    if (!balance) {
+      balance = manager.create(CoinBalance, {
+        user: { id: userId } as User,
+        balance: targetBalance.toString()
+      })
+    } else {
+      balance.balance = targetBalance.toString()
+    }
+
     await manager.save(CoinBalance, balance)
   }
 }

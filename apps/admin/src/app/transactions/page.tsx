@@ -32,10 +32,12 @@ export default function TransactionsPage() {
   // Use the useCoins hook for transaction management
   const { 
     transactions, 
+    processingOrder,
     loading: coinsLoading, 
     error: coinsError,
     pagination,
     fetchTransactions,
+    fetchProcessingOrder,
     approveTransaction,
     rejectTransaction,
     processPayment
@@ -92,8 +94,21 @@ export default function TransactionsPage() {
     try {
       const success = await approveTransaction(transactionId, adminNotes)
       if (success) {
-        showSuccess('Transaction approved successfully. User has been notified.')
-        await fetchTransactions({ page: currentPage, limit: pageSize })
+        showSuccess('Transaction Processed Successfully! The redeem request has been processed. If approved, you can now process the payment.')
+        
+        // Refresh both transactions and processing order
+        await Promise.all([
+          fetchTransactions({ page: currentPage, limit: pageSize }),
+          fetchProcessingOrder()
+        ])
+        
+        // Show additional message about next transaction if available
+        setTimeout(() => {
+          const remainingReadyTransactions = processingOrder.filter(order => order.transactionId !== transactionId)
+          if (remainingReadyTransactions.length > 0) {
+            showSuccess('The next transaction in line will automatically become the oldest and ready to get verified next!')
+          }
+        }, 1000)
       } else {
         showError('Failed to approve transaction. Please try again.')
       }
@@ -231,8 +246,12 @@ export default function TransactionsPage() {
 
   // Apply filters and fetch data
   useEffect(() => {
-    fetchTransactionsWithFilters()
-  }, [fetchTransactionsWithFilters])
+    const loadData = async () => {
+      await fetchTransactionsWithFilters()
+      await fetchProcessingOrder()
+    }
+    loadData()
+  }, [fetchTransactionsWithFilters, fetchProcessingOrder])
 
   // Update pagination state from useCoins hook
   useEffect(() => {
@@ -530,6 +549,7 @@ export default function TransactionsPage() {
       {/* Transaction List */}
       <TransactionList
         transactions={transactions}
+        processingOrder={processingOrder}
         isLoading={isLoading}
         selectedTransaction={selectedTransaction}
         showDetailModal={showDetailModal}

@@ -77,7 +77,7 @@ let UsersService = class UsersService {
     async findById(id) {
         const user = await this.userRepository.findOne({
             where: { id },
-            relations: ['profile', 'paymentDetails', 'authProviders'],
+            relations: ['profile', 'paymentDetails', 'authProviders', 'coinBalance'],
         });
         if (!user) {
             throw new common_1.NotFoundException('User not found');

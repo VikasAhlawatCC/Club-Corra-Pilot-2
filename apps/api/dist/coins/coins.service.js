@@ -129,12 +129,21 @@ let CoinsService = class CoinsService {
             receiptUrl: receiptUrl,
             billDate: new Date(billDate),
             statusUpdatedAt: new Date(),
-            // TODO: Add balance tracking fields when database columns are available
-            // previousBalance: currentBalance,
-            // balanceAfterEarn: currentBalance + coinsEarned,
-            // balanceAfterRedeem: currentBalance + coinsEarned - coinsToRedeem,
+            // Balance tracking fields for reversion on rejection
+            previousBalance: currentBalance,
+            balanceAfterEarn: currentBalance + coinsEarned,
+            balanceAfterRedeem: currentBalance + coinsEarned - coinsToRedeem,
         });
         const savedTransaction = await this.transactionRepository.save(transaction);
+        // BUSINESS RULE: Immediately update user balance when transaction is submitted
+        // This ensures users see their updated balance right after submission
+        if (user) {
+            // Add earned coins and subtract redeemed coins immediately
+            const netAmount = coinsEarned - coinsToRedeem;
+            if (netAmount !== 0) {
+                await this.updateUserBalance(userId, netAmount);
+            }
+        }
         // Get updated balance and transaction list for response
         const balance = await this.balanceUpdateService.getUserBalance(userId);
         const optimisticBalance = await this.balanceUpdateService.getOptimisticBalance(userId, savedTransaction);
@@ -550,6 +559,54 @@ let CoinsService = class CoinsService {
     async getPendingTransactions(page = 1, limit = 20) {
         return this.getAllTransactions(page, limit, { status: 'PENDING' });
     }
+    async getProcessingOrder() {
+        try {
+            // Get all pending transactions ordered by user and creation date
+            const pendingTransactions = await this.transactionRepository.find({
+                where: { status: 'PENDING' },
+                relations: ['user', 'brand'],
+                order: {
+                    user: { id: 'ASC' }, // Group by user
+                    createdAt: 'ASC' // Then by creation date (oldest first)
+                }
+            });
+            // Group transactions by user and find the oldest for each user
+            const userOldestTransaction = new Map();
+            const processingOrder = [];
+            for (const transaction of pendingTransactions) {
+                if (transaction.user) {
+                    const userId = transaction.user.id;
+                    // If this is the first transaction for this user, it's the oldest
+                    if (!userOldestTransaction.has(userId)) {
+                        userOldestTransaction.set(userId, transaction.id);
+                        // Add to processing order
+                        processingOrder.push({
+                            transactionId: transaction.id,
+                            userId: userId,
+                            userName: transaction.user.profile?.firstName && transaction.user.profile?.lastName
+                                ? `${transaction.user.profile.firstName} ${transaction.user.profile.lastName}`
+                                : transaction.user.profile?.firstName
+                                    ? transaction.user.profile.firstName
+                                    : transaction.user.mobileNumber
+                                        ? `User ${transaction.user.mobileNumber.slice(-4)}`
+                                        : 'Unknown User',
+                            userMobile: transaction.user.mobileNumber || 'N/A',
+                            createdAt: transaction.createdAt,
+                            type: transaction.type,
+                            billAmount: transaction.billAmount,
+                            brandName: transaction.brand?.name,
+                            isOldestPending: true
+                        });
+                    }
+                }
+            }
+            return processingOrder;
+        }
+        catch (error) {
+            console.error('Error in getProcessingOrder:', error);
+            return [];
+        }
+    }
     async getTransactionById(id) {
         return this.transactionRepository.findOne({
             where: { id },
@@ -691,7 +748,7 @@ let CoinsService = class CoinsService {
     }
     // Admin methods for transaction navigation and user-specific queries
     async getUserPendingTransactions(userId) {
-        return this.transactionRepository.find({
+        const transactions = await this.transactionRepository.find({
             where: {
                 user: { id: userId },
                 status: 'PENDING',
@@ -699,6 +756,9 @@ let CoinsService = class CoinsService {
             relations: ['user', 'brand'],
             order: { createdAt: 'ASC' }, // Oldest first
         });
+        // Convert to admin DTO format
+        const { convertToAdminTransactionDto } = await Promise.resolve().then(() => __importStar(require('./dto/admin-transaction.dto')));
+        return transactions.map(convertToAdminTransactionDto);
     }
     async getNextUserTransaction(currentTransactionId, userId) {
         const currentTransaction = await this.transactionRepository.findOne({
@@ -747,6 +807,34 @@ let CoinsService = class CoinsService {
             relations: ['user', 'brand'],
             order: { createdAt: 'ASC' },
         });
+    }
+    async getUserVerificationData(userId) {
+        const user = await this.userRepository.findOne({
+            where: { id: userId },
+            relations: ['profile', 'paymentDetails', 'coinBalance'],
+        });
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        const pendingRequests = await this.getUserPendingTransactions(userId);
+        return {
+            user: {
+                id: user.id,
+                name: user.profile ? `${user.profile.firstName} ${user.profile.lastName}`.trim() : 'Unknown User',
+                email: user.email,
+                mobileNumber: user.mobileNumber,
+                profile: user.profile,
+                paymentDetails: user.paymentDetails,
+                coinBalance: user.coinBalance?.balance ?? 0,
+            },
+            pendingRequests: {
+                data: pendingRequests,
+                total: pendingRequests.length,
+                page: 1,
+                limit: pendingRequests.length,
+                totalPages: 1,
+            },
+        };
     }
 };
 exports.CoinsService = CoinsService;

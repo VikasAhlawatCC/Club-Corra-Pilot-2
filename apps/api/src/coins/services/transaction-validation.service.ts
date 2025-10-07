@@ -68,19 +68,7 @@ export class TransactionValidationService {
       throw new BadRequestException('A pending reward request already exists for this bill')
     }
 
-    // Check for recent submissions (prevent spam - max 1 per hour)
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
-    const recentTransaction = await this.transactionRepository.findOne({
-      where: {
-        user: { id: userId },
-        brand: { id: brandId },
-        createdAt: Between(oneHourAgo, now)
-      }
-    })
-
-    if (recentTransaction) {
-      throw new BadRequestException('Please wait at least 1 hour before submitting another request for this brand')
-    }
+    // Note: Removed 1-hour validation restriction - users can now submit multiple requests as needed
 
     // Validate redemption amount
     if (coinsToRedeem > 0) {

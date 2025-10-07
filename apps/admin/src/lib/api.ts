@@ -43,10 +43,15 @@ async function apiRequest<T>(
   const token = getAuthToken()
   if (token) {
     config.headers = { ...config.headers, Authorization: `Bearer ${token}` }
+    console.log('API Request with token:', url, 'Token length:', token.length)
+  } else {
+    console.log('API Request without token:', url)
+    console.warn('No authentication token found. User may need to log in again.')
   }
 
   try {
     const response = await fetch(url, config)
+    console.log('API Response status:', response.status, 'for URL:', url)
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
@@ -78,16 +83,22 @@ export const transactionApi = {
       `/admin/coins/transactions${queryParams ? `?${queryParams}` : `?page=${page}&limit=${limit}`}`
     ),
 
+  // Get processing order for sequential transaction processing
+  getProcessingOrder: () =>
+    apiRequest<{ success: boolean, message: string, data: any[] }>(
+      '/admin/coins/transactions/processing-order'
+    ),
+
   // Get user pending requests for verification navigation
   getUserPendingRequests: (userId: string) =>
     apiRequest<{ success: boolean, message: string, data: { data: CoinTransaction[], total: number, page: number, limit: number, totalPages: number } }>(
-      `/admin/coins/users/${userId}/pending-requests`
+      `/admin/coins/users/${userId}/pending-transactions`
     ),
 
   // Get user details for verification form
   getUserDetails: (userId: string) =>
     apiRequest<{ success: boolean, message: string, data: { user: any } }>(
-      `/admin/coins/users/${userId}/details`
+      `/admin/users/${userId}` // Corrected path to admin/users from admin/coins/users
     ),
 
   // Get complete user verification data (user details + pending requests)

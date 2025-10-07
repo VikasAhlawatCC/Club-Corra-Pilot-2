@@ -14,6 +14,12 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api/v1')
 
+  // Disable ETag to avoid 304 Not Modified responses for JSON APIs
+  const httpInstance = app.getHttpAdapter().getInstance()
+  if (httpInstance && typeof httpInstance.set === 'function') {
+    httpInstance.set('etag', false)
+  }
+
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, transform: true })
   )

@@ -6,8 +6,75 @@ Always remember 1 corra coin is 1 rupee!
 ## Business Rules
 
 1. **Whole Numbers Only**: All amounts (transaction values, corra coins, redemption amounts) must be stored and processed as whole numbers only. No decimal values are allowed.
-2. **Coin Reversion on Rejection**: When a transaction request is rejected, any corra coins that were added or removed from the user's account during the approval process must be reverted back to their previous state.
-3. **No Negative Balances**: A transaction request cannot be approved if the user's total corra coins would become negative after the redemption. The system must validate that `user_balance >= redemption_amount` before allowing approval.
+2. **Immediate Coin Balance Updates**: When a user submits a transaction request, the total earned amount is immediately added to their corra coin balance, and the total redeemed amount is immediately subtracted from their balance. This ensures users see their updated balance right after submission.
+3. **Coin Reversion on Rejection**: When a transaction request is rejected by an admin, only then are the added and subtracted amounts associated with that specific request reverted back to the user's previous balance state.
+4. **No Negative Balances**: A transaction request cannot be approved if the user's total corra coins would become negative after the redemption. The system must validate that `user_balance >= redemption_amount` before allowing approval.
+
+## Corra Coins Lifecycle
+
+### How Users Earn Coins
+Users **ONLY** earn corra coins through the following method:
+- **Transaction Requests (Earning)**: When a user submits a transaction request in the webapp, coins are calculated and immediately added to their balance based on:
+  - Formula: `coinsEarned = (billAmount - coinsRedeemed) × brand.earningPercentage / 100`
+  - The earning is on the NET bill amount (after redemption is deducted)
+  - All calculations result in whole numbers (rounded)
+
+### How Users Burn (Spend) Coins
+Users **ONLY** burn corra coins through the following method:
+- **Transaction Requests (Redemption/Cashback)**: When a user includes a redemption amount in their transaction request:
+  - The `coinsRedeemed` amount is immediately subtracted from their balance
+  - Users can redeem up to `min(userBalance, billAmount × brand.redemptionPercentage / 100, brand.maxRedemptionPerTransaction)`
+  - Redemption reduces the net bill amount for earning calculation
+
+### Balance Tracking
+The system maintains three key values for each user in the `CoinBalance` table:
+1. **balance**: Current available coins = totalEarned - totalRedeemed (after accounting for rejections)
+2. **totalEarned**: Lifetime total of all coins earned from approved/pending transactions
+3. **totalRedeemed**: Lifetime total of all coins redeemed from approved/pending transactions
+
+### Transaction Request Lifecycle
+Each transaction request goes through the following states:
+
+1. **PENDING** (Initial State):
+   - User submits request via webapp with brand, billAmount, receiptUrl, and optional coinsToRedeem
+   - System immediately updates balance: `newBalance = currentBalance + coinsEarned - coinsRedeemed`
+   - System updates: `totalEarned += coinsEarned` and `totalRedeemed += coinsToRedeem`
+   - Transaction stores: `previousBalance`, `balanceAfterEarn`, `balanceAfterRedeem` for audit trail
+   - Status: PENDING
+
+2. **APPROVED** (Admin Action):
+   - Admin approves the transaction
+   - No balance change (already applied at submission)
+   - If `coinsRedeemed > 0`: Status changes to UNPAID (awaits payment processing)
+   - If `coinsRedeemed = 0`: Status changes to PAID (auto-completed, no payment needed)
+
+3. **REJECTED** (Admin Action):
+   - Admin rejects the transaction
+   - Balance is reverted: `balance = previousBalance`
+   - Totals are reverted: `totalEarned -= coinsEarned`, `totalRedeemed -= coinsRedeemed`
+   - Status: REJECTED
+
+4. **PAID** (Final State):
+   - For UNPAID transactions, admin marks as paid after processing UPI payment
+   - No balance change
+   - Status: PAID (transaction complete)
+
+### Key Validation Rules
+1. **Submission Validation**:
+   - User must have `balance >= coinsToRedeem` to submit redemption request
+   - Cannot submit request that would result in negative balance
+   - Must respect brand earning/redemption limits
+
+2. **Approval Validation**:
+   - Cannot approve if user currently has older pending transactions (must process oldest first)
+   - Must verify user still has sufficient balance if redemption was involved
+   - Cannot approve if it would create negative balance
+
+3. **Display Requirements**:
+   - Webapp dashboard must show: current `balance`, `totalEarned`, `totalRedeemed` from server
+   - Admin interface must show: user's `balance`, transaction details with `coinsEarned` and `coinsRedeemed`
+   - All values displayed must be whole numbers
+   - No client-side calculation of balances (always use server values)
 
 ## 1. Web App (User Facing) - `http://localhost:3010/`
 
@@ -62,6 +129,39 @@ Always remember 1 corra coin is 1 rupee!
 4.  **Responses page**: should contain the list of all the email ids filled on the homepage of the web app!
 
 ## 3. Database
+
+### 3.1 User Management
 1.  Make sure to change the entire DBs of the user as per only the details that we are taking at this point should be mandatory fields ie only Mobile number! Rest will be filled later! But this should be sufficient enough!
-2.  **Data Types**: All coin-related fields (balance, earned, redeemed, transaction amounts) must be stored as integers to ensure whole number handling.
-3.  **Transaction History**: Maintain a complete audit trail of all coin balance changes to enable proper reversion on rejection.
+
+### 3.2 Coin Balance Schema
+**Table: coin_balances**
+- `balance` (INTEGER): Current available coins (can increase or decrease)
+- `totalEarned` (INTEGER): Lifetime total of coins earned (only increases, decreases on rejection)
+- `totalRedeemed` (INTEGER): Lifetime total of coins redeemed (only increases, decreases on rejection)
+
+All fields must be kept in sync:
+- When PENDING request is created: Update all three fields
+- When request is REJECTED: Revert all three fields
+- When request is APPROVED/PAID: No change (already applied)
+
+### 3.3 Transaction Schema
+**Table: coin_transactions**
+- `billAmount` (INTEGER): Original bill/transaction amount
+- `coinsEarned` (INTEGER): Coins earned from this transaction
+- `coinsRedeemed` (INTEGER): Coins redeemed in this transaction
+- `previousBalance` (INTEGER): Balance before this transaction (for reversion)
+- `balanceAfterEarn` (INTEGER): Balance after earning (for audit)
+- `balanceAfterRedeem` (INTEGER): Balance after redemption (for audit)
+- `status` (VARCHAR): PENDING | APPROVED | REJECTED | UNPAID | PAID
+- `receiptUrl` (VARCHAR): S3 URL to uploaded receipt
+- `billDate` (DATE): Date on the receipt
+- `adminNotes` (TEXT): Admin comments/rejection reason
+- `processedAt` (TIMESTAMP): When admin approved/rejected
+- `paymentProcessedAt` (TIMESTAMP): When payment was completed
+- `statusUpdatedAt` (TIMESTAMP): Last status change time
+
+### 3.4 Data Integrity Requirements
+1. **Data Types**: All coin-related fields (balance, earned, redeemed, transaction amounts) must be stored as integers to ensure whole number handling.
+2. **Transaction History**: Maintain a complete audit trail of all coin balance changes to enable proper reversion on rejection.
+3. **Atomic Updates**: All balance updates must happen within database transactions to prevent race conditions.
+4. **Consistency**: The formula `balance = totalEarned - totalRedeemed` must always hold true (accounting for rejections).

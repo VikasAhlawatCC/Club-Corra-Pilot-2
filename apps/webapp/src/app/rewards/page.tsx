@@ -11,7 +11,7 @@ import Image from "next/image";
 
 export default function RewardsPage() {
   const router = useRouter();
-  const { user, token, isAuthenticated, isLoading } = useAuth();
+  const { user, token, isAuthenticated, isLoading, refreshUser } = useAuth();
   const [brands, setBrands] = useState<Brand[]>([]);
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
   const [billAmount, setBillAmount] = useState<number>(0);
@@ -190,6 +190,10 @@ export default function RewardsPage() {
 
       if (response.success) {
         toast.success("Reward request submitted successfully!");
+        
+        // Refresh user data to show updated balance immediately
+        await refreshUser();
+        
         router.push("/dashboard");
       } else {
         toast.error(response.message || "Failed to submit request");
@@ -232,21 +236,22 @@ export default function RewardsPage() {
     : 0;
 
   return (
-    <>
-      <h1 className="text-center text-3xl sm:text-4xl font-bold">
-        Get Rewards
-      </h1>
-      <p className="text-center text-black/70 mt-2">
-        Upload your receipt and redeem coins for cashback
-      </p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <h1 className="text-center text-3xl sm:text-4xl font-bold">
+          Request Rewards
+        </h1>
+        <p className="text-center text-black/70 mt-2">
+          Upload your bill to earn Corra Coins and redeem them for cashback.
+        </p>
 
-      <section className="mt-10 rounded-2xl border border-black/10 shadow-soft bg-white animate-fade-up delay-100 relative">
+        <section className="mt-10 rounded-2xl border border-black/10 shadow-soft bg-white animate-fade-up delay-100 relative">
         <div className="px-6 py-6 border-b border-black/10">
           <h2 className="text-xl sm:text-2xl font-semibold">
-            Submit Reward Request
+            Submit a New Reward Request
           </h2>
           <p className="text-black/70 mt-2">
-            Upload your receipt and choose how many coins to redeem for cashback
+            Select the brand, upload your receipt, and enter the transaction details.
           </p>
         </div>
         <div className="p-6">
@@ -259,74 +264,203 @@ export default function RewardsPage() {
                 <p className="mt-2 text-gray-600">Loading brands...</p>
               </div>
             ) : brands.length > 0 ? (
-              <div className="flex items-center gap-3">
-                <button 
-                  onClick={() => {
-                    const currentIndex = brands.findIndex(b => b.id === selectedBrand?.id);
-                    const prevIndex = currentIndex > 0 ? currentIndex - 1 : brands.length - 1;
-                    setSelectedBrand(brands[prevIndex]);
-                  }}
-                  aria-label="Previous brands"
-                  className="h-8 w-8 rounded-full border border-black/10 grid place-items-center hover:bg-black/5 hover:scale-110 transition-all duration-500 ease-out group/prev"
-                >
-                  <span className="group-hover/prev:-translate-x-0.5 transition-transform duration-300 ease-out">‹</span>
-                </button>
-
-                {/* Brand display */}
-                <div className="flex-1 flex justify-center">
-                  <button
-                    className={`rounded-lg border-2 p-4 flex flex-col items-center gap-3 text-center transition-all duration-500 ease-out ${
-                      selectedBrand?.id 
-                        ? "border-green-600 bg-green-50 scale-105 shadow-md" 
-                        : "border-black/10 hover:bg-black/5 hover:scale-102 hover:border-green-300"
-                    }`}
+              <>
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={prevPage}
+                    aria-label="Previous brands"
+                    className="h-8 w-8 rounded-full border border-black/10 grid place-items-center hover:bg-black/5 hover:scale-110 transition-all duration-500 ease-out group/prev"
                   >
-                    <div
-                      className={`h-12 w-12 rounded-full grid place-items-center overflow-hidden ring-1 ring-black/10 transition-all duration-500 ease-out bg-gray-100 ${
-                        selectedBrand?.id ? "ring-green-300" : ""
-                      }`}
+                    <span className="group-hover/prev:-translate-x-0.5 transition-transform duration-300 ease-out">‹</span>
+                  </button>
+
+                  {/* Smooth scrolling brands container */}
+                  <div className="flex-1 overflow-hidden">
+                    <div 
+                      className="flex gap-4 transition-transform duration-700 ease-out"
+                      style={{ transform: `translateX(-${page * (100 / ITEMS_PER_PAGE)}%)` }}
                     >
-                      {selectedBrand?.logoUrl ? (
-                        <Image
-                          src={selectedBrand.logoUrl}
-                          alt={selectedBrand.name}
-                          width={48}
-                          height={48}
-                          className={`h-8 w-8 object-contain transition-all duration-500 ease-out ${
-                            selectedBrand?.id ? "scale-110" : "scale-100"
-                          }`}
-                          unoptimized
-                          draggable={false}
-                        />
-                      ) : (
-                        <span className="text-sm font-semibold text-gray-600">{selectedBrand?.name?.substring(0, 2) || "?"}</span>
-                      )}
+                      {Array.from({ length: totalPages }).map((_, pageIndex) => (
+                        <div key={pageIndex} className="flex gap-4 min-w-full">
+                          {brands.slice(pageIndex * ITEMS_PER_PAGE, pageIndex * ITEMS_PER_PAGE + ITEMS_PER_PAGE).map(brand => (
+                            <button
+                              key={brand.id}
+                              className={`flex-1 rounded-lg border-2 p-4 flex flex-col items-center gap-3 text-center transition-all duration-500 ease-out mt-4 mb-4 ml-2 mr-4${
+                                selectedBrand?.id === brand.id 
+                                  ? "border-green-600 bg-green-50 scale-105 shadow-md" 
+                                  : "border-black/10 hover:bg-black/5 hover:scale-102 hover:border-green-300"
+                              }`}
+                              onClick={() => handleSelectBrand(brand)}
+                            >
+                              <div
+                                className={`h-12 w-12 rounded-full grid place-items-center overflow-hidden ring-1 ring-black/10 transition-all duration-500 ease-out bg-gray-100 ${
+                                  selectedBrand?.id === brand.id ? "ring-green-300" : ""
+                                }`}
+                              >
+                                {brand.logoUrl ? (
+                                  <Image
+                                    src={brand.logoUrl}
+                                    alt={brand.name}
+                                    width={48}
+                                    height={48}
+                                    className={`h-8 w-8 object-contain transition-all duration-500 ease-out ${
+                                      selectedBrand?.id === brand.id ? "scale-110" : "scale-100"
+                                    }`}
+                                    unoptimized
+                                    draggable={false}
+                                  />
+                                ) : (
+                                  <span className="text-sm font-semibold text-gray-600">{brand.name.substring(0, 2)}</span>
+                                )}
+                              </div>
+                              <div className={`font-medium text-sm transition-colors duration-500 ease-out ${
+                                selectedBrand?.id === brand.id ? "text-green-700" : "text-gray-700"
+                              }`}>
+                                {brand.name}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {brand.earningPercentage}% earn, {brand.redemptionPercentage}% redeem
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      ))}
                     </div>
-                    <div className={`font-medium text-sm transition-colors duration-500 ease-out ${
-                      selectedBrand?.id ? "text-green-700" : "text-gray-700"
-                    }`}>
-                      {selectedBrand?.name || "Select Brand"}
-                    </div>
-                    {selectedBrand && (
-                      <div className="text-xs text-gray-500">
-                        {selectedBrand.earningPercentage}% earn, {selectedBrand.redemptionPercentage}% redeem
-                      </div>
-                    )}
+                  </div>
+
+                  <button 
+                    onClick={nextPage}
+                    aria-label="Next brands"
+                    className="h-8 w-8 rounded-full border border-black/10 grid place-items-center hover:bg-black/5 hover:scale-110 transition-all duration-500 ease-out group/next"
+                  >
+                    <span className="group-hover/next:translate-x-0.5 transition-transform duration-300 ease-out">›</span>
                   </button>
                 </div>
 
-                <button 
-                  onClick={() => {
-                    const currentIndex = brands.findIndex(b => b.id === selectedBrand?.id);
-                    const nextIndex = currentIndex < brands.length - 1 ? currentIndex + 1 : 0;
-                    setSelectedBrand(brands[nextIndex]);
-                  }}
-                  aria-label="Next brands"
-                  className="h-8 w-8 rounded-full border border-black/10 grid place-items-center hover:bg-black/5 hover:scale-110 transition-all duration-500 ease-out group/next"
-                >
-                  <span className="group-hover/next:translate-x-0.5 transition-transform duration-300 ease-out">›</span>
-                </button>
-              </div>
+                {/* Pagination Dots */}
+                <div className="mt-3 flex justify-center gap-2">
+                  {Array.from({ length: totalPages }).map((_, i) => (
+                    <button
+                      key={i}
+                      aria-label={`Go to brand set ${i + 1}`}
+                      onClick={() => setPage(i)}
+                      className={`relative h-3 w-3 rounded-full transition-all duration-500 ease-out hover:scale-125 group/dot  ${
+                        page === i 
+                          ? "bg-green-600 scale-125 shadow-md" 
+                          : "bg-black/20 hover:bg-black/30 hover:scale-110"
+                      }`}
+                    >
+                      {/* Animated ring effect for active dot */}
+                      {page === i && (
+                        <div className="absolute inset-0 rounded-full ring-2 ring-green-400 opacity-50 animate-ping" />
+                      )}
+                      {/* Hover effect */}
+                      <div className="absolute inset-0 rounded-full bg-green-400 opacity-0 group-hover/dot:opacity-30 transition-opacity duration-300 ease-out" />
+                    </button>
+                  ))}
+                </div>
+
+                {/* View all brands CTA */}
+                <div className="mt-4 relative inline-block">
+                  <button
+                    onClick={() => {
+                      setShowAllBrands(s => !s);
+                      if (!showAllBrands) setOverlayPage(0);
+                    }}
+                    className="text-sm font-medium text-green-600 hover:text-green-700 hover:underline flex items-center gap-1 transition-colors duration-300"
+                  >
+                    {showAllBrands ? "Hide brands" : "View all brands"}
+                    <span
+                      className={`transition-transform text-xs ${showAllBrands ? "rotate-180" : ""}`}
+                      aria-hidden
+                    >
+                      ▼
+                    </span>
+                  </button>
+
+                  {showAllBrands && (
+                    <div className="absolute left-0 z-30 mt-2 w-72 rounded-xl border border-black/10 bg-white shadow-lg p-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        {overlayBrands.map(brand => (
+                          <button
+                            key={brand.id}
+                            className={`rounded-md border-2 p-1.5 flex items-center gap-1.5 text-left text-xs transition-all duration-300 ease-out ${
+                              selectedBrand?.id === brand.id
+                                ? "border-green-600 bg-green-50"
+                                : "border-black/10 hover:bg-black/5 hover:border-green-300"
+                            }`}
+                            onClick={() => {
+                              handleSelectBrand(brand);
+                              setShowAllBrands(false);
+                              setPage(Math.floor(brands.indexOf(brand) / ITEMS_PER_PAGE));
+                            }}
+                          >
+                            <div
+                              className={`h-6 w-6 rounded-full grid place-items-center overflow-hidden ring-1 ring-black/10 bg-gray-100`}
+                            >
+                              {brand.logoUrl ? (
+                                <Image
+                                  src={brand.logoUrl}
+                                  alt={brand.name}
+                                  width={24}
+                                  height={24}
+                                  className="h-4 w-4 object-contain"
+                                  unoptimized
+                                  draggable={false}
+                                />
+                              ) : (
+                                <span className="text-xs font-semibold text-gray-600">{brand.name.substring(0, 2)}</span>
+                              )}
+                            </div>
+                            <span className="truncate text-xs">{brand.name}</span>
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Pagination inside dropdown */}
+                      {overlayTotalPages > 1 && (
+                        <div className="mt-3 flex items-center justify-between">
+                          <button
+                            onClick={() =>
+                              setOverlayPage(p => (p - 1 + overlayTotalPages) % overlayTotalPages)
+                            }
+                            className="h-7 px-2 text-xs rounded border border-black/10 hover:bg-black/5 hover:scale-110 transition-all duration-300 ease-out group/overlay-prev"
+                          >
+                            <span className="group-hover/overlay-prev:-translate-x-0.5 transition-transform duration-200 ease-out">‹</span>
+                          </button>
+                          <div className="flex gap-1">
+                            {Array.from({ length: overlayTotalPages }).map((_, i) => (
+                              <button
+                                key={i}
+                                onClick={() => setOverlayPage(i)}
+                                className={`relative h-2.5 w-2.5 rounded-full transition-all duration-400 ease-out hover:scale-125 group/overlay-dot ${
+                                  overlayPage === i
+                                    ? "bg-green-600 scale-125 shadow-sm"
+                                    : "bg-black/20 hover:bg-black/30 hover:scale-110"
+                                }`}
+                                aria-label={`Overlay page ${i + 1}`}
+                              >
+                                {/* Animated ring for active overlay dot */}
+                                {overlayPage === i && (
+                                  <div className="absolute inset-0 rounded-full ring-1 ring-green-400 opacity-40 animate-ping" />
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                          <button
+                            onClick={() =>
+                              setOverlayPage(p => (p + 1) % overlayTotalPages)
+                            }
+                            className="h-7 px-2 text-xs rounded border border-black/10 hover:bg-black/5 hover:scale-110 transition-all duration-300 ease-out group/overlay-next"
+                          >
+                            <span className="group-hover/overlay-next:translate-x-0.5 transition-transform duration-200 ease-out">›</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </>
             ) : (
               <div className="text-center py-8">
                 <div className="text-gray-400 text-4xl mb-4">🏪</div>
@@ -344,11 +478,11 @@ export default function RewardsPage() {
 
           {/* Requirements */}
           <div className="rounded-xl border border-blue-200 bg-blue-50 text-blue-700 p-4 text-sm">
+            <p className="font-semibold mb-2">Please ensure the following:</p>
             <ul className="list-disc pl-5 space-y-1">
-              <li>Make sure the receipt photo is clear</li>
+              <li>The receipt photo is clear and legible.</li>
               <li>
-                Total transaction value & Unique Order Id must be present on the
-                receipt
+                The total transaction value and a unique Order ID are clearly visible on the receipt.
               </li>
             </ul>
           </div>
@@ -392,9 +526,9 @@ export default function RewardsPage() {
                     ↥
                   </div>
                   <div className="mt-3 font-medium">
-                    Click to upload or drag and drop
+                    Click to upload or drag and drop your receipt
                   </div>
-                  <div className="text-xs text-black/50">PNG, JPG up to 10MB</div>
+                  <div className="text-xs text-black/50">PNG or JPG, up to 10MB</div>
                 </>
               )}
             </label>
@@ -403,7 +537,7 @@ export default function RewardsPage() {
           {/* Amount */}
           <div className="mt-6">
             <label className="text-sm font-medium">
-              Transaction Value (₹)
+              Transaction Value (₹) as per your bill
             </label>
             <div className="mt-1 relative">
               <input
@@ -429,7 +563,7 @@ export default function RewardsPage() {
           {/* Redemption Slider */}
           <div className="mt-6">
             <label className="text-sm font-medium">
-              Redeem Coins (Optional)
+              Redeem Corra Coins (1 Corra Coin = ₹1)
             </label>
             <div className="mt-3 space-y-4">
               <div>
@@ -490,41 +624,16 @@ export default function RewardsPage() {
                 <span className="text-gray-600">Coins Earned:</span>
                 <span className="font-medium text-green-600">+{coinsEarned} coins</span>
               </div>
-              {selectedBrand && (
-                <div className="text-xs text-gray-500 mt-3 pt-2 border-t border-green-200">
-                  <div>Brand: {selectedBrand.name} ({selectedBrand.earningPercentage}% earn, {selectedBrand.redemptionPercentage}% redeem)</div>
-                  <div>Your Balance: {user?.totalCoins || 0} coins</div>
-                  <div>Max Redeemable: {maxRedeemable} coins</div>
-                </div>
-              )}
             </div>
           </div>
 
           {/* Notes */}
-          <div className="mt-4 space-y-2 text-sm">
+          <div className="mt-4 text-sm">
             <div className="rounded-lg bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3">
-              Verifying your transaction will take 2–3 business days
-            </div>
-            <div className="rounded-lg bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3">
-              You can get cashback on earned Corra Coins on purchase
+              Your cashback will be processed within 2-3 business days after your transaction is successfully verified by our team.
             </div>
           </div>
 
-          {/* Debug Info - Remove in production */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="mt-4 border border-gray-200 bg-gray-50 rounded-lg p-4 text-xs">
-              <h3 className="font-semibold mb-2">Debug Info:</h3>
-              <div className="space-y-1">
-                <div>Selected Brand: {selectedBrand ? 'Yes' : 'No'}</div>
-                <div>Receipt Uploaded: {receiptUrl ? 'Yes' : 'No'}</div>
-                <div>Bill Amount: {billAmount}</div>
-                <div>Coins Redeemed: {coinsRedeemed}</div>
-                <div>UPI ID: {upiId || 'Not provided'}</div>
-                <div>Token: {token ? 'Present' : 'Missing'}</div>
-                <div>Button Disabled: {(!selectedBrand || !receiptUrl || billAmount <= 0 || submitting || (coinsRedeemed > 0 && !upiId)) ? 'Yes' : 'No'}</div>
-              </div>
-            </div>
-          )}
 
           {/* Actions */}
           <div className="mt-6 flex items-center justify-center gap-3">
@@ -548,6 +657,7 @@ export default function RewardsPage() {
           </div>
         </div>
       </section>
-    </>
+      </div>
+    </div>
   );
 }

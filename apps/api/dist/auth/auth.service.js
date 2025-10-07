@@ -212,6 +212,7 @@ let AuthService = class AuthService {
                         isMobileVerified: userData.isMobileVerified,
                         status: userData.status,
                         createdAt: userData.createdAt,
+                        totalCoins: Number(userData.coinBalance?.balance) || 0,
                     }
                 }
             };
