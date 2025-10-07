@@ -911,10 +911,36 @@ let CoinAdminController = class CoinAdminController {
         return transaction;
     }
     async approveTransaction(id, approvalDto, req) {
-        return this.coinsService.approveTransaction(id, req.user.id, approvalDto.adminNotes);
+        try {
+            console.log('[Controller] approveTransaction called:', { id, adminNotes: approvalDto.adminNotes, userId: req.user?.id });
+            const transaction = await this.coinsService.approveTransaction(id, req.user.id, approvalDto.adminNotes);
+            console.log('[Controller] Transaction approved successfully:', { id: transaction.id, status: transaction.status });
+            return {
+                success: true,
+                message: 'Transaction approved successfully',
+                data: { transaction }
+            };
+        }
+        catch (error) {
+            console.error('[Controller] Error approving transaction:', error);
+            throw error;
+        }
     }
     async rejectTransaction(id, rejectionDto, req) {
-        return this.coinsService.rejectTransaction(id, req.user.id, rejectionDto.reason);
+        const transaction = await this.coinsService.rejectTransaction(id, req.user.id, rejectionDto.reason);
+        return {
+            success: true,
+            message: 'Transaction rejected successfully',
+            data: { transaction }
+        };
+    }
+    async markTransactionAsPaid(id, markPaidDto, req) {
+        const transaction = await this.coinsService.markRedeemTransactionAsPaid(id, markPaidDto);
+        return {
+            success: true,
+            message: 'Transaction marked as paid successfully',
+            data: { transaction }
+        };
     }
     async getNextUserTransaction(id, userId) {
         const nextTransaction = await this.coinsService.getNextUserTransaction(id, userId);
@@ -1256,6 +1282,15 @@ __decorate([
     __metadata("design:paramtypes", [String, reward_request_response_dto_1.TransactionRejectionDto, Object]),
     __metadata("design:returntype", Promise)
 ], CoinAdminController.prototype, "rejectTransaction", null);
+__decorate([
+    (0, common_1.Post)('transactions/:id/mark-paid'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, reward_request_response_dto_1.MarkAsPaidDto, Object]),
+    __metadata("design:returntype", Promise)
+], CoinAdminController.prototype, "markTransactionAsPaid", null);
 __decorate([
     (0, common_1.Get)('transactions/:id/next'),
     __param(0, (0, common_1.Param)('id')),

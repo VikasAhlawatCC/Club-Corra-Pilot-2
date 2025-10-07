@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { sendOTP as sendOTPApi, verifyOTP, createRewardRequest } from "@/lib/api";
+import { sendOTP as sendOTPApi, verifyOTP, claimPendingTransaction } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -70,22 +70,19 @@ export default function PhoneVerification({
         login(response.data.token, response.data.user);
         toast.success("Login successful!");
         
-        // Create reward request if we have pending upload data
-        const pendingUpload = localStorage.getItem('pendingUpload');
-        if (pendingUpload) {
+        // Claim pending transaction if we have a session ID
+        const sessionId = localStorage.getItem('pendingTransactionSessionId');
+        if (sessionId) {
           try {
-            const uploadData = JSON.parse(pendingUpload);
-            await createRewardRequest({
-              brandId: uploadData.brandId,
-              billAmount: uploadData.amount,
-              coinsRedeemed: 0, // No redemption for unauthenticated users
-              receiptUrl: uploadData.receiptUrl,
-            }, response.data.token);
+            const claimResponse = await claimPendingTransaction(sessionId, response.data.token);
             
-            localStorage.removeItem('pendingUpload');
-            toast.success("Reward request submitted successfully!");
+            if (claimResponse.success && claimResponse.data) {
+              toast.success("Reward request submitted successfully!");
+              // Clear the session ID after successful claim
+              localStorage.removeItem('pendingTransactionSessionId');
+            }
           } catch (error) {
-            console.error("Error creating reward request:", error);
+            console.error("Error claiming pending transaction:", error);
             const errorMessage = error instanceof Error ? error.message : "Unknown error";
             toast.error(`Failed to submit reward request: ${errorMessage}`);
           }

@@ -1,11 +1,15 @@
 "use client";
 
 import { Suspense, useEffect, useState, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
-import { ALL_BRANDS, type Brand } from "@/data/brands";
-import { getActiveBrands, getPresignedUploadUrl, Brand as ApiBrand } from "@/lib/api";
+import { useSearchParams, useRouter } from "next/navigation";
+import { getActiveBrands, getPresignedUploadUrl, createPendingTransaction, Brand } from "@/lib/api";
 import Image from "next/image";
 import { toast } from "sonner";
+
+// Generate a unique session ID for tracking pending transactions
+function generateSessionId(): string {
+  return `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+}
 
 export default function UploadPage() {
   return (
@@ -17,15 +21,27 @@ export default function UploadPage() {
 
 function UploadContent() {
   const params = useSearchParams();
-  const [brands, setBrands] = useState<Brand[]>(ALL_BRANDS);
-  const [selected, setSelected] = useState<Brand>(ALL_BRANDS[0]);
+  const router = useRouter();
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
   const [amount, setAmount] = useState<string>("500");
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string>("");
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [dragging, setDragging] = useState<boolean>(false);
   const [uploading, setUploading] = useState<boolean>(false);
   const [receiptUrl, setReceiptUrl] = useState<string>("");
   const [loadingBrands, setLoadingBrands] = useState<boolean>(true);
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [sessionId] = useState<string>(() => {
+    // Get or create session ID
+    const existing = localStorage.getItem('pendingTransactionSessionId');
+    if (existing) return existing;
+    
+    const newSessionId = generateSessionId();
+    localStorage.setItem('pendingTransactionSessionId', newSessionId);
+    return newSessionId;
+  });
   
   // Brand carousel state
   const ITEMS_PER_PAGE = 3;
@@ -33,7 +49,7 @@ function UploadContent() {
   const totalPages = Math.ceil(brands.length / ITEMS_PER_PAGE);
   const [showAllBrands, setShowAllBrands] = useState(false);
   
-  // Overlay pagination state
+  // Overlay pagination state for "View all brands"
   const OVERLAY_PER_PAGE = 8;
   const [overlayPage, setOverlayPage] = useState(0);
   const overlayTotalPages = Math.ceil(brands.length / OVERLAY_PER_PAGE);
@@ -42,32 +58,41 @@ function UploadContent() {
     [overlayPage, brands]
   );
 
-  // Fetch brands from API
+  // Fetch brands from API (no authentication required for public endpoint)
   useEffect(() => {
     const fetchBrands = async () => {
       try {
+        console.log("Fetching brands from API...");
         const response = await getActiveBrands();
-        if (response.success && response.data && Array.isArray(response.data)) {
-          // Convert API brands to Brand format
-          const apiBrands: Brand[] = response.data
-            .filter((brand: ApiBrand) => brand && brand.id && brand.name)
-            .map((brand: ApiBrand) => ({
-            key: brand.id,
-            name: brand.name,
-            short: brand.name.substring(0, 2).toUpperCase(),
-            color: "bg-blue-100", // Default color
-            icon: brand.logoUrl,
-          }));
+        console.log("Brands API response:", response);
+        
+        if (response.success && response.data) {
+          // Handle nested response structure: response.data.data contains the brands array
+          const brandsData = (response.data as any).data || response.data;
           
-          setBrands(apiBrands);
-          setSelected(apiBrands[0] || ALL_BRANDS[0]);
+          if (Array.isArray(brandsData)) {
+            const validBrands = brandsData.filter((brand: Brand) => brand && brand.id && brand.name);
+            console.log("Valid brands found:", validBrands);
+            setBrands(validBrands);
+            setSelectedBrand(validBrands[0] || null);
+            
+            if (validBrands.length === 0) {
+              toast.error("No active brands found. Please contact support.");
+            } else {
+              toast.success(`Loaded ${validBrands.length} brands successfully!`);
+            }
+          } else {
+            console.error("Invalid brands data format:", brandsData);
+            toast.error("Invalid brands data format from API");
+          }
+        } else {
+          console.error("Invalid response format:", response);
+          toast.error("Invalid response from brands API");
         }
       } catch (error) {
         console.error("Error fetching brands:", error);
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        toast.error(`Failed to load brands: ${errorMessage}. Using default list.`);
-        setBrands(ALL_BRANDS);
-        setSelected(ALL_BRANDS[0]);
+        toast.error(`Failed to load brands: ${errorMessage}`);
       } finally {
         setLoadingBrands(false);
       }
@@ -84,16 +109,16 @@ function UploadContent() {
     setPage(p => (p + 1) % totalPages);
   }
 
-  function handleSelectBrand(b: Brand) {
-    setSelected(b);
+  function handleSelectBrand(brand: Brand) {
+    setSelectedBrand(brand);
   }
 
   useEffect(() => {
-    const brandKey = params.get("brand");
+    const brandParam = params.get("brand");
     const amt = params.get("amount");
-    if (brandKey) {
-      const found = brands.find((b) => b.key === brandKey);
-      if (found) setSelected(found);
+    if (brandParam && brands.length > 0) {
+      const found = brands.find((b) => b.name.toLowerCase() === brandParam.toLowerCase() || b.id === brandParam);
+      if (found) setSelectedBrand(found);
     }
     if (amt && !Number.isNaN(Number(amt))) setAmount(String(amt));
   }, [params, brands]);
@@ -101,11 +126,12 @@ function UploadContent() {
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) {
+      setReceiptFile(file);
       setFileName(file.name);
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
       
-      // Upload file to S3 using presigned URL
+      // Upload file to S3 using presigned URL (no auth required for public endpoint)
       setUploading(true);
       try {
         const response = await getPresignedUploadUrl(file.name, file.type);
@@ -136,15 +162,21 @@ function UploadContent() {
     }
   }
 
-  const canContinue = Boolean(fileName) && Boolean(receiptUrl) && !uploading;
+  const canContinue = Boolean(selectedBrand) && 
+    Boolean(fileName) && 
+    Boolean(receiptUrl) && 
+    !uploading && 
+    !loadingBrands &&
+    !submitting &&
+    parseInt(amount) > 0;
 
   return (
     <>
       <h1 className="text-center text-3xl sm:text-4xl font-bold">
-        Upload Receipt for {selected.name}
+        Upload Receipt {selectedBrand ? `for ${selectedBrand.name}` : ''}
       </h1>
       <p className="text-center text-black/70 mt-2">
-        Upload your {selected.name} purchase receipt
+        {selectedBrand ? `Upload your ${selectedBrand.name} purchase receipt` : 'Upload your purchase receipt to earn Corra Coins'}
       </p>
 
       {/* Removed old inline stepper (now in layout) */}
@@ -152,7 +184,7 @@ function UploadContent() {
       <section className="mt-10 rounded-2xl border border-black/10 shadow-soft bg-white animate-fade-up delay-100 relative">
         <div className="px-6 py-6 border-b border-black/10">
           <h2 className="text-xl sm:text-2xl font-semibold">
-            Upload Receipt for {selected.name}
+            {selectedBrand ? `Upload Receipt for ${selectedBrand.name}` : 'Upload Receipt'}
           </h2>
           <p className="text-black/70 mt-2">
             Upload a clear photo of your purchase receipt to earn Corra Coins
@@ -181,33 +213,33 @@ function UploadContent() {
                     <div key={pageIndex} className="flex gap-4 min-w-full">
                       {brands.slice(pageIndex * ITEMS_PER_PAGE, pageIndex * ITEMS_PER_PAGE + ITEMS_PER_PAGE).map(b => (
                         <button
-                          key={b.key}
-                          className={`flex-1 rounded-lg border-2 p-4 flex flex-col items-center gap-3 text-center transition-all duration-500 ease-out mt-4 mb-4 ml-2 mr-4${
-                            selected.key === b.key 
+                          key={b.id}
+                          className={`flex-1 rounded-lg border-2 p-4 flex flex-col items-center gap-3 text-center transition-all duration-500 ease-out mt-4 mb-4 ml-2 mr-4 ${
+                            selectedBrand?.id === b.id 
                               ? "border-green-600 bg-green-50 scale-105 shadow-md" 
                               : "border-black/10 hover:bg-black/5 hover:scale-102 hover:border-green-300"
                           }`}
                           onClick={() => handleSelectBrand(b)}
                         >
                           <div
-                            className={`h-12 w-12 rounded-full grid place-items-center overflow-hidden ring-1 ring-black/10 transition-all duration-500 ease-out ${b.color || "bg-gray-100"} ${
-                              selected.key === b.key ? "ring-green-300" : ""
+                            className={`h-12 w-12 rounded-full grid place-items-center overflow-hidden ring-1 ring-black/10 transition-all duration-500 ease-out bg-gray-100 ${
+                              selectedBrand?.id === b.id ? "ring-green-300" : ""
                             }`}
                           >
                             <Image
-                              src={b.icon}
+                              src={b.logoUrl}
                               alt={b.name}
                               width={48}
                               height={48}
                               className={`h-8 w-8 object-contain transition-all duration-500 ease-out ${
-                                selected.key === b.key ? "scale-110" : "scale-100"
+                                selectedBrand?.id === b.id ? "scale-110" : "scale-100"
                               }`}
                               unoptimized
                               draggable={false}
                             />
                           </div>
                           <div className={`font-medium text-sm transition-colors duration-500 ease-out ${
-                            selected.key === b.key ? "text-green-700" : "text-gray-700"
+                            selectedBrand?.id === b.id ? "text-green-700" : "text-gray-700"
                           }`}>
                             {b.name}
                           </div>
@@ -273,9 +305,9 @@ function UploadContent() {
                   <div className="grid grid-cols-2 gap-3">
                     {overlayBrands.map(b => (
                       <button
-                        key={b.key}
+                        key={b.id}
                         className={`rounded-md border-2 p-1.5 flex items-center gap-1.5 text-left text-xs transition-all duration-300 ease-out ${
-                          selected.key === b.key
+                          selectedBrand?.id === b.id
                             ? "border-green-600 bg-green-50"
                             : "border-black/10 hover:bg-black/5 hover:border-green-300"
                         }`}
@@ -286,10 +318,10 @@ function UploadContent() {
                         }}
                       >
                         <div
-                          className={`h-6 w-6 rounded-full grid place-items-center overflow-hidden ring-1 ring-black/10 ${b.color || "bg-gray-100"}`}
+                          className={`h-6 w-6 rounded-full grid place-items-center overflow-hidden ring-1 ring-black/10 bg-gray-100`}
                         >
                           <Image
-                            src={b.icon}
+                            src={b.logoUrl}
                             alt={b.name}
                             width={24}
                             height={24}
@@ -461,32 +493,66 @@ function UploadContent() {
               Take Photo
             </button>
             <button
-              onClick={() => {
-                if (!canContinue) return;
+              onClick={async () => {
+                if (!canContinue) {
+                  if (loadingBrands) {
+                    toast.error("Please wait for brands to load");
+                  } else if (!selectedBrand) {
+                    toast.error("Please select a brand");
+                  } else if (!receiptUrl) {
+                    toast.error("Please upload a receipt");
+                  } else if (!fileName) {
+                    toast.error("Please select a file");
+                  } else if (parseInt(amount) <= 0) {
+                    toast.error("Please enter a valid amount");
+                  }
+                  return;
+                }
                 
-                // Store the upload data in localStorage for the phone page
-                const uploadData = {
-                  brandId: selected.key,
-                  brandName: selected.name,
-                  amount: parseInt(amount) || 0, // Ensure integer conversion
-                  receiptUrl: receiptUrl,
-                  fileName: fileName,
-                };
-                localStorage.setItem('pendingUpload', JSON.stringify(uploadData));
-                
-                // Navigate to phone step
-                const url = `/upload/phone?brand=${encodeURIComponent(
-                  selected.key
-                )}&amount=${encodeURIComponent(amount)}`;
-                window.location.href = url;
+                setSubmitting(true);
+                try {
+                  // Create pending transaction in backend
+                  const response = await createPendingTransaction({
+                    sessionId: sessionId,
+                    brandId: selectedBrand!.id,
+                    billAmount: parseInt(amount) || 0,
+                    receiptUrl: receiptUrl,
+                    fileName: fileName,
+                  });
+
+                  if (response.success) {
+                    toast.success("Request saved! Please sign in to continue.");
+                    
+                    // Navigate to phone verification step
+                    const url = `/upload/phone?brand=${encodeURIComponent(
+                      selectedBrand!.id
+                    )}&amount=${encodeURIComponent(amount)}`;
+                    router.push(url);
+                  } else {
+                    toast.error(response.message || "Failed to save request");
+                  }
+                } catch (error) {
+                  console.error("Error creating pending transaction:", error);
+                  const errorMessage = error instanceof Error ? error.message : "Unknown error";
+                  toast.error(`Failed to save request: ${errorMessage}`);
+                } finally {
+                  setSubmitting(false);
+                }
               }}
+              disabled={!canContinue}
               className={`flex-1 h-12 rounded-xl text-white font-medium transition ${
                 canContinue
                   ? "bg-green-700 hover:bg-green-800 active:scale-95"
                   : "bg-black/20 cursor-not-allowed"
               }`}
+              title={!canContinue ? 
+                (!selectedBrand ? "Please select a brand" :
+                 !receiptUrl ? "Please upload a receipt" : 
+                 loadingBrands ? "Loading brands..." : 
+                 "Please complete all fields") : 
+                ""}
             >
-              {uploading ? "Uploading..." : "Continue"}
+              {submitting ? "Submitting..." : loadingBrands ? "Loading brands..." : uploading ? "Uploading..." : "Continue"}
             </button>
           </div>
         </div>

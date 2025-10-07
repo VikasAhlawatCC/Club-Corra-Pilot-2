@@ -29,17 +29,17 @@ export class UsersService {
   ) {}
 
   async findAll(page: number = 1, limit: number = 20, filters: UserSearchDto = {}): Promise<UserListResponseDto> {
-    const skip = (page - 1) * limit;
+    try {
+      const skip = (page - 1) * limit;
 
-    const queryBuilder = this.userRepository
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.profile', 'profile')
-      .leftJoinAndSelect('user.paymentDetails', 'paymentDetails')
-      .leftJoinAndSelect('user.authProviders', 'authProviders')
-      .leftJoinAndSelect('user.coinBalance', 'coinBalance')
-      .orderBy('user.createdAt', 'DESC')
-      .skip(skip)
-      .take(limit);
+      const queryBuilder = this.userRepository
+        .createQueryBuilder('user')
+        .leftJoinAndSelect('user.profile', 'profile')
+        .leftJoinAndSelect('user.paymentDetails', 'paymentDetails')
+        .leftJoinAndSelect('user.coinBalance', 'coinBalance')
+        .orderBy('user.createdAt', 'DESC')
+        .skip(skip)
+        .take(limit);
 
     if (filters.status) {
       queryBuilder.andWhere('user.status = :status', { status: filters.status });
@@ -83,6 +83,10 @@ export class UsersService {
       limit,
       totalPages: Math.ceil(total / limit),
     };
+    } catch (error) {
+      console.error('Error in findAll:', error);
+      throw error;
+    }
   }
 
   async findById(id: string): Promise<User> {
@@ -101,14 +105,14 @@ export class UsersService {
   async findByMobileNumber(mobileNumber: string): Promise<User | null> {
     return this.userRepository.findOne({
       where: { mobileNumber },
-      relations: ['profile', 'paymentDetails', 'authProviders'],
+      relations: ['profile', 'paymentDetails', 'authProviders', 'coinBalance'],
     });
   }
 
   async findByEmail(email: string): Promise<User | null> {
     return this.userRepository.findOne({
       where: { email },
-      relations: ['profile', 'paymentDetails', 'authProviders'],
+      relations: ['profile', 'paymentDetails', 'authProviders', 'coinBalance'],
     });
   }
 
@@ -161,6 +165,15 @@ export class UsersService {
 
     Object.assign(user.paymentDetails, paymentData);
     return this.paymentDetailsRepository.save(user.paymentDetails);
+  }
+
+  async getUserCount(): Promise<number> {
+    try {
+      return await this.userRepository.count();
+    } catch (error) {
+      console.error('Error getting user count:', error);
+      throw error;
+    }
   }
 
   async getUserStats(): Promise<any> {
@@ -428,6 +441,27 @@ export class UsersService {
 
     // Return user with relations
     return this.findById(savedUser.id);
+  }
+
+  async createCoinBalanceForUser(userId: string): Promise<CoinBalance> {
+    // Check if coin balance already exists
+    const existingBalance = await this.coinBalanceRepository.findOne({
+      where: { user: { id: userId } },
+    });
+
+    if (existingBalance) {
+      return existingBalance;
+    }
+
+    // Create new coin balance
+    const coinBalance = this.coinBalanceRepository.create({
+      balance: '0',
+      totalEarned: '0',
+      totalRedeemed: '0',
+      user: { id: userId },
+    });
+
+    return this.coinBalanceRepository.save(coinBalance);
   }
 
   async adjustUserCoins(userId: string, adjustment: { newBalance?: number; delta?: number; reason?: string }): Promise<any> {

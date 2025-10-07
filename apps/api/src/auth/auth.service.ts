@@ -169,6 +169,11 @@ export class AuthService {
           lastName: '',
           mobileNumber,
         });
+        // Activate the user immediately after OTP verification
+        user.isMobileVerified = true;
+        user.status = UserStatus.ACTIVE;
+        user.lastLoginAt = new Date();
+        await this.userRepository.save(user);
       } else {
         // Update existing user
         user.isMobileVerified = true;
@@ -186,16 +191,23 @@ export class AuthService {
       };
       const accessToken = await this.jwtService.signAsync(payload);
 
+      // Fetch user with coin balance for the response
+      const userWithBalance = await this.usersService.findById(user.id);
+
       return {
         success: true,
         message: 'Login successful',
         data: {
           user: {
-            id: user.id,
-            mobileNumber: user.mobileNumber,
-            isMobileVerified: user.isMobileVerified,
-            status: user.status,
-            createdAt: user.createdAt,
+            id: userWithBalance.id,
+            mobileNumber: userWithBalance.mobileNumber,
+            isMobileVerified: userWithBalance.isMobileVerified,
+            status: userWithBalance.status,
+            createdAt: userWithBalance.createdAt,
+            upiId: userWithBalance.paymentDetails?.upiId || '',
+            totalCoins: String(userWithBalance.coinBalance?.balance || 0),
+            totalEarned: String(userWithBalance.coinBalance?.totalEarned || 0),
+            totalRedeemed: String(userWithBalance.coinBalance?.totalRedeemed || 0),
           },
           accessToken,
         }
@@ -220,20 +232,36 @@ export class AuthService {
         throw new UnauthorizedException('User account is not active');
       }
 
+      // Ensure coin balance exists - create if missing
+      if (!userData.coinBalance) {
+        console.log(`Creating missing coin balance for user ${userData.id}`);
+        await this.usersService.createCoinBalanceForUser(userData.id);
+        // Fetch user again to get the coin balance
+        const updatedUser = await this.usersService.findById(user.id);
+        if (updatedUser && updatedUser.coinBalance) {
+          userData.coinBalance = updatedUser.coinBalance;
+        }
+      }
+
+      const userResponse = {
+        id: userData.id,
+        mobileNumber: userData.mobileNumber,
+        isMobileVerified: userData.isMobileVerified,
+        status: userData.status,
+        createdAt: userData.createdAt,
+        upiId: userData.paymentDetails?.upiId || '',
+        totalCoins: String(userData.coinBalance?.balance || 0),
+        totalEarned: String(userData.coinBalance?.totalEarned || 0),
+        totalRedeemed: String(userData.coinBalance?.totalRedeemed || 0),
+      };
+
+      console.log(`User verify response for ${userData.mobileNumber}:`, JSON.stringify(userResponse));
+
       return {
         success: true,
         message: 'User verification successful',
         data: {
-          user: {
-            id: userData.id,
-            mobileNumber: userData.mobileNumber,
-            isMobileVerified: userData.isMobileVerified,
-            status: userData.status,
-            createdAt: userData.createdAt,
-            totalCoins: String(userData.coinBalance?.balance || 0),
-            totalEarned: String(userData.coinBalance?.totalEarned || 0),
-            totalRedeemed: String(userData.coinBalance?.totalRedeemed || 0),
-          }
+          user: userResponse
         }
       };
     } catch (error) {

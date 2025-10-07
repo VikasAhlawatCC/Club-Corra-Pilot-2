@@ -12,14 +12,17 @@ const typeorm_1 = require("@nestjs/typeorm");
 const coin_admin_controller_1 = require("./controllers/coin-admin.controller");
 const transaction_controller_1 = require("./controllers/transaction.controller");
 const coin_public_controller_1 = require("./controllers/coin-public.controller");
+const pending_transaction_controller_1 = require("./controllers/pending-transaction.controller");
 const coins_service_1 = require("./coins.service");
 const coin_balance_entity_1 = require("./entities/coin-balance.entity");
 const coin_transaction_entity_1 = require("./entities/coin-transaction.entity");
+const pending_transaction_entity_1 = require("./entities/pending-transaction.entity");
 const brand_entity_1 = require("../brands/entities/brand.entity");
 const user_entity_1 = require("../users/entities/user.entity");
 const transaction_validation_service_1 = require("./services/transaction-validation.service");
 const transaction_approval_service_1 = require("./services/transaction-approval.service");
 const balance_update_service_1 = require("./services/balance-update.service");
+const pending_transaction_service_1 = require("./services/pending-transaction.service");
 const files_service_1 = require("../files/files.service");
 const file_entity_1 = require("../files/file.entity");
 const brands_module_1 = require("../brands/brands.module");
@@ -29,15 +32,16 @@ exports.CoinsModule = CoinsModule;
 exports.CoinsModule = CoinsModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            typeorm_1.TypeOrmModule.forFeature([coin_balance_entity_1.CoinBalance, coin_transaction_entity_1.CoinTransaction, brand_entity_1.Brand, user_entity_1.User, file_entity_1.File]),
+            typeorm_1.TypeOrmModule.forFeature([coin_balance_entity_1.CoinBalance, coin_transaction_entity_1.CoinTransaction, pending_transaction_entity_1.PendingTransaction, brand_entity_1.Brand, user_entity_1.User, file_entity_1.File]),
             brands_module_1.BrandsModule,
         ],
-        controllers: [coin_admin_controller_1.CoinAdminController, transaction_controller_1.TransactionController, coin_public_controller_1.CoinPublicController],
+        controllers: [coin_admin_controller_1.CoinAdminController, transaction_controller_1.TransactionController, coin_public_controller_1.CoinPublicController, pending_transaction_controller_1.PendingTransactionController],
         providers: [
             coins_service_1.CoinsService,
             transaction_validation_service_1.TransactionValidationService,
             transaction_approval_service_1.TransactionApprovalService,
             balance_update_service_1.BalanceUpdateService,
+            pending_transaction_service_1.PendingTransactionService,
             files_service_1.FilesService,
         ],
         exports: [coins_service_1.CoinsService, typeorm_1.TypeOrmModule],

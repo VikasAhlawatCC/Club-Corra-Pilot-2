@@ -427,14 +427,24 @@ let CoinsService = class CoinsService {
     }
     // Admin approval methods
     async approveTransaction(transactionId, adminUserId, adminNotes) {
+        console.log('[Service] approveTransaction called:', { transactionId, adminUserId, adminNotes });
         const transaction = await this.transactionRepository.findOne({
             where: { id: transactionId },
-            relations: ['user', 'brand'],
+            relations: ['user', 'brand', 'user.paymentDetails'],
         });
         if (!transaction) {
+            console.error('[Service] Transaction not found:', transactionId);
             throw new common_1.NotFoundException('Transaction not found');
         }
+        console.log('[Service] Found transaction:', {
+            id: transaction.id,
+            status: transaction.status,
+            coinsRedeemed: transaction.coinsRedeemed,
+            coinsEarned: transaction.coinsEarned,
+            type: transaction.type
+        });
         if (transaction.status !== 'PENDING') {
+            console.error('[Service] Transaction is not pending:', transaction.status);
             throw new common_1.BadRequestException('Transaction is not pending');
         }
         // Check if there are older pending transactions for the same user
@@ -453,16 +463,37 @@ let CoinsService = class CoinsService {
         }
         // Validate that user has sufficient balance for redemption (prevent negative balances)
         if (transaction.coinsRedeemed && transaction.coinsRedeemed > 0 && transaction.user) {
-            const userBalance = await this.balanceRepository.findOne({ where: { user: { id: transaction.user.id } } });
-            const currentBalance = BigInt(userBalance?.balance || '0');
-            if (currentBalance < BigInt(transaction.coinsRedeemed)) {
-                throw new common_1.BadRequestException(`Cannot approve transaction. User has ${currentBalance} coins but trying to redeem ${transaction.coinsRedeemed} coins. This would result in a negative balance.`);
+            console.log('[Service] Checking user balance for redemption:', {
+                userId: transaction.user.id,
+                coinsRedeemed: transaction.coinsRedeemed
+            });
+            try {
+                const userBalance = await this.balanceRepository.findOne({ where: { user: { id: transaction.user.id } } });
+                console.log('[Service] User balance found:', {
+                    balance: userBalance?.balance,
+                    userId: transaction.user.id
+                });
+                const currentBalance = BigInt(userBalance?.balance || '0');
+                const redeemAmount = BigInt(transaction.coinsRedeemed);
+                console.log('[Service] Balance comparison:', {
+                    currentBalance: currentBalance.toString(),
+                    redeemAmount: redeemAmount.toString()
+                });
+                if (currentBalance < redeemAmount) {
+                    console.error('[Service] Insufficient balance for redemption');
+                    throw new common_1.BadRequestException(`Cannot approve transaction. User has ${currentBalance} coins but trying to redeem ${transaction.coinsRedeemed} coins. This would result in a negative balance.`);
+                }
+            }
+            catch (balanceError) {
+                console.error('[Service] Error checking user balance:', balanceError);
+                throw balanceError;
             }
         }
         // Determine the new status based on redemption amount
         let newStatus;
         if (transaction.coinsRedeemed && transaction.coinsRedeemed > 0) {
-            newStatus = 'UNPAID'; // Needs payment processing
+            // TODO: Change to 'UNPAID' once the enum value is added to the database
+            newStatus = 'APPROVED'; // Needs payment processing (temporary - should be UNPAID)
         }
         else {
             newStatus = 'PAID'; // No redemption, automatically paid
@@ -474,11 +505,19 @@ let CoinsService = class CoinsService {
         if (adminNotes) {
             transaction.adminNotes = adminNotes;
         }
-        await this.transactionRepository.save(transaction);
+        console.log('[Service] Saving transaction with new status:', newStatus);
+        try {
+            const savedTransaction = await this.transactionRepository.save(transaction);
+            console.log('[Service] Transaction saved successfully:', { id: savedTransaction.id, status: savedTransaction.status });
+            return savedTransaction;
+        }
+        catch (saveError) {
+            console.error('[Service] Error saving transaction:', saveError);
+            throw saveError;
+        }
         // CRITICAL FIX: Remove duplicate balance update
         // Balance is already updated at submission time (Business Rule #2)
         // No need to update balance again on approval since it was already applied
-        return transaction;
     }
     async rejectTransaction(transactionId, adminUserId, adminNotes) {
         const transaction = await this.transactionRepository.findOne({
@@ -518,6 +557,36 @@ let CoinsService = class CoinsService {
         await this.transactionRepository.save(transaction);
         return transaction;
     }
+    async markRedeemTransactionAsPaid(transactionId, markPaidDto) {
+        const transaction = await this.transactionRepository.findOne({
+            where: { id: transactionId },
+            relations: ['user', 'brand'],
+        });
+        if (!transaction) {
+            throw new common_1.NotFoundException('Transaction not found');
+        }
+        if (transaction.status !== 'UNPAID') {
+            throw new common_1.BadRequestException('Transaction must be in UNPAID status to mark as paid');
+        }
+        // Validate that transaction has redemption amount
+        if (!transaction.coinsRedeemed || transaction.coinsRedeemed <= 0) {
+            throw new common_1.BadRequestException('Only transactions with redemption amounts can be marked as paid');
+        }
+        // Validate transaction ID format (basic UPI reference validation)
+        if (!markPaidDto.transactionId || markPaidDto.transactionId.trim().length < 5) {
+            throw new common_1.BadRequestException('Valid transaction ID is required (minimum 5 characters)');
+        }
+        // Update transaction status
+        transaction.status = 'PAID';
+        transaction.paymentProcessedAt = new Date();
+        transaction.statusUpdatedAt = new Date();
+        transaction.transactionId = markPaidDto.transactionId.trim();
+        if (markPaidDto.adminNotes) {
+            transaction.adminNotes = (transaction.adminNotes || '') + `\n\nPayment Notes: ${markPaidDto.adminNotes}`;
+        }
+        await this.transactionRepository.save(transaction);
+        return transaction;
+    }
     // Admin methods for getting all transactions
     async getAllTransactions(page = 1, limit = 20, filters = {}) {
         try {
@@ -544,7 +613,7 @@ let CoinsService = class CoinsService {
             // Use findAndCount with relations to get both data and total count
             const [allTransactions, total] = await this.transactionRepository.findAndCount({
                 where: whereClause,
-                relations: ['user', 'brand'],
+                relations: ['user', 'brand', 'user.paymentDetails'],
                 order: { createdAt: 'DESC' },
                 skip,
                 take: limit,
@@ -627,7 +696,7 @@ let CoinsService = class CoinsService {
     async getTransactionById(id) {
         return this.transactionRepository.findOne({
             where: { id },
-            relations: ['brand', 'user'],
+            relations: ['brand', 'user', 'user.paymentDetails'],
         });
     }
     async getTransactionStats() {
@@ -672,73 +741,77 @@ let CoinsService = class CoinsService {
         }
     }
     async getCoinSystemStats() {
-        // Get comprehensive coin system statistics
-        const [totalUsers, activeBrands, totalTransactions, pendingTransactions, approvedTransactions, rejectedTransactions, totalCoinsInCirculation, welcomeBonusesGiven, pendingRedemptions, totalEarned, totalRedeemed,] = await Promise.all([
-            // Total users
-            this.userRepository.count(),
-            // Active brands
-            this.brandRepository.count({ where: { isActive: true } }),
-            // Transaction counts
-            this.transactionRepository.count(),
-            this.transactionRepository.count({ where: { status: 'PENDING' } }),
-            this.transactionRepository.count({ where: { status: 'COMPLETED' } }),
-            this.transactionRepository.count({ where: { status: 'FAILED' } }),
-            // Total coins in circulation (sum of all user balances)
-            this.balanceRepository
-                .createQueryBuilder('balance')
-                .select('SUM(balance.balance)', 'total')
-                .getRawOne()
-                .then(result => BigInt(result?.total || '0')),
-            // Welcome bonuses given (count of WELCOME_BONUS transactions)
-            this.transactionRepository.count({ where: { type: 'WELCOME_BONUS' } }),
-            // Pending redemptions (count of pending REDEEM transactions)
-            this.transactionRepository.count({ where: { type: 'REDEEM', status: 'PENDING' } }),
-            // Total earned (sum of all EARN transactions)
-            this.transactionRepository
-                .createQueryBuilder('transaction')
-                .select('SUM(transaction.amount)', 'total')
-                .where('transaction.type = :type', { type: 'EARN' })
-                .andWhere('transaction.status = :status', { status: 'COMPLETED' })
-                .getRawOne()
-                .then(result => BigInt(result?.total || '0')),
-            // Total redeemed (sum of all REDEEM transactions)
-            this.transactionRepository
-                .createQueryBuilder('transaction')
-                .select('SUM(ABS(transaction.amount))', 'total')
-                .where('transaction.type = :type', { type: 'REDEEM' })
-                .andWhere('transaction.status = :status', { status: 'COMPLETED' })
-                .getRawOne()
-                .then(result => BigInt(result?.total || '0')),
-        ]);
-        // Calculate transaction success rate
-        const transactionSuccessRate = totalTransactions > 0
-            ? ((approvedTransactions / totalTransactions) * 100)
-            : 0;
-        // Determine system health based on pending transactions and success rate
-        let systemHealth = 'healthy';
-        if (pendingTransactions > 50 || transactionSuccessRate < 80) {
-            systemHealth = 'critical';
+        try {
+            // Get comprehensive coin system statistics
+            const [totalUsers, activeBrands, totalTransactions, pendingTransactions, approvedTransactions, rejectedTransactions, totalCoinsInCirculation, welcomeBonusesGiven, pendingRedemptions, totalEarned, totalRedeemed,] = await Promise.all([
+                // Total users
+                this.userRepository.count(),
+                // Active brands
+                this.brandRepository.count({ where: { isActive: true } }),
+                // Transaction counts
+                this.transactionRepository.count(),
+                this.transactionRepository.count({ where: { status: 'PENDING' } }),
+                this.transactionRepository.count({ where: { status: 'COMPLETED' } }),
+                this.transactionRepository.count({ where: { status: 'FAILED' } }),
+                // Total coins in circulation (sum of all user balances)
+                this.balanceRepository
+                    .createQueryBuilder('balance')
+                    .select('SUM(CAST(balance.balance AS DECIMAL))', 'total')
+                    .getRawOne()
+                    .then(result => BigInt(result?.total || '0')),
+                // Welcome bonuses given (count of WELCOME_BONUS transactions)
+                this.transactionRepository.count({ where: { type: 'WELCOME_BONUS' } }),
+                // Pending redemptions (count of pending REDEEM transactions)
+                this.transactionRepository.count({ where: { type: 'REDEEM', status: 'PENDING' } }),
+                // FIXED: Total earned from coin_balances (includes PENDING transactions per business rules)
+                // This shows the actual total that users have earned, including pending requests
+                this.balanceRepository
+                    .createQueryBuilder('balance')
+                    .select('SUM(CAST(balance.total_earned AS DECIMAL))', 'total')
+                    .getRawOne()
+                    .then(result => BigInt(result?.total || '0')),
+                // FIXED: Total redeemed from coin_balances (includes PENDING transactions per business rules)
+                // This shows the actual total that users have redeemed, including pending requests
+                this.balanceRepository
+                    .createQueryBuilder('balance')
+                    .select('SUM(CAST(balance.total_redeemed AS DECIMAL))', 'total')
+                    .getRawOne()
+                    .then(result => BigInt(result?.total || '0')),
+            ]);
+            // Calculate transaction success rate
+            const transactionSuccessRate = totalTransactions > 0
+                ? ((approvedTransactions / totalTransactions) * 100)
+                : 0;
+            // Determine system health based on pending transactions and success rate
+            let systemHealth = 'healthy';
+            if (pendingTransactions > 50 || transactionSuccessRate < 80) {
+                systemHealth = 'critical';
+            }
+            else if (pendingTransactions > 20 || transactionSuccessRate < 90) {
+                systemHealth = 'warning';
+            }
+            return {
+                totalCoinsInCirculation: totalCoinsInCirculation.toString(),
+                totalUsers,
+                welcomeBonusesGiven,
+                pendingRedemptions,
+                activeBrands,
+                systemHealth,
+                totalEarned: totalEarned.toString(),
+                totalRedeemed: totalRedeemed.toString(),
+                totalTransactions,
+                approvedTransactions,
+                rejectedTransactions,
+                transactionSuccessRate,
+                pendingEarnRequests: await this.transactionRepository.count({
+                    where: { type: 'EARN', status: 'PENDING' }
+                }),
+            };
         }
-        else if (pendingTransactions > 20 || transactionSuccessRate < 90) {
-            systemHealth = 'warning';
+        catch (error) {
+            console.error('Error in getCoinSystemStats:', error);
+            throw error;
         }
-        return {
-            totalCoinsInCirculation,
-            totalUsers,
-            welcomeBonusesGiven,
-            pendingRedemptions,
-            activeBrands,
-            systemHealth,
-            totalEarned,
-            totalRedeemed,
-            totalTransactions,
-            approvedTransactions,
-            rejectedTransactions,
-            transactionSuccessRate,
-            pendingEarnRequests: await this.transactionRepository.count({
-                where: { type: 'EARN', status: 'PENDING' }
-            }),
-        };
     }
     async associateTempTransactionWithUser(tempTransactionId, userId) {
         // Find the temporary transaction
@@ -842,9 +915,9 @@ let CoinsService = class CoinsService {
                 mobileNumber: user.mobileNumber,
                 profile: user.profile,
                 paymentDetails: user.paymentDetails,
-                coinBalance: BigInt(user.coinBalance?.balance || '0'),
-                totalEarned: BigInt(user.coinBalance?.totalEarned || '0'),
-                totalRedeemed: BigInt(user.coinBalance?.totalRedeemed || '0'),
+                coinBalance: (user.coinBalance?.balance || '0').toString(),
+                totalEarned: (user.coinBalance?.totalEarned || '0').toString(),
+                totalRedeemed: (user.coinBalance?.totalRedeemed || '0').toString(),
             },
             pendingRequests: {
                 data: pendingRequests,

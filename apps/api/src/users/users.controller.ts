@@ -32,6 +32,27 @@ export class UsersController {
     };
   }
 
+  @Get('health')
+  async health() {
+    try {
+      // Simple database health check
+      const count = await this.usersService.getUserCount();
+      return {
+        success: true,
+        message: 'Users service is healthy',
+        data: { userCount: count }
+      };
+    } catch (error) {
+      console.error('Users health check failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return {
+        success: false,
+        message: 'Users service health check failed',
+        error: errorMessage
+      };
+    }
+  }
+
   @Get('search')
   async search(
     @Query('q') query: string,

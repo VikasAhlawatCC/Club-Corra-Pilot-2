@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { EyeIcon, DocumentTextIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import type { AdminCoinTransaction } from '../../types/coins'
 import { formatDate } from '@/utils/dateUtils'
@@ -18,6 +18,8 @@ import {
 } from '@/components/ui'
 
 import { getProxiedUrl } from '@/utils/s3UrlProxy'
+import { transactionApi } from '@/lib/api'
+import { useToast, ToastContainer } from '@/components/common'
 
 interface TransactionDetailModalProps {
   transaction: AdminCoinTransaction | null
@@ -30,7 +32,33 @@ export function TransactionDetailModal({
   isOpen, 
   onClose 
 }: TransactionDetailModalProps) {
+  const [isMarkingPaid, setIsMarkingPaid] = useState(false)
+  const [paymentTxId, setPaymentTxId] = useState('')
+  const [showMarkPaidForm, setShowMarkPaidForm] = useState(false)
+  const { toasts, removeToast, showSuccess, showError } = useToast()
+
   if (!isOpen || !transaction) return null
+
+  const handleMarkAsPaid = async () => {
+    if (!paymentTxId || paymentTxId.trim().length < 5) {
+      showError('Please enter a valid payment transaction ID (minimum 5 characters)')
+      return
+    }
+
+    setIsMarkingPaid(true)
+    try {
+      await transactionApi.markTransactionAsPaid(transaction.id, paymentTxId.trim())
+      showSuccess('Transaction marked as paid successfully!')
+      setShowMarkPaidForm(false)
+      setPaymentTxId('')
+      onClose() // Close modal and refresh
+    } catch (error) {
+      console.error('Error marking transaction as paid:', error)
+      showError('Failed to mark transaction as paid. Please try again.')
+    } finally {
+      setIsMarkingPaid(false)
+    }
+  }
 
 
 
@@ -146,8 +174,94 @@ export function TransactionDetailModal({
                     </span>
                   </div>
                 )}
+                {transaction.userUpiId && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">UPI ID:</span>
+                    <span className="font-mono text-sm font-semibold text-blue-600">
+                      {transaction.userUpiId}
+                    </span>
+                  </div>
+                )}
               </CardContent>
             </Card>
+
+            {/* UNPAID Transaction Payment Section */}
+            {transaction.status === 'UNPAID' && transaction.coinsRedeemed && transaction.coinsRedeemed > 0 && (
+              <Card className="border-orange-200 bg-orange-50">
+                <CardHeader>
+                  <CardTitle className="text-orange-800 flex items-center gap-2">
+                    <ExclamationTriangleIcon className="w-5 h-5" />
+                    Payment Pending
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-orange-700 text-sm">
+                    This transaction has been approved and requires payment of {transaction.coinsRedeemed} rupees to the user.
+                  </p>
+                  {transaction.userUpiId && (
+                    <div className="p-3 bg-white rounded-md border border-orange-200">
+                      <p className="text-sm font-medium text-gray-700 mb-1">User's UPI ID:</p>
+                      <p className="font-mono text-lg font-bold text-blue-600">{transaction.userUpiId}</p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(transaction.userUpiId!)
+                          showSuccess('UPI ID copied to clipboard!')
+                        }}
+                        className="mt-2 w-full"
+                      >
+                        Copy UPI ID
+                      </Button>
+                    </div>
+                  )}
+                  {!transaction.userUpiId && (
+                    <div className="p-3 bg-white rounded-md border border-orange-200">
+                      <p className="text-sm text-red-600">⚠️ No UPI ID available for this user. Please contact the user to provide their UPI ID.</p>
+                    </div>
+                  )}
+                  {!showMarkPaidForm ? (
+                    <Button
+                      onClick={() => setShowMarkPaidForm(true)}
+                      className="w-full bg-green-600 hover:bg-green-700"
+                    >
+                      Mark as Paid
+                    </Button>
+                  ) : (
+                    <div className="space-y-3 p-3 bg-white rounded-md border border-orange-200">
+                      <p className="text-sm font-medium text-gray-700">Enter UPI Transaction ID:</p>
+                      <input
+                        type="text"
+                        value={paymentTxId}
+                        onChange={(e) => setPaymentTxId(e.target.value)}
+                        placeholder="e.g., 123456789012"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                        disabled={isMarkingPaid}
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleMarkAsPaid}
+                          disabled={isMarkingPaid || !paymentTxId || paymentTxId.trim().length < 5}
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                        >
+                          {isMarkingPaid ? 'Processing...' : 'Confirm Payment'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setShowMarkPaidForm(false)
+                            setPaymentTxId('')
+                          }}
+                          disabled={isMarkingPaid}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Brand Information */}
             {transaction.brand && (
@@ -363,6 +477,9 @@ export function TransactionDetailModal({
           </div>
         </div>
       </DialogContent>
+      
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </Dialog>
   )
 }

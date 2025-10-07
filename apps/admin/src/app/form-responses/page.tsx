@@ -66,6 +66,8 @@ export default function FormResponsesPage() {
 
   // Fetch form responses
   const fetchResponses = useCallback(async () => {
+    let waitlistData = { data: [] }
+    
     try {
       setIsLoading(true)
       
@@ -84,7 +86,7 @@ export default function FormResponsesPage() {
         throw new Error('Failed to fetch waitlist entries')
       }
       
-      const waitlistData = await waitlistResponse.json()
+      waitlistData = await waitlistResponse.json()
       
       // Fetch partner applications (with error handling)
       let partnerData = { data: [] }
@@ -116,7 +118,9 @@ export default function FormResponsesPage() {
         createdAt: entry.createdAt
       }))
       
-      const partnerResponses: FormResponse[] = partnerData.data.map((app: PartnerApplication) => ({
+      // Ensure partnerData.data is an array before mapping
+      const partnerEntries = Array.isArray(partnerData.data) ? partnerData.data : []
+      const partnerResponses: FormResponse[] = partnerEntries.map((app: PartnerApplication) => ({
         id: app.id,
         type: 'partner' as const,
         data: app,

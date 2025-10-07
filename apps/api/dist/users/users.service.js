@@ -32,49 +32,54 @@ let UsersService = class UsersService {
         this.coinTransactionRepository = coinTransactionRepository;
     }
     async findAll(page = 1, limit = 20, filters = {}) {
-        const skip = (page - 1) * limit;
-        const queryBuilder = this.userRepository
-            .createQueryBuilder('user')
-            .leftJoinAndSelect('user.profile', 'profile')
-            .leftJoinAndSelect('user.paymentDetails', 'paymentDetails')
-            .leftJoinAndSelect('user.authProviders', 'authProviders')
-            .leftJoinAndSelect('user.coinBalance', 'coinBalance')
-            .orderBy('user.createdAt', 'DESC')
-            .skip(skip)
-            .take(limit);
-        if (filters.status) {
-            queryBuilder.andWhere('user.status = :status', { status: filters.status });
-        }
-        if (filters.search) {
-            queryBuilder.andWhere('(user.mobileNumber ILIKE :search OR user.email ILIKE :search OR profile.firstName ILIKE :search OR profile.lastName ILIKE :search)', { search: `%${filters.search}%` });
-        }
-        if (filters.isMobileVerified !== undefined) {
-            queryBuilder.andWhere('user.isMobileVerified = :isMobileVerified', { isMobileVerified: filters.isMobileVerified });
-        }
-        if (filters.isEmailVerified !== undefined) {
-            queryBuilder.andWhere('user.isEmailVerified = :isEmailVerified', { isEmailVerified: filters.isEmailVerified });
-        }
-        const [users, total] = await queryBuilder.getManyAndCount();
-        // Add coin balance information to each user
-        const usersWithCoins = await Promise.all(users.map(async (user) => {
-            const totalTransactions = await this.coinTransactionRepository.count({
-                where: { user: { id: user.id } },
-            });
+        try {
+            const skip = (page - 1) * limit;
+            const queryBuilder = this.userRepository
+                .createQueryBuilder('user')
+                .leftJoinAndSelect('user.profile', 'profile')
+                .leftJoinAndSelect('user.paymentDetails', 'paymentDetails')
+                .leftJoinAndSelect('user.coinBalance', 'coinBalance')
+                .orderBy('user.createdAt', 'DESC')
+                .skip(skip)
+                .take(limit);
+            if (filters.status) {
+                queryBuilder.andWhere('user.status = :status', { status: filters.status });
+            }
+            if (filters.search) {
+                queryBuilder.andWhere('(user.mobileNumber ILIKE :search OR user.email ILIKE :search OR profile.firstName ILIKE :search OR profile.lastName ILIKE :search)', { search: `%${filters.search}%` });
+            }
+            if (filters.isMobileVerified !== undefined) {
+                queryBuilder.andWhere('user.isMobileVerified = :isMobileVerified', { isMobileVerified: filters.isMobileVerified });
+            }
+            if (filters.isEmailVerified !== undefined) {
+                queryBuilder.andWhere('user.isEmailVerified = :isEmailVerified', { isEmailVerified: filters.isEmailVerified });
+            }
+            const [users, total] = await queryBuilder.getManyAndCount();
+            // Add coin balance information to each user
+            const usersWithCoins = await Promise.all(users.map(async (user) => {
+                const totalTransactions = await this.coinTransactionRepository.count({
+                    where: { user: { id: user.id } },
+                });
+                return {
+                    ...user,
+                    totalCoins: user.coinBalance ? parseFloat(user.coinBalance.balance.toString()) : 0,
+                    totalEarned: user.coinBalance ? parseFloat(user.coinBalance.totalEarned.toString()) : 0,
+                    totalRedeemed: user.coinBalance ? parseFloat(user.coinBalance.totalRedeemed.toString()) : 0,
+                    totalTransactions,
+                };
+            }));
             return {
-                ...user,
-                totalCoins: user.coinBalance ? parseFloat(user.coinBalance.balance.toString()) : 0,
-                totalEarned: user.coinBalance ? parseFloat(user.coinBalance.totalEarned.toString()) : 0,
-                totalRedeemed: user.coinBalance ? parseFloat(user.coinBalance.totalRedeemed.toString()) : 0,
-                totalTransactions,
+                data: usersWithCoins,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
             };
-        }));
-        return {
-            data: usersWithCoins,
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
-        };
+        }
+        catch (error) {
+            console.error('Error in findAll:', error);
+            throw error;
+        }
     }
     async findById(id) {
         const user = await this.userRepository.findOne({
@@ -89,13 +94,13 @@ let UsersService = class UsersService {
     async findByMobileNumber(mobileNumber) {
         return this.userRepository.findOne({
             where: { mobileNumber },
-            relations: ['profile', 'paymentDetails', 'authProviders'],
+            relations: ['profile', 'paymentDetails', 'authProviders', 'coinBalance'],
         });
     }
     async findByEmail(email) {
         return this.userRepository.findOne({
             where: { email },
-            relations: ['profile', 'paymentDetails', 'authProviders'],
+            relations: ['profile', 'paymentDetails', 'authProviders', 'coinBalance'],
         });
     }
     async updateUserStatus(id, status) {
@@ -139,6 +144,15 @@ let UsersService = class UsersService {
         }
         Object.assign(user.paymentDetails, paymentData);
         return this.paymentDetailsRepository.save(user.paymentDetails);
+    }
+    async getUserCount() {
+        try {
+            return await this.userRepository.count();
+        }
+        catch (error) {
+            console.error('Error getting user count:', error);
+            throw error;
+        }
     }
     async getUserStats() {
         const [totalUsers, activeUsers, pendingUsers, suspendedUsers, mobileVerifiedUsers, emailVerifiedUsers,] = await Promise.all([
@@ -355,6 +369,23 @@ let UsersService = class UsersService {
         await this.coinBalanceRepository.save(coinBalance);
         // Return user with relations
         return this.findById(savedUser.id);
+    }
+    async createCoinBalanceForUser(userId) {
+        // Check if coin balance already exists
+        const existingBalance = await this.coinBalanceRepository.findOne({
+            where: { user: { id: userId } },
+        });
+        if (existingBalance) {
+            return existingBalance;
+        }
+        // Create new coin balance
+        const coinBalance = this.coinBalanceRepository.create({
+            balance: '0',
+            totalEarned: '0',
+            totalRedeemed: '0',
+            user: { id: userId },
+        });
+        return this.coinBalanceRepository.save(coinBalance);
     }
     async adjustUserCoins(userId, adjustment) {
         const user = await this.findById(userId);

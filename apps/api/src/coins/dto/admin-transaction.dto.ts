@@ -92,6 +92,10 @@ export class AdminTransactionDto {
   @IsOptional()
   @IsNumber()
   isOldestPending?: boolean
+
+  @IsOptional()
+  @IsString()
+  userUpiId?: string
 }
 
 /**
@@ -129,5 +133,6 @@ export function convertToAdminTransactionDto(transaction: CoinTransaction): Admi
     } : undefined,
     userBalance: undefined, // This would need to be populated separately
     isOldestPending: undefined, // This would need to be calculated separately
+    userUpiId: transaction.user?.paymentDetails?.upiId,
   }
 }

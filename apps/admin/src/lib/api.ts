@@ -132,43 +132,53 @@ export const transactionApi = {
       `/admin/coins/users/${userId}/verification-data`
     ),
 
-  // Approve earn transaction
+  // Approve transaction (unified for both EARN and REDEEM)
   approveEarnTransaction: (id: string, adminUserId: string, adminNotes?: string) =>
     apiRequest<{ success: boolean, message: string, data: { transaction: CoinTransaction } }>(
       `/admin/coins/transactions/${id}/approve`,
       {
-        method: 'PUT',
-        body: JSON.stringify({ adminUserId, adminNotes }),
+        method: 'POST',
+        body: JSON.stringify({ adminNotes }),
       }
     ),
 
-  // Reject earn transaction
+  // Reject transaction (unified for both EARN and REDEEM)
   rejectEarnTransaction: (id: string, adminUserId: string, adminNotes: string) =>
     apiRequest<{ success: boolean, message: string, data: { transactionId: string, adminNotes: string } }>(
       `/admin/coins/transactions/${id}/reject`,
       {
-        method: 'PUT',
-        body: JSON.stringify({ adminUserId, adminNotes }),
+        method: 'POST',
+        body: JSON.stringify({ reason: adminNotes }),
       }
     ),
 
-  // Approve redeem transaction
+  // Approve redeem transaction (same endpoint as earn)
   approveRedeemTransaction: (id: string, adminUserId: string, adminNotes?: string) =>
     apiRequest<{ success: boolean, message: string, data: { transaction: CoinTransaction } }>(
-      `/admin/coins/transactions/${id}/approve-redeem`,
+      `/admin/coins/transactions/${id}/approve`,
       {
-        method: 'PUT',
-        body: JSON.stringify({ adminUserId, adminNotes }),
+        method: 'POST',
+        body: JSON.stringify({ adminNotes }),
       }
     ),
 
-  // Reject redeem transaction
+  // Reject redeem transaction (same endpoint as earn)
   rejectRedeemTransaction: (id: string, adminUserId: string, adminNotes: string) =>
     apiRequest<{ success: boolean, message: string, data: { transaction: CoinTransaction } }>(
-      `/admin/coins/transactions/${id}/reject-redeem`,
+      `/admin/coins/transactions/${id}/reject`,
       {
-        method: 'PUT',
-        body: JSON.stringify({ adminUserId, adminNotes }),
+        method: 'POST',
+        body: JSON.stringify({ reason: adminNotes }),
+      }
+    ),
+
+  // Mark transaction as paid
+  markTransactionAsPaid: (id: string, paymentTransactionId: string, adminNotes?: string) =>
+    apiRequest<{ success: boolean, message: string, data: { transaction: CoinTransaction } }>(
+      `/admin/coins/transactions/${id}/mark-paid`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ transactionId: paymentTransactionId, adminNotes }),
       }
     ),
 
