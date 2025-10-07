@@ -49,7 +49,7 @@ let TransactionApprovalService = class TransactionApprovalService {
                 }
             }
             // Enhanced validation: Check if user still has sufficient balance (if redemption involved)
-            if (transaction.coinsRedeemed && transaction.coinsRedeemed > 0) {
+            if (transaction.coinsRedeemed && transaction.coinsRedeemed > 0 && transaction.user) {
                 const currentBalance = await manager.findOne(coin_balance_entity_1.CoinBalance, {
                     where: { user: { id: transaction.user.id } }
                 });

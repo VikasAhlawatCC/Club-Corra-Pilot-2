@@ -47,11 +47,11 @@ export class TransactionApprovalService {
         }
       }
 
-      // Enhanced validation: Check if user still has sufficient balance (if redemption involved)
-      if (transaction.coinsRedeemed && transaction.coinsRedeemed > 0) {
-        const currentBalance = await manager.findOne(CoinBalance, {
-          where: { user: { id: transaction.user.id } }
-        })
+        // Enhanced validation: Check if user still has sufficient balance (if redemption involved)
+        if (transaction.coinsRedeemed && transaction.coinsRedeemed > 0 && transaction.user) {
+          const currentBalance = await manager.findOne(CoinBalance, {
+            where: { user: { id: transaction.user.id } }
+          })
         
         if (!currentBalance) {
           throw new BadRequestException('User balance not found')

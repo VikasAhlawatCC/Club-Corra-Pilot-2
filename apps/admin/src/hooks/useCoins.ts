@@ -77,7 +77,7 @@ export const useCoins = (skipInitialFetch = false) => {
       
       const response = await transactionApi.getProcessingOrder()
       if (response.success) {
-        setProcessingOrder(response.data)
+        setProcessingOrder(response.data || [])
       } else {
         setError('Failed to fetch processing order')
       }

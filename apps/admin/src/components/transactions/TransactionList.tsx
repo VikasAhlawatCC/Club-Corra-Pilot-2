@@ -78,7 +78,7 @@ export const TransactionList = memo(function TransactionList({
     <>
       <TransactionTable
         transactions={transactions}
-        processingOrder={processingOrder}
+        processingOrder={Array.isArray(processingOrder) ? processingOrder : []}
         onTransactionSelect={onTransactionSelect}
         onApproveEarn={onApproveEarn}
         onRejectEarn={onRejectEarn}
