@@ -30,6 +30,8 @@ export interface User {
   createdAt: string;
   upiId?: string;
   totalCoins?: number;
+  totalEarned?: number;
+  totalRedeemed?: number;
 }
 
 export interface Transaction {

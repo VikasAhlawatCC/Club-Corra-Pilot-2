@@ -60,8 +60,8 @@ export default function DashboardPage() {
   }
 
   const totalCoins = user?.totalCoins || 0;
-  const totalEarned = transactions.reduce((sum, t) => sum + t.coinsEarned, 0);
-  const totalRedeemed = transactions.reduce((sum, t) => sum + t.coinsRedeemed, 0);
+  const totalEarned = user?.totalEarned || 0;
+  const totalRedeemed = user?.totalRedeemed || 0;
 
   return (
     <div className="font-sans bg-white min-h-screen">

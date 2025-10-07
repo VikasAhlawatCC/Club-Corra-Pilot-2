@@ -231,6 +231,8 @@ export class AuthService {
             status: userData.status,
             createdAt: userData.createdAt,
             totalCoins: Number(userData.coinBalance?.balance) || 0,
+            totalEarned: Number(userData.coinBalance?.totalEarned) || 0,
+            totalRedeemed: Number(userData.coinBalance?.totalRedeemed) || 0,
           }
         }
       };

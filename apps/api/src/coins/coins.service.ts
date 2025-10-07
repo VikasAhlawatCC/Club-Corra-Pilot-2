@@ -108,11 +108,8 @@ export class CoinsService {
     // BUSINESS RULE: Immediately update user balance when transaction is submitted
     // This ensures users see their updated balance right after submission
     if (user) {
-      // Add earned coins and subtract redeemed coins immediately
-      const netAmount = coinsEarned - coinsToRedeem;
-      if (netAmount !== 0) {
-        await this.updateUserBalance(userId, netAmount);
-      }
+      // Update balance with proper tracking of totalEarned and totalRedeemed
+      await this.updateUserBalanceForRewardRequest(userId, coinsEarned, coinsToRedeem);
     }
 
     // Get updated balance and transaction list for response
@@ -308,6 +305,27 @@ export class CoinsService {
     await this.balanceRepository.save(balance);
   }
 
+  /**
+   * Update user balance for reward requests with proper tracking of totalEarned and totalRedeemed
+   * This method ensures that both earned and redeemed amounts are tracked separately
+   */
+  async updateUserBalanceForRewardRequest(userId: string, coinsEarned: number, coinsRedeemed: number): Promise<void> {
+    const balance = await this.getUserBalance(userId);
+    
+    // Update balance: add earned coins, subtract redeemed coins
+    balance.balance += coinsEarned - coinsRedeemed;
+    
+    // Track totalEarned and totalRedeemed separately
+    if (coinsEarned > 0) {
+      balance.totalEarned += coinsEarned;
+    }
+    if (coinsRedeemed > 0) {
+      balance.totalRedeemed += coinsRedeemed;
+    }
+
+    await this.balanceRepository.save(balance);
+  }
+
   async revertUserBalance(userId: string, targetBalance: number): Promise<void> {
     const balance = await this.getUserBalance(userId);
     const currentBalance = balance.balance;
@@ -323,6 +341,29 @@ export class CoinsService {
     } else if (difference < 0) {
       // Balance was increased, so we need to reduce totalRedeemed
       balance.totalRedeemed = Math.max(0, balance.totalRedeemed + difference);
+    }
+
+    await this.balanceRepository.save(balance);
+  }
+
+  /**
+   * Revert user balance for a specific transaction with proper tracking of totalEarned and totalRedeemed
+   * This method is used when a transaction is rejected and we need to revert the balance changes
+   */
+  async revertUserBalanceForTransaction(userId: string, transaction: CoinTransaction): Promise<void> {
+    const balance = await this.getUserBalance(userId);
+    
+    // Revert balance to previous state
+    balance.balance = transaction.previousBalance || 0;
+    
+    // Revert totalEarned if coins were earned
+    if (transaction.coinsEarned && transaction.coinsEarned > 0) {
+      balance.totalEarned = Math.max(0, balance.totalEarned - transaction.coinsEarned);
+    }
+    
+    // Revert totalRedeemed if coins were redeemed
+    if (transaction.coinsRedeemed && transaction.coinsRedeemed > 0) {
+      balance.totalRedeemed = Math.max(0, balance.totalRedeemed - transaction.coinsRedeemed);
     }
 
     await this.balanceRepository.save(balance);
@@ -951,6 +992,8 @@ export class CoinsService {
         profile: user.profile,
         paymentDetails: user.paymentDetails,
         coinBalance: user.coinBalance?.balance ?? 0,
+        totalEarned: user.coinBalance?.totalEarned ?? 0,
+        totalRedeemed: user.coinBalance?.totalRedeemed ?? 0,
       },
       pendingRequests: {
         data: pendingRequests,

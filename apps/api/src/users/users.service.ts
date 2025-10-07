@@ -69,6 +69,8 @@ export class UsersService {
         return {
           ...user,
           totalCoins: user.coinBalance ? parseFloat(user.coinBalance.balance.toString()) : 0,
+          totalEarned: user.coinBalance ? parseFloat(user.coinBalance.totalEarned.toString()) : 0,
+          totalRedeemed: user.coinBalance ? parseFloat(user.coinBalance.totalRedeemed.toString()) : 0,
           totalTransactions,
         };
       })

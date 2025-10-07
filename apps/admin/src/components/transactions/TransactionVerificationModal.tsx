@@ -60,6 +60,8 @@ interface UserDetails {
     upiId?: string
   }
   coinBalance?: number
+  totalEarned?: number
+  totalRedeemed?: number
 }
 
 interface PendingRequest {
@@ -1269,6 +1271,10 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
                         </div>
                         <div className="text-muted-foreground font-semibold">
                           Balance: {formatInteger(userDetails.coinBalance ?? 0)} coins
+                        </div>
+                        <div className="text-muted-foreground text-sm space-y-1">
+                          <div>Total Earned: {formatInteger(userDetails.totalEarned ?? 0)} coins</div>
+                          <div>Total Redeemed: {formatInteger(userDetails.totalRedeemed ?? 0)} coins</div>
                         </div>
                         <div className="text-muted-foreground space-y-1">
                           {userDetails.email && (

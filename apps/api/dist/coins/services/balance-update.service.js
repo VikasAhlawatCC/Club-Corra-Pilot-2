@@ -22,19 +22,62 @@ let BalanceUpdateService = class BalanceUpdateService {
         this.balanceRepository = balanceRepository;
     }
     async updateBalanceForRewardRequest(manager, userId, coinsEarned, coinsRedeemed) {
-        const netAmount = coinsEarned - coinsRedeemed;
-        if (netAmount !== 0) {
-            await this.updateUserBalance(manager, userId, netAmount);
+        let balance = await manager.findOne(coin_balance_entity_1.CoinBalance, {
+            where: { user: { id: userId } }
+        });
+        if (!balance) {
+            balance = manager.create(coin_balance_entity_1.CoinBalance, {
+                user: { id: userId },
+                balance: 0,
+                totalEarned: 0,
+                totalRedeemed: 0
+            });
         }
+        // Update balance: add earned coins, subtract redeemed coins
+        balance.balance += coinsEarned - coinsRedeemed;
+        // Track totalEarned and totalRedeemed separately
+        if (coinsEarned > 0) {
+            balance.totalEarned += coinsEarned;
+        }
+        if (coinsRedeemed > 0) {
+            balance.totalRedeemed += coinsRedeemed;
+        }
+        await manager.save(coin_balance_entity_1.CoinBalance, balance);
     }
     async updateBalanceForEarnRequest(manager, userId, coinsEarned) {
         if (coinsEarned > 0) {
-            await this.updateUserBalance(manager, userId, coinsEarned);
+            let balance = await manager.findOne(coin_balance_entity_1.CoinBalance, {
+                where: { user: { id: userId } }
+            });
+            if (!balance) {
+                balance = manager.create(coin_balance_entity_1.CoinBalance, {
+                    user: { id: userId },
+                    balance: 0,
+                    totalEarned: 0,
+                    totalRedeemed: 0
+                });
+            }
+            balance.balance += coinsEarned;
+            balance.totalEarned += coinsEarned;
+            await manager.save(coin_balance_entity_1.CoinBalance, balance);
         }
     }
     async updateBalanceForRedeemRequest(manager, userId, coinsRedeemed) {
         if (coinsRedeemed > 0) {
-            await this.updateUserBalance(manager, userId, -coinsRedeemed);
+            let balance = await manager.findOne(coin_balance_entity_1.CoinBalance, {
+                where: { user: { id: userId } }
+            });
+            if (!balance) {
+                balance = manager.create(coin_balance_entity_1.CoinBalance, {
+                    user: { id: userId },
+                    balance: 0,
+                    totalEarned: 0,
+                    totalRedeemed: 0
+                });
+            }
+            balance.balance -= coinsRedeemed;
+            balance.totalRedeemed += coinsRedeemed;
+            await manager.save(coin_balance_entity_1.CoinBalance, balance);
         }
     }
     async rollbackBalanceUpdate(manager, userId, amount) {
@@ -60,11 +103,43 @@ let BalanceUpdateService = class BalanceUpdateService {
         if (!balance) {
             balance = this.balanceRepository.create({
                 user: { id: userId },
-                balance: 0
+                balance: 0,
+                totalEarned: 0,
+                totalRedeemed: 0
             });
             await this.balanceRepository.save(balance);
         }
         return balance;
+    }
+    /**
+     * Revert user balance for a specific transaction with proper tracking of totalEarned and totalRedeemed
+     * This method is used when a transaction is rejected and we need to revert the balance changes
+     */
+    async revertUserBalanceForTransaction(manager, userId, transaction) {
+        let balance = await manager.findOne(coin_balance_entity_1.CoinBalance, {
+            where: { user: { id: userId } }
+        });
+        if (!balance) {
+            balance = manager.create(coin_balance_entity_1.CoinBalance, {
+                user: { id: userId },
+                balance: transaction.previousBalance || 0,
+                totalEarned: 0,
+                totalRedeemed: 0
+            });
+        }
+        else {
+            // Revert balance to previous state
+            balance.balance = transaction.previousBalance || 0;
+            // Revert totalEarned if coins were earned
+            if (transaction.coinsEarned && transaction.coinsEarned > 0) {
+                balance.totalEarned = Math.max(0, balance.totalEarned - transaction.coinsEarned);
+            }
+            // Revert totalRedeemed if coins were redeemed
+            if (transaction.coinsRedeemed && transaction.coinsRedeemed > 0) {
+                balance.totalRedeemed = Math.max(0, balance.totalRedeemed - transaction.coinsRedeemed);
+            }
+        }
+        await manager.save(coin_balance_entity_1.CoinBalance, balance);
     }
     async updateUserBalance(manager, userId, amount) {
         let balance = await manager.findOne(coin_balance_entity_1.CoinBalance, {

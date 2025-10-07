@@ -226,6 +226,8 @@ export class DashboardService {
     const [
       totalCoinsInCirculation,
       totalLiability,
+      totalEarned,
+      totalRedeemed,
       monthlyRevenue,
       averageRevenuePerUser,
       coinBreakageRate,
@@ -238,6 +240,16 @@ export class DashboardService {
       this.coinBalanceRepository
         .createQueryBuilder('b')
         .select('SUM(b.totalEarned)', 'total')
+        .getRawOne()
+        .then(result => parseFloat(result.total) || 0),
+      this.coinBalanceRepository
+        .createQueryBuilder('b')
+        .select('SUM(b.totalEarned)', 'total')
+        .getRawOne()
+        .then(result => parseFloat(result.total) || 0),
+      this.coinBalanceRepository
+        .createQueryBuilder('b')
+        .select('SUM(b.totalRedeemed)', 'total')
         .getRawOne()
         .then(result => parseFloat(result.total) || 0),
       0, // Placeholder - would need actual revenue calculation
@@ -264,6 +276,8 @@ export class DashboardService {
     return {
       totalCoinsInCirculation,
       totalLiability,
+      totalEarned,
+      totalRedeemed,
       monthlyRevenue,
       averageRevenuePerUser,
       coinBreakageRate,
