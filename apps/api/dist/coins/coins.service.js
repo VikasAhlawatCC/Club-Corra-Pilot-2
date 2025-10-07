@@ -116,31 +116,36 @@ let CoinsService = class CoinsService {
             const userBalance = await this.balanceRepository.findOne({ where: { user: { id: user.id } } });
             currentBalance = userBalance?.balance || 0;
         }
-        // Create transaction with all new fields
-        const transaction = this.transactionRepository.create({
-            user: user,
-            brand: brand,
-            amount: (coinsEarned - coinsToRedeem).toString(),
-            type: 'REWARD_REQUEST',
-            status: 'PENDING',
-            billAmount: billAmount,
-            coinsEarned: coinsEarned,
-            coinsRedeemed: coinsToRedeem,
-            receiptUrl: receiptUrl,
-            billDate: new Date(billDate),
-            statusUpdatedAt: new Date(),
-            // Balance tracking fields for reversion on rejection
-            previousBalance: currentBalance,
-            balanceAfterEarn: currentBalance + coinsEarned,
-            balanceAfterRedeem: currentBalance + coinsEarned - coinsToRedeem,
+        // CRITICAL FIX: Wrap transaction creation and balance update in database transaction
+        // This prevents race conditions and ensures data consistency
+        const savedTransaction = await this.transactionRepository.manager.transaction(async (manager) => {
+            // Create transaction with all new fields
+            const transaction = manager.create(coin_transaction_entity_1.CoinTransaction, {
+                user: user,
+                brand: brand,
+                amount: (coinsEarned - coinsToRedeem).toString(),
+                type: 'REWARD_REQUEST',
+                status: 'PENDING',
+                billAmount: billAmount,
+                coinsEarned: coinsEarned,
+                coinsRedeemed: coinsToRedeem,
+                receiptUrl: receiptUrl,
+                billDate: new Date(billDate),
+                statusUpdatedAt: new Date(),
+                // Balance tracking fields for reversion on rejection
+                previousBalance: currentBalance,
+                balanceAfterEarn: currentBalance + coinsEarned,
+                balanceAfterRedeem: currentBalance + coinsEarned - coinsToRedeem,
+            });
+            const savedTransaction = await manager.save(coin_transaction_entity_1.CoinTransaction, transaction);
+            // BUSINESS RULE: Immediately update user balance when transaction is submitted
+            // This ensures users see their updated balance right after submission
+            if (user) {
+                // Update balance with proper tracking of totalEarned and totalRedeemed
+                await this.balanceUpdateService.updateBalanceForRewardRequest(manager, userId, coinsEarned, coinsToRedeem);
+            }
+            return savedTransaction;
         });
-        const savedTransaction = await this.transactionRepository.save(transaction);
-        // BUSINESS RULE: Immediately update user balance when transaction is submitted
-        // This ensures users see their updated balance right after submission
-        if (user) {
-            // Update balance with proper tracking of totalEarned and totalRedeemed
-            await this.updateUserBalanceForRewardRequest(userId, coinsEarned, coinsToRedeem);
-        }
         // Get updated balance and transaction list for response
         const balance = await this.balanceUpdateService.getUserBalance(userId);
         const optimisticBalance = await this.balanceUpdateService.getOptimisticBalance(userId, savedTransaction);
@@ -477,19 +482,15 @@ let CoinsService = class CoinsService {
         }
         // Update transaction status
         transaction.status = newStatus;
-        transaction.adminNotes = adminNotes;
+        transaction.processedAt = new Date();
         transaction.statusUpdatedAt = new Date();
-        await this.transactionRepository.save(transaction);
-        // Update user balance with proper tracking for reversion
-        if (transaction.type === 'REWARD_REQUEST' || transaction.type === 'EARN') {
-            if (transaction.user) {
-                // Update balance: add earned coins, subtract redeemed coins
-                const netAmount = (transaction.coinsEarned || 0) - (transaction.coinsRedeemed || 0);
-                if (netAmount !== 0) {
-                    await this.updateUserBalance(transaction.user.id, netAmount);
-                }
-            }
+        if (adminNotes) {
+            transaction.adminNotes = adminNotes;
         }
+        await this.transactionRepository.save(transaction);
+        // CRITICAL FIX: Remove duplicate balance update
+        // Balance is already updated at submission time (Business Rule #2)
+        // No need to update balance again on approval since it was already applied
         return transaction;
     }
     async rejectTransaction(transactionId, adminUserId, adminNotes) {
@@ -517,14 +518,11 @@ let CoinsService = class CoinsService {
                 throw new common_1.BadRequestException('Cannot reject this transaction. Please review older pending transactions first.');
             }
         }
-        // Revert coin balance changes if transaction was previously approved
-        // Note: This check is for cases where a transaction might have been approved and then rejected
-        if (transaction.status === 'PAID' || transaction.status === 'UNPAID') {
-            // TODO: Implement balance reversion when balance tracking fields are available
-            // if (transaction.user && transaction.previousBalance !== undefined) {
-            //   // Revert to previous balance
-            //   await this.revertUserBalance(transaction.user.id, transaction.previousBalance);
-            // }
+        // CRITICAL FIX: Revert coin balance changes when transaction is rejected
+        // This implements Business Rule #3: Coin Reversion on Rejection
+        if (transaction.user && transaction.previousBalance !== undefined) {
+            // Revert balance using the new method that properly handles totalEarned and totalRedeemed
+            await this.revertUserBalanceForTransaction(transaction.user.id, transaction);
         }
         // Update transaction status
         transaction.status = 'REJECTED';

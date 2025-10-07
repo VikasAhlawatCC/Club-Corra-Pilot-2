@@ -79,7 +79,19 @@ export const transactionApi = {
 
   // Get all transactions
   getAllTransactions: (page = 1, limit = 20, userId?: string, queryParams?: string) =>
-    apiRequest<{ success: boolean, message: string, data: { data: CoinTransaction[], total: number, page: number, limit: number, totalPages: number } }>(
+    apiRequest<{ 
+      success: boolean, 
+      message: string, 
+      data: CoinTransaction[], 
+      pagination: {
+        page: number,
+        limit: number,
+        total: number,
+        totalPages: number,
+        hasNext: boolean,
+        hasPrev: boolean
+      }
+    }>(
       `/admin/coins/transactions${queryParams ? `?${queryParams}` : `?page=${page}&limit=${limit}`}`
     ),
 
