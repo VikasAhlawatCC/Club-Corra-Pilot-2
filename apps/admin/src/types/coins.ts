@@ -49,6 +49,7 @@ export interface AdminCoinTransaction {
   // New fields for unified flow
   userBalance?: number // Current user balance for negative balance checks
   isOldestPending?: boolean // Whether this is the oldest pending transaction for the user
+  userUpiId?: string // User's UPI ID for payment processing (for UNPAID redemptions)
 }
 
 export interface TransactionFilters {

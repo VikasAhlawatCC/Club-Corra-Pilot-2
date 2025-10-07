@@ -471,7 +471,7 @@ export class CoinsService {
   ): Promise<CoinTransaction> {
     const transaction = await this.transactionRepository.findOne({
       where: { id: transactionId },
-      relations: ['user', 'brand'],
+      relations: ['user', 'brand', 'user.paymentDetails'],
     });
 
     if (!transaction) {
@@ -582,6 +582,47 @@ export class CoinsService {
     return transaction;
   }
 
+  async markRedeemTransactionAsPaid(
+    transactionId: string,
+    markPaidDto: { transactionId: string; adminNotes?: string },
+  ): Promise<CoinTransaction> {
+    const transaction = await this.transactionRepository.findOne({
+      where: { id: transactionId },
+      relations: ['user', 'brand'],
+    });
+
+    if (!transaction) {
+      throw new NotFoundException('Transaction not found');
+    }
+
+    if (transaction.status !== 'UNPAID') {
+      throw new BadRequestException('Transaction must be in UNPAID status to mark as paid');
+    }
+
+    // Validate that transaction has redemption amount
+    if (!transaction.coinsRedeemed || transaction.coinsRedeemed <= 0) {
+      throw new BadRequestException('Only transactions with redemption amounts can be marked as paid');
+    }
+
+    // Validate transaction ID format (basic UPI reference validation)
+    if (!markPaidDto.transactionId || markPaidDto.transactionId.trim().length < 5) {
+      throw new BadRequestException('Valid transaction ID is required (minimum 5 characters)');
+    }
+
+    // Update transaction status
+    transaction.status = 'PAID';
+    transaction.paymentProcessedAt = new Date();
+    transaction.statusUpdatedAt = new Date();
+    transaction.transactionId = markPaidDto.transactionId.trim();
+    if (markPaidDto.adminNotes) {
+      transaction.adminNotes = (transaction.adminNotes || '') + `\n\nPayment Notes: ${markPaidDto.adminNotes}`;
+    }
+
+    await this.transactionRepository.save(transaction);
+
+    return transaction;
+  }
+
   // Admin methods for getting all transactions
   async getAllTransactions(page: number = 1, limit: number = 20, filters: any = {}) {
     try {
@@ -615,7 +656,7 @@ export class CoinsService {
       // Use findAndCount with relations to get both data and total count
       const [allTransactions, total] = await this.transactionRepository.findAndCount({
         where: whereClause,
-        relations: ['user', 'brand'],
+        relations: ['user', 'brand', 'user.paymentDetails'],
         order: { createdAt: 'DESC' },
         skip,
         take: limit,
@@ -707,7 +748,7 @@ export class CoinsService {
   async getTransactionById(id: string): Promise<CoinTransaction | null> {
     return this.transactionRepository.findOne({
       where: { id },
-      relations: ['brand', 'user'],
+      relations: ['brand', 'user', 'user.paymentDetails'],
     });
   }
 
@@ -802,21 +843,19 @@ export class CoinsService {
       // Pending redemptions (count of pending REDEEM transactions)
       this.transactionRepository.count({ where: { type: 'REDEEM', status: 'PENDING' } }),
       
-      // Total earned (sum of all EARN transactions)
-      this.transactionRepository
-        .createQueryBuilder('transaction')
-        .select('SUM(CAST(transaction.amount AS DECIMAL))', 'total')
-        .where('transaction.type = :type', { type: 'EARN' })
-        .andWhere('transaction.status = :status', { status: 'COMPLETED' })
+      // FIXED: Total earned from coin_balances (includes PENDING transactions per business rules)
+      // This shows the actual total that users have earned, including pending requests
+      this.balanceRepository
+        .createQueryBuilder('balance')
+        .select('SUM(CAST(balance.total_earned AS DECIMAL))', 'total')
         .getRawOne()
         .then(result => BigInt(result?.total || '0')),
       
-      // Total redeemed (sum of all REDEEM transactions)
-      this.transactionRepository
-        .createQueryBuilder('transaction')
-        .select('SUM(CAST(ABS(transaction.amount) AS DECIMAL))', 'total')
-        .where('transaction.type = :type', { type: 'REDEEM' })
-        .andWhere('transaction.status = :status', { status: 'COMPLETED' })
+      // FIXED: Total redeemed from coin_balances (includes PENDING transactions per business rules)
+      // This shows the actual total that users have redeemed, including pending requests
+      this.balanceRepository
+        .createQueryBuilder('balance')
+        .select('SUM(CAST(balance.total_redeemed AS DECIMAL))', 'total')
         .getRawOne()
         .then(result => BigInt(result?.total || '0')),
     ]);

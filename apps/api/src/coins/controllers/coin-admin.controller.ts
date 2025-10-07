@@ -1024,6 +1024,15 @@ export class CoinAdminController {
     return this.coinsService.rejectTransaction(id, req.user.id, rejectionDto.reason);
   }
 
+  @Post('transactions/:id/mark-paid')
+  async markTransactionAsPaid(
+    @Param('id') id: string,
+    @Body() markPaidDto: MarkAsPaidDto,
+    @Req() req: any,
+  ) {
+    return this.coinsService.markRedeemTransactionAsPaid(id, markPaidDto);
+  }
+
   @Get('transactions/:id/next')
   async getNextUserTransaction(
     @Param('id') id: string,

@@ -125,6 +125,11 @@ __decorate([
     (0, class_validator_1.IsNumber)(),
     __metadata("design:type", Boolean)
 ], AdminTransactionDto.prototype, "isOldestPending", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], AdminTransactionDto.prototype, "userUpiId", void 0);
 /**
  * Converts a CoinTransaction entity to AdminTransactionDto
  * Handles the conversion of amount from string to number
@@ -160,5 +165,6 @@ function convertToAdminTransactionDto(transaction) {
         } : undefined,
         userBalance: undefined, // This would need to be populated separately
         isOldestPending: undefined, // This would need to be calculated separately
+        userUpiId: transaction.user?.paymentDetails?.upiId,
     };
 }

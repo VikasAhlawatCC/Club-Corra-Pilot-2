@@ -172,6 +172,16 @@ export const transactionApi = {
       }
     ),
 
+  // Mark transaction as paid
+  markTransactionAsPaid: (id: string, paymentTransactionId: string, adminNotes?: string) =>
+    apiRequest<{ success: boolean, message: string, data: { transaction: CoinTransaction } }>(
+      `/admin/coins/transactions/${id}/mark-paid`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ transactionId: paymentTransactionId, adminNotes }),
+      }
+    ),
+
   // Process payment
   processPayment: (
     id: string, 

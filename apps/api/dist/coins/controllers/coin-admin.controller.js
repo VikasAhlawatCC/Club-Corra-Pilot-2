@@ -916,6 +916,9 @@ let CoinAdminController = class CoinAdminController {
     async rejectTransaction(id, rejectionDto, req) {
         return this.coinsService.rejectTransaction(id, req.user.id, rejectionDto.reason);
     }
+    async markTransactionAsPaid(id, markPaidDto, req) {
+        return this.coinsService.markRedeemTransactionAsPaid(id, markPaidDto);
+    }
     async getNextUserTransaction(id, userId) {
         const nextTransaction = await this.coinsService.getNextUserTransaction(id, userId);
         return {
@@ -1256,6 +1259,15 @@ __decorate([
     __metadata("design:paramtypes", [String, reward_request_response_dto_1.TransactionRejectionDto, Object]),
     __metadata("design:returntype", Promise)
 ], CoinAdminController.prototype, "rejectTransaction", null);
+__decorate([
+    (0, common_1.Post)('transactions/:id/mark-paid'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, reward_request_response_dto_1.MarkAsPaidDto, Object]),
+    __metadata("design:returntype", Promise)
+], CoinAdminController.prototype, "markTransactionAsPaid", null);
 __decorate([
     (0, common_1.Get)('transactions/:id/next'),
     __param(0, (0, common_1.Param)('id')),
