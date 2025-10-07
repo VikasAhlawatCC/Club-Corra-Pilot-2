@@ -12,6 +12,7 @@ This document describes the detailed plan for setting up and evolving the new li
 ## Repository Layout
 - `/apps/admin` — Admin Portal (Next.js)
 - `/apps/api` — API backend (NestJS)
+- `/apps/webapp` — Frontend webapp (Next.js) — **NEW**
 - `/scripts/deployment` — EC2 deployment scripts (systemd, nginx, logrotate)
 - `/docs` — Documentation (workplan, indexing, CI/CD)
 - `/.github/workflows` — CI/CD workflows
@@ -81,20 +82,28 @@ This document describes the detailed plan for setting up and evolving the new li
 - Add search heuristics and quick targets for Cursor
 - Provide `yarn cursor:index` script (placeholder for now)
 
-## Step 7 — Future Webapp Integration
-- Add `/apps/webapp` when repo is provided
+## Step 7 — Webapp Integration (NEW)
+- **Source**: [https://github.com/Harsh-BH/corro-club-frontend.git](https://github.com/Harsh-BH/corro-club-frontend.git)
+- **Target**: `/apps/webapp` — Frontend webapp (Next.js)
+- **Integration Type**: Frontend-only (backend integration deferred)
+- **Detailed Plan**: See `/docs/WEBAPP_INTEGRATION_WORKPLAN.md`
 - Configure as independent workspace; no shared package
-- If necessary, introduce `packages/types` (types-only) later
 - Add Vercel deployment workflow for webapp
 - Update `/docs/INDEX_MAP.md` and CI workflows
+- **Status**: Ready for implementation
 
 ## Environment Variables
 - Admin (Vercel): `NEXT_PUBLIC_CDN_URL`, `API_BASE_URL`, auth provider vars
 - API (EC2): `DATABASE_URL`, `S3_BUCKET`, `S3_REGION`, `CLOUDFRONT_URL`, `JWT_SECRET`
+- Webapp (Vercel): `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_CDN_URL`, auth provider vars
 
 ## Commands Reference (root)
 - `yarn dev` — run parallel dev across apps (if configured)
+- `yarn dev:webapp` — run webapp development server
+- `yarn dev:admin` — run admin development server
+- `yarn dev:api` — run API development server
 - `yarn build` — build all apps
+- `yarn build:webapp` — build webapp only
 - `yarn lint` — lint all apps
 - `yarn typecheck` — typecheck all apps
 - `yarn test` — test all apps
@@ -104,6 +113,8 @@ This document describes the detailed plan for setting up and evolving the new li
 - Admin copied and running on Vercel
 - API deployed to EC2 with systemd, health checks passing
 - Migrations executed against DB
+- **Webapp integrated and running on Vercel**
 - CI pipeline green
 - Index map documented and accessible
+- **Webapp integration workplan complete**
 

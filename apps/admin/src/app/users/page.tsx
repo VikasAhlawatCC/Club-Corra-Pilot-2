@@ -111,21 +111,74 @@ export default function UsersPage() {
       
       console.log('Fetching users from API...')
       console.log('API Base URL:', process.env.NEXT_PUBLIC_API_BASE_URL)
+      console.log('Current user:', user)
+      console.log('Is authenticated:', !!user)
+      console.log('Auth token exists:', !!localStorage.getItem('admin_token'))
+      
+      // Check if user is authenticated
+      if (!user) {
+        console.error('User is not authenticated, redirecting to login')
+        router.push('/login')
+        return
+      }
       
       const [usersResponse, statsResponse] = await Promise.all([
         userApi.getAllUsers(),
         userApi.getUserStats()
       ])
       
+      console.log('Raw users response:', usersResponse)
+      console.log('Raw stats response:', statsResponse)
+      
+      // Check if the API call was successful
+      if (!usersResponse.success) {
+        console.error('Users API call failed:', usersResponse)
+        throw new Error(`API call failed: ${usersResponse.message || 'Unknown error'}`)
+      }
+      
+      if (!statsResponse.success) {
+        console.error('Stats API call failed:', statsResponse)
+        throw new Error(`Stats API call failed: ${statsResponse.message || 'Unknown error'}`)
+      }
+      
       if (usersResponse.success && statsResponse.success) {
-        console.log('Users fetched successfully:', usersResponse.data.data?.length || 0, 'users')
+        console.log('Users fetched successfully:', usersResponse.data?.data?.data?.length || 0, 'users')
+        console.log('Full usersResponse.data:', usersResponse.data)
+        
         // Transform the API response to match our User interface
-        const usersArray = usersResponse.data.data || [];
-        const transformedUsers: User[] = usersArray.map((user: any) => {
-          // Handle missing profile data gracefully
-          const firstName = user.profile?.firstName || 'User';
-          const lastName = user.profile?.lastName || user.mobileNumber.slice(-4) || 'User';
-          const fullName = `${firstName} ${lastName}`.trim();
+        const usersPayload = usersResponse.data
+        console.log('usersPayload structure:', usersPayload)
+        
+        // Handle nested response structure: response.data.data.data
+        let safeUsersArray = []
+        if (usersPayload?.data?.data && Array.isArray(usersPayload.data.data)) {
+          safeUsersArray = usersPayload.data.data
+        } else if (usersPayload?.data && Array.isArray(usersPayload.data)) {
+          safeUsersArray = usersPayload.data
+        } else if (Array.isArray(usersPayload)) {
+          safeUsersArray = usersPayload
+        } else {
+          console.error(
+            'User data is not an array. Check API response structure.',
+            { usersPayload }
+          )
+          safeUsersArray = []
+        }
+        
+        console.log('Safe users array:', safeUsersArray, 'Length:', safeUsersArray.length)
+        console.log('Safe users array type:', typeof safeUsersArray, 'Is Array:', Array.isArray(safeUsersArray))
+        
+        if (safeUsersArray.length === 0) {
+          console.log('No users found in API response')
+        }
+        
+        let transformedUsers: User[] = [];
+        try {
+          transformedUsers = safeUsersArray.map((user: any) => {
+            // Handle missing profile data gracefully
+            const firstName = user.profile?.firstName || 'User';
+            const lastName = user.profile?.lastName || user.mobileNumber.slice(-4) || 'User';
+            const fullName = `${firstName} ${lastName}`.trim();
           
           return {
             id: user.id,
@@ -147,10 +200,20 @@ export default function UsersPage() {
             lastLoginAt: user.lastLoginAt
           };
         })
+        } catch (error) {
+          console.error('Error transforming users:', error)
+          console.error('safeUsersArray that caused error:', safeUsersArray)
+          transformedUsers = []
+        }
         
         setUsers(transformedUsers)
         setFilteredUsers(transformedUsers)
-        setUserStats(statsResponse.data)
+        setUserStats(statsResponse.data || {
+          totalUsers: 0,
+          activeUsers: 0,
+          pendingUsers: 0,
+          totalCoins: 0
+        })
       } else {
         throw new Error('Failed to fetch data from API')
       }

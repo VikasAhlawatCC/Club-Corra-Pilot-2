@@ -17,7 +17,9 @@ const common_1 = require("@nestjs/common");
 const auth_service_1 = require("./auth.service");
 const jwt_auth_guard_1 = require("../common/guards/jwt-auth.guard");
 const admin_guard_1 = require("../common/guards/admin.guard");
+const user_guard_1 = require("../common/guards/user.guard");
 const class_validator_1 = require("class-validator");
+const user_login_dto_1 = require("./dto/user-login.dto");
 class AdminLoginDto {
 }
 __decorate([
@@ -32,6 +34,7 @@ let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
     }
+    // Admin endpoints
     async adminLogin(body) {
         try {
             const result = await this.authService.adminLogin(body);
@@ -41,13 +44,35 @@ let AuthController = class AuthController {
             throw error;
         }
     }
-    async verify(req) {
+    async adminVerify(req) {
         return this.authService.adminVerify(req.user);
+    }
+    // User endpoints
+    async userLoginSignup(body) {
+        try {
+            const result = await this.authService.userLoginSignup(body);
+            return result;
+        }
+        catch (error) {
+            throw error;
+        }
+    }
+    async userVerifyOtp(body) {
+        try {
+            const result = await this.authService.userVerifyOtp(body);
+            return result;
+        }
+        catch (error) {
+            throw error;
+        }
+    }
+    async userVerify(req) {
+        return this.authService.userVerify(req.user);
     }
 };
 exports.AuthController = AuthController;
 __decorate([
-    (0, common_1.Post)('login'),
+    (0, common_1.Post)('admin/login'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [AdminLoginDto]),
@@ -55,13 +80,35 @@ __decorate([
 ], AuthController.prototype, "adminLogin", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, admin_guard_1.AdminGuard),
-    (0, common_1.Post)('verify'),
+    (0, common_1.Post)('admin/verify'),
     __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
-], AuthController.prototype, "verify", null);
+], AuthController.prototype, "adminVerify", null);
+__decorate([
+    (0, common_1.Post)('login-signup'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [user_login_dto_1.UserLoginDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "userLoginSignup", null);
+__decorate([
+    (0, common_1.Post)('verify-otp'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [user_login_dto_1.UserVerifyOtpDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "userVerifyOtp", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, user_guard_1.UserGuard),
+    (0, common_1.Post)('user/verify'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "userVerify", null);
 exports.AuthController = AuthController = __decorate([
-    (0, common_1.Controller)('auth/admin'),
+    (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService])
 ], AuthController);

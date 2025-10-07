@@ -1,0 +1,42 @@
+$ next build --turbopack
+   ▲ Next.js 15.5.4 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 33ms
+ ✓ Compiled successfully in 2.1s
+   Linting and checking validity of types ...
+ ⨯ ESLint: a.getScope is not a function Occurred while linting /Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/app/layout.tsx:20 Rule: "react-hooks/rules-of-hooks"
+   Collecting page data ...
+   Generating static pages (0/16) ...
+   Generating static pages (4/16) 
+   Generating static pages (8/16) 
+   Generating static pages (12/16) 
+ ✓ Generating static pages (16/16)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                         Size  First Load JS
+┌ ○ /                            85.7 kB         200 kB
+├ ○ /_not-found                      0 B         114 kB
+├ ○ /dashboard                     974 B         115 kB
+├ ○ /login                       2.01 kB         163 kB
+├ ○ /redeem                      13.1 kB         127 kB
+├ ○ /redeem/success              1.05 kB         115 kB
+├ ○ /upload                      9.59 kB         125 kB
+├ ○ /upload/phone                2.19 kB         164 kB
+├ ○ /upload/success              1.21 kB         116 kB
+├ ○ /upload/verify               1.03 kB         116 kB
+├ ○ /verify                      1.27 kB         115 kB
+├ ○ /verify/otp                  1.25 kB         115 kB
+└ ○ /verify/success              1.18 kB         115 kB
++ First Load JS shared by all     132 kB
+  ├ chunks/6d7edb92ab3e475e.js   75.3 kB
+  ├ chunks/c4fb9e8f2bb0cfb0.js   10.9 kB
+  └ chunks/f3a8ffa10fc79cf5.js     13 kB
+  ├ chunks/3cdfedd350870372.css  17.1 kB
+  └ other shared chunks (total)  15.5 kB
+
+
+○  (Static)  prerendered as static content
+

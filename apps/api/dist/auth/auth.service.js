@@ -19,11 +19,15 @@ const typeorm_2 = require("typeorm");
 const jwt_1 = require("@nestjs/jwt");
 const admin_entity_1 = require("../admin/entities/admin.entity");
 const admin_service_1 = require("../admin/admin.service");
+const user_entity_1 = require("../users/entities/user.entity");
+const users_service_1 = require("../users/users.service");
 let AuthService = class AuthService {
-    constructor(adminRepository, jwtService, adminService) {
+    constructor(adminRepository, userRepository, jwtService, adminService, usersService) {
         this.adminRepository = adminRepository;
+        this.userRepository = userRepository;
         this.jwtService = jwtService;
         this.adminService = adminService;
+        this.usersService = usersService;
     }
     async adminLogin({ email, password }) {
         try {
@@ -103,12 +107,136 @@ let AuthService = class AuthService {
             throw error;
         }
     }
+    // User authentication methods
+    async userLoginSignup(userLoginDto) {
+        try {
+            const { mobileNumber } = userLoginDto;
+            // Generate OTP (for development, use a simple 6-digit number)
+            // In production, integrate with SMS service like Twilio
+            const otp = this.generateOTP();
+            // For development, we'll store OTP in memory or use a simple approach
+            // In production, use Redis or database to store OTP with expiration
+            console.log(`OTP for ${mobileNumber}: ${otp}`);
+            // Check if user exists
+            const existingUser = await this.usersService.findByMobileNumber(mobileNumber);
+            if (existingUser) {
+                // Update last login attempt
+                existingUser.lastLoginAt = new Date();
+                await this.userRepository.save(existingUser);
+            }
+            return {
+                success: true,
+                message: 'OTP sent successfully',
+                data: {
+                    mobileNumber,
+                    otp: process.env.NODE_ENV === 'development' ? otp : undefined, // Only return OTP in development
+                    isNewUser: !existingUser,
+                }
+            };
+        }
+        catch (error) {
+            throw error;
+        }
+    }
+    async userVerifyOtp(userVerifyOtpDto) {
+        try {
+            const { mobileNumber, otp } = userVerifyOtpDto;
+            // For development, accept any 6-digit OTP
+            // In production, verify against stored OTP
+            if (process.env.NODE_ENV !== 'development' && !this.verifyOTP(mobileNumber, otp)) {
+                throw new common_1.UnauthorizedException('Invalid OTP');
+            }
+            // Find or create user
+            let user = await this.usersService.findByMobileNumber(mobileNumber);
+            if (!user) {
+                // Create new user with minimal data (only mobile number as per requirements)
+                user = await this.usersService.createUser({
+                    firstName: '',
+                    lastName: '',
+                    mobileNumber,
+                });
+            }
+            else {
+                // Update existing user
+                user.isMobileVerified = true;
+                user.status = 'ACTIVE';
+                user.lastLoginAt = new Date();
+                await this.userRepository.save(user);
+            }
+            // Generate JWT token for user
+            const payload = {
+                sub: user.id,
+                mobileNumber: user.mobileNumber,
+                role: 'user',
+                type: 'user'
+            };
+            const accessToken = await this.jwtService.signAsync(payload);
+            return {
+                success: true,
+                message: 'Login successful',
+                data: {
+                    user: {
+                        id: user.id,
+                        mobileNumber: user.mobileNumber,
+                        isMobileVerified: user.isMobileVerified,
+                        status: user.status,
+                        createdAt: user.createdAt,
+                    },
+                    accessToken,
+                }
+            };
+        }
+        catch (error) {
+            throw error;
+        }
+    }
+    async userVerify(user) {
+        try {
+            if (!user || !user.id) {
+                throw new common_1.UnauthorizedException('Invalid user token');
+            }
+            const userData = await this.usersService.findById(user.id);
+            if (!userData) {
+                throw new common_1.UnauthorizedException('User not found');
+            }
+            if (userData.status !== 'ACTIVE') {
+                throw new common_1.UnauthorizedException('User account is not active');
+            }
+            return {
+                success: true,
+                message: 'User verification successful',
+                data: {
+                    user: {
+                        id: userData.id,
+                        mobileNumber: userData.mobileNumber,
+                        isMobileVerified: userData.isMobileVerified,
+                        status: userData.status,
+                        createdAt: userData.createdAt,
+                    }
+                }
+            };
+        }
+        catch (error) {
+            throw error;
+        }
+    }
+    generateOTP() {
+        return Math.floor(100000 + Math.random() * 900000).toString();
+    }
+    verifyOTP(mobileNumber, otp) {
+        // In production, implement proper OTP verification logic
+        // For now, return true for development
+        return true;
+    }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(admin_entity_1.Admin)),
+    __param(1, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         jwt_1.JwtService,
-        admin_service_1.AdminService])
+        admin_service_1.AdminService,
+        users_service_1.UsersService])
 ], AuthService);

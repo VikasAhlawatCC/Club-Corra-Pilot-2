@@ -38,6 +38,7 @@ let UsersService = class UsersService {
             .leftJoinAndSelect('user.profile', 'profile')
             .leftJoinAndSelect('user.paymentDetails', 'paymentDetails')
             .leftJoinAndSelect('user.authProviders', 'authProviders')
+            .leftJoinAndSelect('user.coinBalance', 'coinBalance')
             .orderBy('user.createdAt', 'DESC')
             .skip(skip)
             .take(limit);
@@ -56,15 +57,12 @@ let UsersService = class UsersService {
         const [users, total] = await queryBuilder.getManyAndCount();
         // Add coin balance information to each user
         const usersWithCoins = await Promise.all(users.map(async (user) => {
-            const coinBalance = await this.coinBalanceRepository.findOne({
-                where: { user: { id: user.id } },
-            });
             const totalTransactions = await this.coinTransactionRepository.count({
                 where: { user: { id: user.id } },
             });
             return {
                 ...user,
-                totalCoins: coinBalance ? parseFloat(coinBalance.balance.toString()) : 0,
+                totalCoins: user.coinBalance ? parseFloat(user.coinBalance.balance.toString()) : 0,
                 totalTransactions,
             };
         }));

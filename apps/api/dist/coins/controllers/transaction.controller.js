@@ -22,7 +22,8 @@ let TransactionController = class TransactionController {
         this.coinsService = coinsService;
     }
     async createRewardRequest(createRewardRequestDto, req) {
-        const userId = req.user.id;
+        // Handle both authenticated and unauthenticated users
+        const userId = req?.user?.id || createRewardRequestDto.tempUserId || `temp_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
         return this.coinsService.createRewardRequest(userId, createRewardRequestDto);
     }
     async getUserTransactions(page = 1, limit = 20, status, type, brandId, req) {
@@ -39,13 +40,22 @@ let TransactionController = class TransactionController {
         const userId = req.user.id;
         const transaction = await this.coinsService.getTransactionById(id);
         if (!transaction) {
-            throw new Error('Transaction not found');
+            throw new common_1.NotFoundException('Transaction not found');
         }
         // Ensure user can only access their own transactions
         if (transaction.user && transaction.user.id !== userId) {
-            throw new Error('Unauthorized access to transaction');
+            throw new common_1.UnauthorizedException('Unauthorized access to transaction');
         }
         return transaction;
+    }
+    async associateTempTransaction(tempTransactionId, req) {
+        const userId = req.user.id;
+        const transaction = await this.coinsService.associateTempTransactionWithUser(tempTransactionId, userId);
+        return {
+            success: true,
+            message: 'Temporary transaction associated successfully',
+            data: transaction
+        };
     }
 };
 exports.TransactionController = TransactionController;
@@ -58,6 +68,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], TransactionController.prototype, "createRewardRequest", null);
 __decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Get)(),
     __param(0, (0, common_1.Query)('page')),
     __param(1, (0, common_1.Query)('limit')),
@@ -70,6 +81,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], TransactionController.prototype, "getUserTransactions", null);
 __decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Get)('my'),
     __param(0, (0, common_1.Query)('page')),
     __param(1, (0, common_1.Query)('limit')),
@@ -81,6 +93,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], TransactionController.prototype, "getMyTransactions", null);
 __decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Req)()),
@@ -88,8 +101,16 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], TransactionController.prototype, "getTransactionById", null);
-exports.TransactionController = TransactionController = __decorate([
+__decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Post)('associate-temp/:tempTransactionId'),
+    __param(0, (0, common_1.Param)('tempTransactionId')),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], TransactionController.prototype, "associateTempTransaction", null);
+exports.TransactionController = TransactionController = __decorate([
     (0, common_1.Controller)('transactions'),
     __metadata("design:paramtypes", [coins_service_1.CoinsService])
 ], TransactionController);

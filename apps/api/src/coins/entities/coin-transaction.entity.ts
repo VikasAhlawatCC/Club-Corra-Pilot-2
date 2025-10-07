@@ -3,7 +3,7 @@ import { BaseEntity } from '../../common/entities/base.entity'
 import { User } from '../../users/entities/user.entity'
 import { Brand } from '../../brands/entities/brand.entity'
 
-export type CoinTransactionStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'PROCESSED' | 'PAID' | 'COMPLETED' | 'FAILED'
+export type CoinTransactionStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'PROCESSED' | 'PAID' | 'UNPAID' | 'COMPLETED' | 'FAILED'
 
 @Entity('coin_transactions')
 export class CoinTransaction extends BaseEntity {

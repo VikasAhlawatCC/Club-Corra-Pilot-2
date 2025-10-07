@@ -1,0 +1,88 @@
+$ eslint
+(node:63998) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/eslint.config.js?mtime=1759788893121 is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/next.config.ts
+  1:13  error  Parsing error: Unexpected token {
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/app/dashboard/page.tsx
+  20:5  error  Parsing error: Unexpected token <
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/app/layout.tsx
+  1:13  error  Parsing error: Unexpected token {
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/app/login/page.tsx
+  11:5  error  Parsing error: Unexpected token <
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/app/page.tsx
+  7:5  error  Parsing error: Unexpected token <
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/app/redeem/page.tsx
+  6:27  error  Parsing error: Unexpected token Brand
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/app/redeem/success/page.tsx
+  9:5  error  Parsing error: Unexpected token <
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/app/upload/layout.tsx
+  13:50  error  Parsing error: Unexpected token :
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/app/upload/page.tsx
+  5:27  error  Parsing error: Unexpected token Brand
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/app/upload/phone/page.tsx
+  8:5  error  Parsing error: Unexpected token <
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/app/upload/success/page.tsx
+  8:5  error  Parsing error: Unexpected token <
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/app/upload/verify/page.tsx
+  8:5  error  Parsing error: Unexpected token <
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/app/verify/otp/page.tsx
+  9:5  error  Parsing error: Unexpected token <
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/app/verify/page.tsx
+  9:5  error  Parsing error: Unexpected token <
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/app/verify/success/page.tsx
+  9:5  error  Parsing error: Unexpected token <
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/components/BackButton.tsx
+  5:54  error  Parsing error: Unexpected token :
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/components/Hero.tsx
+  17:2  error  Parsing error: The keyword 'interface' is reserved
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/components/HowItWorks.tsx
+  7:13  error  Parsing error: Unexpected token {
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/components/PhoneVerification.tsx
+  7:8  error  Parsing error: Unexpected token interface
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/components/SelectedBrands.tsx
+  8:5  error  Parsing error: Unexpected token <
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/components/ui/button.tsx
+  3:20  error  Parsing error: Unexpected token VariantProps
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/components/ui/input.tsx
+  5:45  error  Parsing error: Unexpected token :
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/components/ui/sonner.tsx
+  6:30  error  Parsing error: Unexpected token :
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/components/ui/tooltip.tsx
+  11:2  error  Parsing error: Unexpected token :
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/data/brands.ts
+  1:8  error  Parsing error: Unexpected token type
+
+/Users/vikasahlawat/Documents/Club-Corra-Pilot-2/apps/webapp/src/lib/utils.ts
+  1:15  error  Parsing error: Unexpected token ClassValue
+
+✖ 26 problems (26 errors, 0 warnings)
+
+error Command failed with exit code 1.
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.

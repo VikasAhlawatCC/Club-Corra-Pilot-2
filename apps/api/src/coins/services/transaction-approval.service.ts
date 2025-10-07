@@ -30,8 +30,32 @@ export class TransactionApprovalService {
         throw new BadRequestException('Transaction is not in pending status')
       }
 
-      // Update transaction status
-      transaction.status = 'APPROVED'
+      // Business Rule: Check if there are older pending transactions for the same user
+      if (transaction.user) {
+        const olderPendingTransaction = await manager
+          .createQueryBuilder(CoinTransaction, 'tx')
+          .where('tx.userId = :userId', { userId: transaction.user.id })
+          .andWhere('tx.status = :status', { status: 'PENDING' })
+          .andWhere('tx.createdAt < :createdAt', { createdAt: transaction.createdAt })
+          .orderBy('tx.createdAt', 'ASC')
+          .getOne()
+
+        if (olderPendingTransaction) {
+          throw new BadRequestException(
+            `Cannot approve this transaction. User has an older pending transaction (ID: ${olderPendingTransaction.id}) that must be processed first.`
+          )
+        }
+      }
+
+      // Update transaction status based on business rules
+      let newStatus: string
+      if (transaction.coinsRedeemed && transaction.coinsRedeemed > 0) {
+        newStatus = 'UNPAID' // Needs payment processing
+      } else {
+        newStatus = 'PAID' // No redemption, automatically paid
+      }
+
+      transaction.status = newStatus as any
       transaction.processedAt = new Date()
       transaction.statusUpdatedAt = new Date()
       if (approvalDto.adminNotes) {

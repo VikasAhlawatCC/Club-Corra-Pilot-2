@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan } from 'typeorm';
+import { Repository, MoreThan, LessThan } from 'typeorm';
 import { CoinBalance } from './entities/coin-balance.entity';
 import { CoinTransaction } from './entities/coin-transaction.entity';
 import { Brand } from '../brands/entities/brand.entity';
@@ -17,7 +17,7 @@ export class CoinsService {
     @InjectRepository(CoinBalance)
     private readonly balanceRepository: Repository<CoinBalance>,
     @InjectRepository(CoinTransaction)
-    private readonly transactionRepository: Repository<CoinTransaction>,
+    public readonly transactionRepository: Repository<CoinTransaction>,
     @InjectRepository(Brand)
     private readonly brandRepository: Repository<Brand>,
     @InjectRepository(User)
@@ -30,11 +30,14 @@ export class CoinsService {
   async createRewardRequest(userId: string, createRewardRequestDto: CreateRewardRequestDto): Promise<RewardRequestResponseDto> {
     const { brandId, billAmount, billDate, receiptUrl, coinsToRedeem = 0 } = createRewardRequestDto;
 
-    // Validate the request using the validation service
-    await this.transactionValidationService.validateRewardRequest(userId, createRewardRequestDto);
+    // For temporary users (unauthenticated), skip user validation
+    let user = null;
+    if (!userId.startsWith('temp_')) {
+      // Validate the request using the validation service
+      await this.transactionValidationService.validateRewardRequest(userId, createRewardRequestDto);
+      user = await this.userRepository.findOne({ where: { id: userId } });
+    }
 
-    // Get user and brand for transaction creation
-    const user = await this.userRepository.findOne({ where: { id: userId } });
     const brand = await this.brandRepository.findOne({ where: { id: brandId } });
 
     // Calculate coins earned based on brand's earning percentage
@@ -87,6 +90,95 @@ export class CoinsService {
       limit: recentTransactions.limit,
       totalPages: recentTransactions.totalPages,
     };
+  }
+
+  async associateTempTransactionWithUser(tempTransactionId: string, userId: string): Promise<CoinTransaction> {
+    // Find the temporary transaction
+    const tempTransaction = await this.transactionRepository.findOne({
+      where: { id: tempTransactionId },
+      relations: ['brand']
+    });
+
+    if (!tempTransaction) {
+      throw new NotFoundException('Temporary transaction not found');
+    }
+
+    // Verify it's a temporary transaction (no user associated)
+    if (tempTransaction.user) {
+      throw new BadRequestException('Transaction is already associated with a user');
+    }
+
+    // Find the user
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Associate the transaction with the user
+    tempTransaction.user = user;
+    const updatedTransaction = await this.transactionRepository.save(tempTransaction);
+
+    return updatedTransaction;
+  }
+
+  async getOldestPendingTransactionForUser(userId: string): Promise<CoinTransaction | null> {
+    return await this.transactionRepository
+      .createQueryBuilder('transaction')
+      .leftJoinAndSelect('transaction.user', 'user')
+      .leftJoinAndSelect('transaction.brand', 'brand')
+      .where('transaction.userId = :userId', { userId })
+      .andWhere('transaction.status = :status', { status: 'PENDING' })
+      .orderBy('transaction.createdAt', 'ASC')
+      .getOne();
+  }
+
+  async getUserPendingTransactions(userId: string): Promise<CoinTransaction[]> {
+    return await this.transactionRepository
+      .createQueryBuilder('transaction')
+      .leftJoinAndSelect('transaction.user', 'user')
+      .leftJoinAndSelect('transaction.brand', 'brand')
+      .where('transaction.userId = :userId', { userId })
+      .andWhere('transaction.status = :status', { status: 'PENDING' })
+      .orderBy('transaction.createdAt', 'ASC')
+      .getMany();
+  }
+
+  async getNextUserTransaction(currentTransactionId: string, userId: string): Promise<CoinTransaction | null> {
+    const currentTransaction = await this.transactionRepository.findOne({
+      where: { id: currentTransactionId }
+    });
+
+    if (!currentTransaction) {
+      return null;
+    }
+
+    return await this.transactionRepository
+      .createQueryBuilder('transaction')
+      .leftJoinAndSelect('transaction.user', 'user')
+      .leftJoinAndSelect('transaction.brand', 'brand')
+      .where('transaction.userId = :userId', { userId })
+      .andWhere('transaction.createdAt > :createdAt', { createdAt: currentTransaction.createdAt })
+      .orderBy('transaction.createdAt', 'ASC')
+      .getOne();
+  }
+
+  async getPreviousUserTransaction(currentTransactionId: string, userId: string): Promise<CoinTransaction | null> {
+    const currentTransaction = await this.transactionRepository.findOne({
+      where: { id: currentTransactionId }
+    });
+
+    if (!currentTransaction) {
+      return null;
+    }
+
+    return await this.transactionRepository
+      .createQueryBuilder('transaction')
+      .leftJoinAndSelect('transaction.user', 'user')
+      .leftJoinAndSelect('transaction.brand', 'brand')
+      .where('transaction.userId = :userId', { userId })
+      .andWhere('transaction.createdAt < :createdAt', { createdAt: currentTransaction.createdAt })
+      .orderBy('transaction.createdAt', 'DESC')
+      .getOne();
   }
 
   async createWelcomeBonus(userId: string): Promise<CoinTransaction> {
@@ -374,8 +466,34 @@ export class CoinsService {
       throw new BadRequestException('Transaction is not pending');
     }
 
+    // Check if there are older pending transactions for the same user
+    if (transaction.user) {
+      const olderPendingTransactions = await this.transactionRepository.find({
+        where: {
+          user: { id: transaction.user.id },
+          status: 'PENDING',
+        },
+        order: { createdAt: 'ASC' },
+      });
+
+      // If there are older pending transactions, prevent approval
+      if (olderPendingTransactions.length > 0 && olderPendingTransactions[0].id !== transactionId) {
+        throw new BadRequestException('Cannot approve this transaction. Please review older pending transactions first.');
+      }
+    }
+
+    // Determine the new status based on redemption amount
+    let newStatus: string;
+    if (transaction.coinsRedeemed && transaction.coinsRedeemed > 0) {
+      newStatus = 'UNPAID'; // Needs payment processing
+    } else {
+      newStatus = 'PAID'; // No redemption, automatically paid
+    }
+
     // Update transaction status
-    transaction.status = 'COMPLETED';
+    transaction.status = newStatus as any;
+    transaction.adminNotes = adminNotes;
+    transaction.statusUpdatedAt = new Date();
     await this.transactionRepository.save(transaction);
 
     // Update user balance if it's an earn transaction
@@ -407,8 +525,26 @@ export class CoinsService {
       throw new BadRequestException('Transaction is not pending');
     }
 
+    // Check if there are older pending transactions for the same user
+    if (transaction.user) {
+      const olderPendingTransactions = await this.transactionRepository.find({
+        where: {
+          user: { id: transaction.user.id },
+          status: 'PENDING',
+        },
+        order: { createdAt: 'ASC' },
+      });
+
+      // If there are older pending transactions, prevent rejection
+      if (olderPendingTransactions.length > 0 && olderPendingTransactions[0].id !== transactionId) {
+        throw new BadRequestException('Cannot reject this transaction. Please review older pending transactions first.');
+      }
+    }
+
     // Update transaction status
-    transaction.status = 'FAILED';
+    transaction.status = 'REJECTED';
+    transaction.adminNotes = adminNotes;
+    transaction.statusUpdatedAt = new Date();
     await this.transactionRepository.save(transaction);
 
     return transaction;
@@ -417,32 +553,22 @@ export class CoinsService {
   // Admin methods for getting all transactions
   async getAllTransactions(page: number = 1, limit: number = 20, filters: any = {}) {
     try {
+      console.log('getAllTransactions called with:', { page, limit, filters });
+      
       const skip = (page - 1) * limit;
-
-      const queryBuilder = this.transactionRepository.createQueryBuilder('transaction')
-        .leftJoinAndSelect('transaction.brand', 'brand')
-        .leftJoinAndSelect('transaction.user', 'user')
-        .orderBy('transaction.createdAt', 'DESC')
-        .skip(skip)
-        .take(limit);
-
-      if (filters.status) {
-        queryBuilder.andWhere('transaction.status = :status', { status: filters.status });
-      }
-      if (filters.type) {
-        queryBuilder.andWhere('transaction.type = :type', { type: filters.type });
-      }
-      if (filters.brandId) {
-        queryBuilder.andWhere('transaction.brandId = :brandId', { brandId: filters.brandId });
-      }
-      if (filters.userId) {
-        queryBuilder.andWhere('transaction.userId = :userId', { userId: filters.userId });
-      }
-
-      const [transactions, total] = await queryBuilder.getManyAndCount();
+      
+      // Use findAndCount with relations to get both data and total count
+      const [allTransactions, total] = await this.transactionRepository.findAndCount({
+        relations: ['user', 'brand'],
+        order: { createdAt: 'DESC' },
+        skip,
+        take: limit,
+      });
+      
+      console.log('Found transactions:', allTransactions.length, 'Total:', total);
 
       return {
-        data: transactions,
+        data: allTransactions,
         total,
         page,
         limit,
@@ -491,6 +617,35 @@ export class CoinsService {
       completedTransactions,
       failedTransactions,
     };
+  }
+
+  async debugTransactions() {
+    try {
+      // Test basic count
+      const totalCount = await this.transactionRepository.count();
+      
+      // Test simple find
+      const sampleTransactions = await this.transactionRepository.find({
+        take: 3,
+        order: { createdAt: 'DESC' }
+      });
+      
+      return {
+        totalCount,
+        sampleCount: sampleTransactions.length,
+        sampleTransactions: sampleTransactions.map(tx => ({
+          id: tx.id,
+          type: tx.type,
+          status: tx.status,
+          amount: tx.amount,
+          createdAt: tx.createdAt
+        })),
+        message: 'Debug successful'
+      };
+    } catch (error) {
+      console.error('Debug error:', error);
+      return { error: (error as Error).message };
+    }
   }
 
   async getCoinSystemStats() {
@@ -582,6 +737,104 @@ export class CoinsService {
         where: { type: 'EARN', status: 'PENDING' } 
       }),
     };
+  }
+
+  async associateTempTransactionWithUser(tempTransactionId: string, userId: string): Promise<CoinTransaction> {
+    // Find the temporary transaction
+    const transaction = await this.transactionRepository.findOne({
+      where: { id: tempTransactionId },
+      relations: ['user', 'brand'],
+    });
+
+    if (!transaction) {
+      throw new NotFoundException('Temporary transaction not found');
+    }
+
+    // Check if transaction is associated with a temporary user
+    if (!transaction.user || !transaction.user.id.startsWith('temp_')) {
+      throw new BadRequestException('Transaction is not a temporary transaction');
+    }
+
+    // Get the real user
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Update the transaction with the real user
+    transaction.user = user;
+    await this.transactionRepository.save(transaction);
+
+    return transaction;
+  }
+
+  // Admin methods for transaction navigation and user-specific queries
+  async getUserPendingTransactions(userId: string): Promise<CoinTransaction[]> {
+    return this.transactionRepository.find({
+      where: {
+        user: { id: userId },
+        status: 'PENDING',
+      },
+      relations: ['user', 'brand'],
+      order: { createdAt: 'ASC' }, // Oldest first
+    });
+  }
+
+  async getNextUserTransaction(currentTransactionId: string, userId: string): Promise<CoinTransaction | null> {
+    const currentTransaction = await this.transactionRepository.findOne({
+      where: { id: currentTransactionId },
+      relations: ['user'],
+    });
+
+    if (!currentTransaction || !currentTransaction.user) {
+      return null;
+    }
+
+    // Get the next transaction for the same user (newer)
+    const nextTransaction = await this.transactionRepository.findOne({
+      where: {
+        user: { id: currentTransaction.user.id },
+        createdAt: MoreThan(currentTransaction.createdAt),
+      },
+      relations: ['user', 'brand'],
+      order: { createdAt: 'ASC' },
+    });
+
+    return nextTransaction;
+  }
+
+  async getPreviousUserTransaction(currentTransactionId: string, userId: string): Promise<CoinTransaction | null> {
+    const currentTransaction = await this.transactionRepository.findOne({
+      where: { id: currentTransactionId },
+      relations: ['user'],
+    });
+
+    if (!currentTransaction || !currentTransaction.user) {
+      return null;
+    }
+
+    // Get the previous transaction for the same user (older)
+    const previousTransaction = await this.transactionRepository.findOne({
+      where: {
+        user: { id: currentTransaction.user.id },
+        createdAt: LessThan(currentTransaction.createdAt),
+      },
+      relations: ['user', 'brand'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return previousTransaction;
+  }
+
+  async getOldestPendingTransactionForUser(userId: string): Promise<CoinTransaction | null> {
+    return this.transactionRepository.findOne({
+      where: {
+        user: { id: userId },
+        status: 'PENDING',
+      },
+      relations: ['user', 'brand'],
+      order: { createdAt: 'ASC' },
+    });
   }
 
 }
