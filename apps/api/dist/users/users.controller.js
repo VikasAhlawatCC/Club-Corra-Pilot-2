@@ -39,6 +39,26 @@ let UsersController = class UsersController {
             data: result
         };
     }
+    async health() {
+        try {
+            // Simple database health check
+            const count = await this.usersService.getUserCount();
+            return {
+                success: true,
+                message: 'Users service is healthy',
+                data: { userCount: count }
+            };
+        }
+        catch (error) {
+            console.error('Users health check failed:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            return {
+                success: false,
+                message: 'Users service health check failed',
+                error: errorMessage
+            };
+        }
+    }
     async search(query, page = 1, limit = 20) {
         return this.usersService.searchUsers(query, page, limit);
     }
@@ -140,6 +160,12 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "stats", null);
+__decorate([
+    (0, common_1.Get)('health'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "health", null);
 __decorate([
     (0, common_1.Get)('search'),
     __param(0, (0, common_1.Query)('q')),

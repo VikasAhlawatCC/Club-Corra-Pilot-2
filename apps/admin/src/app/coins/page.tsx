@@ -21,7 +21,7 @@ export default function CoinsPage() {
   const recentTransactions = (transactions || []).slice(0, 10).map(tx => ({
     id: tx.id || 'unknown',
     userId: tx.userId || 'unknown',
-    userName: tx.userName || 'Unknown User',
+    userName: tx.userMobile || tx.userName || 'Unknown User',
     type: tx.type || 'UNKNOWN',
     amount: tx.amount || 0,
     timestamp: tx.createdAt || new Date(),

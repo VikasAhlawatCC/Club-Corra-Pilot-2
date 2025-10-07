@@ -762,20 +762,21 @@ export class CoinsService {
   }
 
   async getCoinSystemStats() {
-    // Get comprehensive coin system statistics
-    const [
-      totalUsers,
-      activeBrands,
-      totalTransactions,
-      pendingTransactions,
-      approvedTransactions,
-      rejectedTransactions,
-      totalCoinsInCirculation,
-      welcomeBonusesGiven,
-      pendingRedemptions,
-      totalEarned,
-      totalRedeemed,
-    ] = await Promise.all([
+    try {
+      // Get comprehensive coin system statistics
+      const [
+        totalUsers,
+        activeBrands,
+        totalTransactions,
+        pendingTransactions,
+        approvedTransactions,
+        rejectedTransactions,
+        totalCoinsInCirculation,
+        welcomeBonusesGiven,
+        pendingRedemptions,
+        totalEarned,
+        totalRedeemed,
+      ] = await Promise.all([
       // Total users
       this.userRepository.count(),
       
@@ -791,7 +792,7 @@ export class CoinsService {
       // Total coins in circulation (sum of all user balances)
       this.balanceRepository
         .createQueryBuilder('balance')
-        .select('SUM(balance.balance)', 'total')
+        .select('SUM(CAST(balance.balance AS DECIMAL))', 'total')
         .getRawOne()
         .then(result => BigInt(result?.total || '0')),
       
@@ -804,7 +805,7 @@ export class CoinsService {
       // Total earned (sum of all EARN transactions)
       this.transactionRepository
         .createQueryBuilder('transaction')
-        .select('SUM(transaction.amount)', 'total')
+        .select('SUM(CAST(transaction.amount AS DECIMAL))', 'total')
         .where('transaction.type = :type', { type: 'EARN' })
         .andWhere('transaction.status = :status', { status: 'COMPLETED' })
         .getRawOne()
@@ -813,7 +814,7 @@ export class CoinsService {
       // Total redeemed (sum of all REDEEM transactions)
       this.transactionRepository
         .createQueryBuilder('transaction')
-        .select('SUM(ABS(transaction.amount))', 'total')
+        .select('SUM(CAST(ABS(transaction.amount) AS DECIMAL))', 'total')
         .where('transaction.type = :type', { type: 'REDEEM' })
         .andWhere('transaction.status = :status', { status: 'COMPLETED' })
         .getRawOne()
@@ -834,14 +835,14 @@ export class CoinsService {
     }
 
     return {
-      totalCoinsInCirculation,
+      totalCoinsInCirculation: totalCoinsInCirculation.toString(),
       totalUsers,
       welcomeBonusesGiven,
       pendingRedemptions,
       activeBrands,
       systemHealth,
-      totalEarned,
-      totalRedeemed,
+      totalEarned: totalEarned.toString(),
+      totalRedeemed: totalRedeemed.toString(),
       totalTransactions,
       approvedTransactions,
       rejectedTransactions,
@@ -850,6 +851,10 @@ export class CoinsService {
         where: { type: 'EARN', status: 'PENDING' } 
       }),
     };
+    } catch (error) {
+      console.error('Error in getCoinSystemStats:', error);
+      throw error;
+    }
   }
 
   async associateTempTransactionWithUser(tempTransactionId: string, userId: string): Promise<CoinTransaction> {
@@ -974,9 +979,9 @@ export class CoinsService {
         mobileNumber: user.mobileNumber,
         profile: user.profile,
         paymentDetails: user.paymentDetails,
-        coinBalance: BigInt(user.coinBalance?.balance || '0'),
-        totalEarned: BigInt(user.coinBalance?.totalEarned || '0'),
-        totalRedeemed: BigInt(user.coinBalance?.totalRedeemed || '0'),
+        coinBalance: (user.coinBalance?.balance || '0').toString(),
+        totalEarned: (user.coinBalance?.totalEarned || '0').toString(),
+        totalRedeemed: (user.coinBalance?.totalRedeemed || '0').toString(),
       },
       pendingRequests: {
         data: pendingRequests,

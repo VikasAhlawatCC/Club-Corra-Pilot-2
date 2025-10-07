@@ -15,7 +15,7 @@ import {
   Heart,
   Star,
   MessageSquare,
-  CommandLineIcon
+  Terminal
 } from 'lucide-react'
 import { formatDate } from '@/utils/dateUtils'
 
@@ -133,7 +133,7 @@ export function FormResponseModal({ isOpen, onClose, type, data }: FormResponseM
       {app.adminNotes && (
         <div>
           <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <CommandLineIcon className="w-5 h-5" />
+            <Terminal className="w-5 h-5" />
             Admin Notes
           </h4>
           <div className="bg-gray-50 p-4 rounded-lg">
@@ -194,7 +194,7 @@ export function FormResponseModal({ isOpen, onClose, type, data }: FormResponseM
       {entry.adminNotes && (
         <div>
           <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <CommandLineIcon className="w-5 h-5" />
+            <Terminal className="w-5 h-5" />
             Admin Notes
           </h4>
           <div className="bg-gray-50 p-4 rounded-lg">

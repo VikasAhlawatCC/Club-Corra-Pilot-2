@@ -155,7 +155,17 @@ export async function getUserProfile(token: string): Promise<ApiResponse<User>> 
 
   const result = await response.json();
   
-  // The API response contains a nested user object, so we extract it.
+  // The API response is triple-nested due to ResponseInterceptor:
+  // result.data.data.user contains the actual user data
+  if (result.success && result.data && result.data.data && result.data.data.user) {
+    return {
+      success: result.success,
+      message: result.message,
+      data: result.data.data.user,
+    };
+  }
+  
+  // Fallback: Try the old structure (result.data.user)
   if (result.success && result.data && result.data.user) {
     return {
       success: result.success,
@@ -164,10 +174,10 @@ export async function getUserProfile(token: string): Promise<ApiResponse<User>> 
     };
   }
   
-  // Return the original response if the structure is not as expected or if it's an error response
+  // Return the original response if the structure is not as expected
   return {
     ...result,
-    data: result.data?.user || result.data, // Fallback for safety
+    data: result.data?.data?.user || result.data?.user || result.data,
   };
 }
 
