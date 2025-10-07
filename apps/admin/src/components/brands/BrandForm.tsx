@@ -295,9 +295,9 @@ export function BrandForm({
                             type="number"
                             min="0"
                             max="100"
-                            step="0.01"
+                            step="1"
                             required
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                           />
                           <span className="absolute right-3 top-2 text-muted-foreground">%</span>
                         </div>
@@ -323,9 +323,9 @@ export function BrandForm({
                             type="number"
                             min="0"
                             max="100"
-                            step="0.01"
+                            step="1"
                             required
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                           />
                           <span className="absolute right-3 top-2 text-muted-foreground">%</span>
                         </div>
@@ -357,10 +357,10 @@ export function BrandForm({
                             {...field}
                             type="number"
                             min="0"
-                            step="0.01"
+                            step="1"
                             placeholder="No minimum"
                             className="pl-8"
-                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
                             value={field.value || ''}
                           />
                         </div>
@@ -386,10 +386,10 @@ export function BrandForm({
                             {...field}
                             type="number"
                             min="0"
-                            step="0.01"
+                            step="1"
                             placeholder="No maximum"
                             className="pl-8"
-                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
                             value={field.value || ''}
                           />
                         </div>
@@ -421,10 +421,10 @@ export function BrandForm({
                             {...field}
                             type="number"
                             min="0"
-                            step="0.01"
+                            step="1"
                             required
                             className="pl-8"
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                           />
                         </div>
                       </FormControl>

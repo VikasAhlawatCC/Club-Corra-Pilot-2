@@ -47,9 +47,11 @@ function UploadContent() {
     const fetchBrands = async () => {
       try {
         const response = await getActiveBrands();
-        if (response.success && response.data) {
+        if (response.success && response.data && Array.isArray(response.data)) {
           // Convert API brands to Brand format
-          const apiBrands: Brand[] = response.data.map((brand: ApiBrand) => ({
+          const apiBrands: Brand[] = response.data
+            .filter((brand: ApiBrand) => brand && brand.id && brand.name)
+            .map((brand: ApiBrand) => ({
             key: brand.id,
             name: brand.name,
             short: brand.name.substring(0, 2).toUpperCase(),
@@ -62,7 +64,8 @@ function UploadContent() {
         }
       } catch (error) {
         console.error("Error fetching brands:", error);
-        toast.error("Failed to load brands, using default list");
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        toast.error(`Failed to load brands: ${errorMessage}. Using default list.`);
         setBrands(ALL_BRANDS);
         setSelected(ALL_BRANDS[0]);
       } finally {
@@ -102,7 +105,7 @@ function UploadContent() {
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
       
-      // Upload file to S3
+      // Upload file to S3 using presigned URL
       setUploading(true);
       try {
         const response = await getPresignedUploadUrl(file.name, file.type);
@@ -125,7 +128,8 @@ function UploadContent() {
         }
       } catch (error) {
         console.error("Error uploading file:", error);
-        toast.error("Failed to upload receipt");
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        toast.error(`Failed to upload receipt: ${errorMessage}`);
       } finally {
         setUploading(false);
       }
@@ -421,8 +425,16 @@ function UploadContent() {
               <input
                 className="w-full h-12 rounded-xl border border-black/15 px-4 pr-10 outline-none focus:border-green-600 transition"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Only allow whole numbers (integers)
+                  if (value === '' || /^\d+$/.test(value)) {
+                    setAmount(value);
+                  }
+                }}
                 inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="Enter amount (whole numbers only)"
               />
               <button className="absolute right-2.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-md border border-black/15 grid place-items-center text-xs">
                 ↻
@@ -456,7 +468,7 @@ function UploadContent() {
                 const uploadData = {
                   brandId: selected.key,
                   brandName: selected.name,
-                  amount: Number(amount),
+                  amount: parseInt(amount) || 0, // Ensure integer conversion
                   receiptUrl: receiptUrl,
                   fileName: fileName,
                 };

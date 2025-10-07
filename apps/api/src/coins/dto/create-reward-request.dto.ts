@@ -4,8 +4,8 @@ export class CreateRewardRequestDto {
   @IsUUID()
   brandId!: string
 
-  @IsNumber()
-  @Min(0.01)
+  @IsInt()
+  @Min(1)
   @Max(100000)
   billAmount!: number
 

@@ -38,13 +38,15 @@ export default function RewardsPage() {
   const fetchBrands = async () => {
     try {
       const response = await getActiveBrands();
-      if (response.success && response.data) {
-        setBrands(response.data);
-        setSelectedBrand(response.data[0] || null);
+      if (response.success && response.data && Array.isArray(response.data)) {
+        const validBrands = response.data.filter((brand: Brand) => brand && brand.id && brand.name);
+        setBrands(validBrands);
+        setSelectedBrand(validBrands[0] || null);
       }
     } catch (error) {
       console.error("Error fetching brands:", error);
-      toast.error("Failed to load brands");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Failed to load brands: ${errorMessage}`);
     } finally {
       setLoadingBrands(false);
     }
@@ -75,7 +77,8 @@ export default function RewardsPage() {
       }
     } catch (error) {
       console.error("Error uploading file:", error);
-      toast.error("Failed to upload receipt");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Failed to upload receipt: ${errorMessage}`);
     } finally {
       setUploading(false);
     }
@@ -103,7 +106,8 @@ export default function RewardsPage() {
       }
     } catch (error) {
       console.error("Error submitting reward request:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to submit request");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Failed to submit request: ${errorMessage}`);
     } finally {
       setSubmitting(false);
     }

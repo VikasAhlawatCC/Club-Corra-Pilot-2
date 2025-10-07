@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { EyeIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
+import { EyeIcon, DocumentTextIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import type { AdminCoinTransaction } from '../../types/coins'
 import { formatDate } from '@/utils/dateUtils'
 import {
@@ -138,6 +138,14 @@ export function TransactionDetailModal({
                   <span className="text-muted-foreground">User ID:</span>
                   <span className="font-mono text-sm">{transaction.userId}</span>
                 </div>
+                {transaction.userBalance !== undefined && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Current Balance:</span>
+                    <span className={`text-lg font-semibold ${transaction.userBalance < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      {transaction.userBalance} coins
+                    </span>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -161,6 +169,26 @@ export function TransactionDetailModal({
                       />
                     </div>
                   )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Balance Warning */}
+            {transaction.userBalance !== undefined && transaction.userBalance < 0 && (
+              <Card className="border-red-200 bg-red-50">
+                <CardHeader>
+                  <CardTitle className="text-red-800 flex items-center gap-2">
+                    <ExclamationTriangleIcon className="w-5 h-5" />
+                    Negative Balance Warning
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-red-700 text-sm">
+                    This user has a negative balance of {transaction.userBalance} coins. 
+                    {transaction.coinsRedeemed && transaction.coinsRedeemed > 0 && (
+                      <span> Consider reducing the redeem amount to prevent further negative balance.</span>
+                    )}
+                  </p>
                 </CardContent>
               </Card>
             )}

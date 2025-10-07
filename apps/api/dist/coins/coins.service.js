@@ -1,10 +1,43 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
@@ -43,11 +76,17 @@ let CoinsService = class CoinsService {
             user = await this.userRepository.findOne({ where: { id: userId } });
         }
         const brand = await this.brandRepository.findOne({ where: { id: brandId } });
-        // Calculate coins earned based on brand's earning percentage
+        // Calculate coins earned based on brand's earning percentage (whole numbers only)
         const netBillAmount = billAmount - coinsToRedeem;
         const coinsEarnedRaw = (netBillAmount * (brand?.earningPercentage || 0)) / 100;
-        const coinsEarned = Math.max(1, Math.round(coinsEarnedRaw));
-        // Create transaction with all new fields
+        const coinsEarned = Math.max(1, Math.round(coinsEarnedRaw)); // Ensure whole number
+        // Get current user balance for tracking (only for authenticated users)
+        let currentBalance = 0;
+        if (user) {
+            const userBalance = await this.balanceRepository.findOne({ where: { user: { id: user.id } } });
+            currentBalance = userBalance?.balance || 0;
+        }
+        // Create transaction with all new fields including balance tracking
         const transaction = this.transactionRepository.create({
             user: user,
             brand: brand,
@@ -60,6 +99,10 @@ let CoinsService = class CoinsService {
             receiptUrl: receiptUrl,
             billDate: new Date(billDate),
             statusUpdatedAt: new Date(),
+            // Balance tracking fields for reversion on rejection
+            previousBalance: currentBalance,
+            balanceAfterEarn: currentBalance + coinsEarned,
+            balanceAfterRedeem: currentBalance + coinsEarned - coinsToRedeem,
         });
         const savedTransaction = await this.transactionRepository.save(transaction);
         // Get updated balance and transaction list for response
@@ -88,81 +131,6 @@ let CoinsService = class CoinsService {
             limit: recentTransactions.limit,
             totalPages: recentTransactions.totalPages,
         };
-    }
-    async associateTempTransactionWithUser(tempTransactionId, userId) {
-        // Find the temporary transaction
-        const tempTransaction = await this.transactionRepository.findOne({
-            where: { id: tempTransactionId },
-            relations: ['brand']
-        });
-        if (!tempTransaction) {
-            throw new common_1.NotFoundException('Temporary transaction not found');
-        }
-        // Verify it's a temporary transaction (no user associated)
-        if (tempTransaction.user) {
-            throw new common_1.BadRequestException('Transaction is already associated with a user');
-        }
-        // Find the user
-        const user = await this.userRepository.findOne({ where: { id: userId } });
-        if (!user) {
-            throw new common_1.NotFoundException('User not found');
-        }
-        // Associate the transaction with the user
-        tempTransaction.user = user;
-        const updatedTransaction = await this.transactionRepository.save(tempTransaction);
-        return updatedTransaction;
-    }
-    async getOldestPendingTransactionForUser(userId) {
-        return await this.transactionRepository
-            .createQueryBuilder('transaction')
-            .leftJoinAndSelect('transaction.user', 'user')
-            .leftJoinAndSelect('transaction.brand', 'brand')
-            .where('transaction.userId = :userId', { userId })
-            .andWhere('transaction.status = :status', { status: 'PENDING' })
-            .orderBy('transaction.createdAt', 'ASC')
-            .getOne();
-    }
-    async getUserPendingTransactions(userId) {
-        return await this.transactionRepository
-            .createQueryBuilder('transaction')
-            .leftJoinAndSelect('transaction.user', 'user')
-            .leftJoinAndSelect('transaction.brand', 'brand')
-            .where('transaction.userId = :userId', { userId })
-            .andWhere('transaction.status = :status', { status: 'PENDING' })
-            .orderBy('transaction.createdAt', 'ASC')
-            .getMany();
-    }
-    async getNextUserTransaction(currentTransactionId, userId) {
-        const currentTransaction = await this.transactionRepository.findOne({
-            where: { id: currentTransactionId }
-        });
-        if (!currentTransaction) {
-            return null;
-        }
-        return await this.transactionRepository
-            .createQueryBuilder('transaction')
-            .leftJoinAndSelect('transaction.user', 'user')
-            .leftJoinAndSelect('transaction.brand', 'brand')
-            .where('transaction.userId = :userId', { userId })
-            .andWhere('transaction.createdAt > :createdAt', { createdAt: currentTransaction.createdAt })
-            .orderBy('transaction.createdAt', 'ASC')
-            .getOne();
-    }
-    async getPreviousUserTransaction(currentTransactionId, userId) {
-        const currentTransaction = await this.transactionRepository.findOne({
-            where: { id: currentTransactionId }
-        });
-        if (!currentTransaction) {
-            return null;
-        }
-        return await this.transactionRepository
-            .createQueryBuilder('transaction')
-            .leftJoinAndSelect('transaction.user', 'user')
-            .leftJoinAndSelect('transaction.brand', 'brand')
-            .where('transaction.userId = :userId', { userId })
-            .andWhere('transaction.createdAt < :createdAt', { createdAt: currentTransaction.createdAt })
-            .orderBy('transaction.createdAt', 'DESC')
-            .getOne();
     }
     async createWelcomeBonus(userId) {
         // Validate user exists
@@ -237,7 +205,7 @@ let CoinsService = class CoinsService {
         const coinsToRedeem = Math.max(1, Math.round(coinsToRedeemRaw));
         // Check user has sufficient balance
         const balance = await this.getUserBalance(userId);
-        if (parseInt(balance.balance) < coinsToRedeem) {
+        if (balance.balance < coinsToRedeem) {
             throw new common_1.BadRequestException('Insufficient coin balance for redemption');
         }
         // Create transaction
@@ -263,9 +231,9 @@ let CoinsService = class CoinsService {
                 // Create new balance record
                 balance = this.balanceRepository.create({
                     user: { id: userId },
-                    balance: '0',
-                    totalEarned: '0',
-                    totalRedeemed: '0',
+                    balance: 0,
+                    totalEarned: 0,
+                    totalRedeemed: 0,
                 });
                 await this.balanceRepository.save(balance);
             }
@@ -296,6 +264,23 @@ let CoinsService = class CoinsService {
         }
         else {
             balance.totalRedeemed += Math.abs(integerAmount);
+        }
+        await this.balanceRepository.save(balance);
+    }
+    async revertUserBalance(userId, targetBalance) {
+        const balance = await this.getUserBalance(userId);
+        const currentBalance = balance.balance;
+        const difference = targetBalance - currentBalance;
+        // Set the balance to the target value
+        balance.balance = targetBalance;
+        // Adjust the totals based on the difference
+        if (difference > 0) {
+            // Balance was reduced, so we need to reduce totalEarned
+            balance.totalEarned = Math.max(0, balance.totalEarned - difference);
+        }
+        else if (difference < 0) {
+            // Balance was increased, so we need to reduce totalRedeemed
+            balance.totalRedeemed = Math.max(0, balance.totalRedeemed + difference);
         }
         await this.balanceRepository.save(balance);
     }
@@ -403,6 +388,14 @@ let CoinsService = class CoinsService {
                 throw new common_1.BadRequestException('Cannot approve this transaction. Please review older pending transactions first.');
             }
         }
+        // Validate that user has sufficient balance for redemption (prevent negative balances)
+        if (transaction.coinsRedeemed && transaction.coinsRedeemed > 0 && transaction.user) {
+            const userBalance = await this.balanceRepository.findOne({ where: { user: { id: transaction.user.id } } });
+            const currentBalance = userBalance?.balance || 0;
+            if (currentBalance < transaction.coinsRedeemed) {
+                throw new common_1.BadRequestException(`Cannot approve transaction. User has ${currentBalance} coins but trying to redeem ${transaction.coinsRedeemed} coins. This would result in a negative balance.`);
+            }
+        }
         // Determine the new status based on redemption amount
         let newStatus;
         if (transaction.coinsRedeemed && transaction.coinsRedeemed > 0) {
@@ -416,11 +409,14 @@ let CoinsService = class CoinsService {
         transaction.adminNotes = adminNotes;
         transaction.statusUpdatedAt = new Date();
         await this.transactionRepository.save(transaction);
-        // Update user balance if it's an earn transaction
+        // Update user balance with proper tracking for reversion
         if (transaction.type === 'REWARD_REQUEST' || transaction.type === 'EARN') {
-            const amount = parseInt(transaction.amount);
-            if (amount > 0 && transaction.user) {
-                await this.updateUserBalance(transaction.user.id, amount);
+            if (transaction.user) {
+                // Update balance: add earned coins, subtract redeemed coins
+                const netAmount = (transaction.coinsEarned || 0) - (transaction.coinsRedeemed || 0);
+                if (netAmount !== 0) {
+                    await this.updateUserBalance(transaction.user.id, netAmount);
+                }
             }
         }
         return transaction;
@@ -450,6 +446,14 @@ let CoinsService = class CoinsService {
                 throw new common_1.BadRequestException('Cannot reject this transaction. Please review older pending transactions first.');
             }
         }
+        // Revert coin balance changes if transaction was previously approved
+        // Note: This check is for cases where a transaction might have been approved and then rejected
+        if (transaction.status === 'PAID' || transaction.status === 'UNPAID') {
+            if (transaction.user && transaction.previousBalance !== undefined) {
+                // Revert to previous balance
+                await this.revertUserBalance(transaction.user.id, transaction.previousBalance);
+            }
+        }
         // Update transaction status
         transaction.status = 'REJECTED';
         transaction.adminNotes = adminNotes;
@@ -470,8 +474,11 @@ let CoinsService = class CoinsService {
                 take: limit,
             });
             console.log('Found transactions:', allTransactions.length, 'Total:', total);
+            // Convert entities to DTOs with proper type conversion
+            const { convertToAdminTransactionDto } = await Promise.resolve().then(() => __importStar(require('./dto/admin-transaction.dto')));
+            const convertedTransactions = allTransactions.map(convertToAdminTransactionDto);
             return {
-                data: allTransactions,
+                data: convertedTransactions,
                 total,
                 page,
                 limit,

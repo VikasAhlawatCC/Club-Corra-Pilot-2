@@ -37,7 +37,8 @@ const handleGetEarlyAccess = async () => {
 		setEmail(""); // Clear the email field
 	} catch (error) {
 		console.error("Error adding to waitlist:", error);
-		toast.error(error instanceof Error ? error.message : "Failed to add to waitlist");
+		const errorMessage = error instanceof Error ? error.message : "Unknown error";
+		toast.error(`Failed to add to waitlist: ${errorMessage}`);
 	}
 };
 

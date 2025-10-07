@@ -40,12 +40,19 @@ export class CoinsService {
 
     const brand = await this.brandRepository.findOne({ where: { id: brandId } });
 
-    // Calculate coins earned based on brand's earning percentage
+    // Calculate coins earned based on brand's earning percentage (whole numbers only)
     const netBillAmount = billAmount - coinsToRedeem;
     const coinsEarnedRaw = (netBillAmount * (brand?.earningPercentage || 0)) / 100;
-    const coinsEarned = Math.max(1, Math.round(coinsEarnedRaw));
+    const coinsEarned = Math.max(1, Math.round(coinsEarnedRaw)); // Ensure whole number
 
-    // Create transaction with all new fields
+    // Get current user balance for tracking (only for authenticated users)
+    let currentBalance = 0;
+    if (user) {
+      const userBalance = await this.balanceRepository.findOne({ where: { user: { id: user.id } } });
+      currentBalance = userBalance?.balance || 0;
+    }
+
+    // Create transaction with all new fields including balance tracking
     const transaction = this.transactionRepository.create({
       user: user,
       brand: brand,
@@ -58,6 +65,10 @@ export class CoinsService {
       receiptUrl: receiptUrl,
       billDate: new Date(billDate),
       statusUpdatedAt: new Date(),
+      // Balance tracking fields for reversion on rejection
+      previousBalance: currentBalance,
+      balanceAfterEarn: currentBalance + coinsEarned,
+      balanceAfterRedeem: currentBalance + coinsEarned - coinsToRedeem,
     });
 
     const savedTransaction = await this.transactionRepository.save(transaction);
@@ -92,94 +103,6 @@ export class CoinsService {
     };
   }
 
-  async associateTempTransactionWithUser(tempTransactionId: string, userId: string): Promise<CoinTransaction> {
-    // Find the temporary transaction
-    const tempTransaction = await this.transactionRepository.findOne({
-      where: { id: tempTransactionId },
-      relations: ['brand']
-    });
-
-    if (!tempTransaction) {
-      throw new NotFoundException('Temporary transaction not found');
-    }
-
-    // Verify it's a temporary transaction (no user associated)
-    if (tempTransaction.user) {
-      throw new BadRequestException('Transaction is already associated with a user');
-    }
-
-    // Find the user
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    // Associate the transaction with the user
-    tempTransaction.user = user;
-    const updatedTransaction = await this.transactionRepository.save(tempTransaction);
-
-    return updatedTransaction;
-  }
-
-  async getOldestPendingTransactionForUser(userId: string): Promise<CoinTransaction | null> {
-    return await this.transactionRepository
-      .createQueryBuilder('transaction')
-      .leftJoinAndSelect('transaction.user', 'user')
-      .leftJoinAndSelect('transaction.brand', 'brand')
-      .where('transaction.userId = :userId', { userId })
-      .andWhere('transaction.status = :status', { status: 'PENDING' })
-      .orderBy('transaction.createdAt', 'ASC')
-      .getOne();
-  }
-
-  async getUserPendingTransactions(userId: string): Promise<CoinTransaction[]> {
-    return await this.transactionRepository
-      .createQueryBuilder('transaction')
-      .leftJoinAndSelect('transaction.user', 'user')
-      .leftJoinAndSelect('transaction.brand', 'brand')
-      .where('transaction.userId = :userId', { userId })
-      .andWhere('transaction.status = :status', { status: 'PENDING' })
-      .orderBy('transaction.createdAt', 'ASC')
-      .getMany();
-  }
-
-  async getNextUserTransaction(currentTransactionId: string, userId: string): Promise<CoinTransaction | null> {
-    const currentTransaction = await this.transactionRepository.findOne({
-      where: { id: currentTransactionId }
-    });
-
-    if (!currentTransaction) {
-      return null;
-    }
-
-    return await this.transactionRepository
-      .createQueryBuilder('transaction')
-      .leftJoinAndSelect('transaction.user', 'user')
-      .leftJoinAndSelect('transaction.brand', 'brand')
-      .where('transaction.userId = :userId', { userId })
-      .andWhere('transaction.createdAt > :createdAt', { createdAt: currentTransaction.createdAt })
-      .orderBy('transaction.createdAt', 'ASC')
-      .getOne();
-  }
-
-  async getPreviousUserTransaction(currentTransactionId: string, userId: string): Promise<CoinTransaction | null> {
-    const currentTransaction = await this.transactionRepository.findOne({
-      where: { id: currentTransactionId }
-    });
-
-    if (!currentTransaction) {
-      return null;
-    }
-
-    return await this.transactionRepository
-      .createQueryBuilder('transaction')
-      .leftJoinAndSelect('transaction.user', 'user')
-      .leftJoinAndSelect('transaction.brand', 'brand')
-      .where('transaction.userId = :userId', { userId })
-      .andWhere('transaction.createdAt < :createdAt', { createdAt: currentTransaction.createdAt })
-      .orderBy('transaction.createdAt', 'DESC')
-      .getOne();
-  }
 
   async createWelcomeBonus(userId: string): Promise<CoinTransaction> {
     // Validate user exists
@@ -272,7 +195,7 @@ export class CoinsService {
 
     // Check user has sufficient balance
     const balance = await this.getUserBalance(userId);
-    if (parseInt(balance.balance) < coinsToRedeem) {
+    if (balance.balance < coinsToRedeem) {
       throw new BadRequestException('Insufficient coin balance for redemption');
     }
 
@@ -304,9 +227,9 @@ export class CoinsService {
         // Create new balance record
         balance = this.balanceRepository.create({
           user: { id: userId },
-          balance: '0',
-          totalEarned: '0',
-          totalRedeemed: '0',
+          balance: 0,
+          totalEarned: 0,
+          totalRedeemed: 0,
         });
         await this.balanceRepository.save(balance);
       } catch (error: any) {
@@ -338,6 +261,26 @@ export class CoinsService {
       balance.totalEarned += integerAmount;
     } else {
       balance.totalRedeemed += Math.abs(integerAmount);
+    }
+
+    await this.balanceRepository.save(balance);
+  }
+
+  async revertUserBalance(userId: string, targetBalance: number): Promise<void> {
+    const balance = await this.getUserBalance(userId);
+    const currentBalance = balance.balance;
+    const difference = targetBalance - currentBalance;
+
+    // Set the balance to the target value
+    balance.balance = targetBalance;
+    
+    // Adjust the totals based on the difference
+    if (difference > 0) {
+      // Balance was reduced, so we need to reduce totalEarned
+      balance.totalEarned = Math.max(0, balance.totalEarned - difference);
+    } else if (difference < 0) {
+      // Balance was increased, so we need to reduce totalRedeemed
+      balance.totalRedeemed = Math.max(0, balance.totalRedeemed + difference);
     }
 
     await this.balanceRepository.save(balance);
@@ -482,6 +425,16 @@ export class CoinsService {
       }
     }
 
+    // Validate that user has sufficient balance for redemption (prevent negative balances)
+    if (transaction.coinsRedeemed && transaction.coinsRedeemed > 0 && transaction.user) {
+      const userBalance = await this.balanceRepository.findOne({ where: { user: { id: transaction.user.id } } });
+      const currentBalance = userBalance?.balance || 0;
+      
+      if (currentBalance < transaction.coinsRedeemed) {
+        throw new BadRequestException(`Cannot approve transaction. User has ${currentBalance} coins but trying to redeem ${transaction.coinsRedeemed} coins. This would result in a negative balance.`);
+      }
+    }
+
     // Determine the new status based on redemption amount
     let newStatus: string;
     if (transaction.coinsRedeemed && transaction.coinsRedeemed > 0) {
@@ -496,11 +449,14 @@ export class CoinsService {
     transaction.statusUpdatedAt = new Date();
     await this.transactionRepository.save(transaction);
 
-    // Update user balance if it's an earn transaction
+    // Update user balance with proper tracking for reversion
     if (transaction.type === 'REWARD_REQUEST' || transaction.type === 'EARN') {
-      const amount = parseInt(transaction.amount);
-      if (amount > 0 && transaction.user) {
-        await this.updateUserBalance(transaction.user.id, amount);
+      if (transaction.user) {
+        // Update balance: add earned coins, subtract redeemed coins
+        const netAmount = (transaction.coinsEarned || 0) - (transaction.coinsRedeemed || 0);
+        if (netAmount !== 0) {
+          await this.updateUserBalance(transaction.user.id, netAmount);
+        }
       }
     }
 
@@ -541,6 +497,15 @@ export class CoinsService {
       }
     }
 
+    // Revert coin balance changes if transaction was previously approved
+    // Note: This check is for cases where a transaction might have been approved and then rejected
+    if ((transaction.status as any) === 'PAID' || (transaction.status as any) === 'UNPAID') {
+      if (transaction.user && transaction.previousBalance !== undefined) {
+        // Revert to previous balance
+        await this.revertUserBalance(transaction.user.id, transaction.previousBalance);
+      }
+    }
+
     // Update transaction status
     transaction.status = 'REJECTED';
     transaction.adminNotes = adminNotes;
@@ -567,8 +532,12 @@ export class CoinsService {
       
       console.log('Found transactions:', allTransactions.length, 'Total:', total);
 
+      // Convert entities to DTOs with proper type conversion
+      const { convertToAdminTransactionDto } = await import('./dto/admin-transaction.dto');
+      const convertedTransactions = allTransactions.map(convertToAdminTransactionDto);
+
       return {
-        data: allTransactions,
+        data: convertedTransactions,
         total,
         page,
         limit,

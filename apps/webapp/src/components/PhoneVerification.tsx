@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { sendOTP, verifyOTP, createRewardRequest } from "@/lib/api";
+import { sendOTP as sendOTPApi, verifyOTP, createRewardRequest } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -47,13 +47,14 @@ export default function PhoneVerification({
     setSending(true);
     
     try {
-      await sendOTP(`+91${phone}`);
+      await sendOTPApi(`+91${phone}`);
       toast.success("OTP sent successfully!");
       setStage("otp");
       setResendTimer(30);
     } catch (error) {
       console.error("Error sending OTP:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to send OTP");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Failed to send OTP: ${errorMessage}`);
     } finally {
       setSending(false);
     }
@@ -85,7 +86,8 @@ export default function PhoneVerification({
             toast.success("Reward request submitted successfully!");
           } catch (error) {
             console.error("Error creating reward request:", error);
-            toast.error("Failed to submit reward request");
+            const errorMessage = error instanceof Error ? error.message : "Unknown error";
+            toast.error(`Failed to submit reward request: ${errorMessage}`);
           }
         }
         
@@ -93,7 +95,8 @@ export default function PhoneVerification({
       }
     } catch (error) {
       console.error("Error verifying OTP:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to verify OTP");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Failed to verify OTP: ${errorMessage}`);
     } finally {
       setVerifying(false);
     }

@@ -39,15 +39,19 @@ export default function HowItWorks() {
     const fetchBrands = async () => {
       try {
         const response = await getActiveBrands();
-        if (response.success && response.data) {
+        if (response.success && response.data && Array.isArray(response.data)) {
           // Convert API brands to EarningBrand format
-          const apiBrands: EarningBrand[] = response.data.map((brand: Brand) => ({
+          const apiBrands: EarningBrand[] = response.data
+            .filter((brand: Brand) => brand && brand.id && brand.name && typeof brand.earningPercentage === 'number')
+            .map((brand: Brand) => ({
             key: brand.id,
             name: brand.name,
             short: brand.name.substring(0, 2).toUpperCase(),
             color: "bg-blue-100", // Default color, could be enhanced
             icon: brand.logoUrl,
-            rate: brand.earningPercentage / 100, // Convert percentage to decimal
+            // Handle both percentage (15) and decimal (0.15) formats
+            // Ensure rate is always between 0 and 1
+            rate: Math.min(1, Math.max(0, brand.earningPercentage > 1 ? brand.earningPercentage / 100 : brand.earningPercentage)),
           }));
           
           setBrands(apiBrands);
@@ -55,7 +59,8 @@ export default function HowItWorks() {
         }
       } catch (error) {
         console.error("Error fetching brands:", error);
-        toast.error("Failed to load brands, using default list");
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        toast.error(`Failed to load brands: ${errorMessage}. Using default list.`);
         setBrands(FALLBACK_BRANDS);
         setSelected(FALLBACK_BRANDS[0]);
       } finally {

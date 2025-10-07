@@ -29,12 +29,16 @@ export default function DashboardPage() {
     
     try {
       const response = await getUserTransactions(token);
-      if (response.success && response.data) {
-        setTransactions(response.data);
+      if (response.success && response.data && Array.isArray(response.data)) {
+        const validTransactions = response.data.filter((transaction: Transaction) => 
+          transaction && transaction.id && typeof transaction.coinsEarned === 'number'
+        );
+        setTransactions(validTransactions);
       }
     } catch (error) {
       console.error("Error fetching transactions:", error);
-      toast.error("Failed to load transaction history");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Failed to load transaction history: ${errorMessage}`);
     } finally {
       setLoadingTransactions(false);
     }

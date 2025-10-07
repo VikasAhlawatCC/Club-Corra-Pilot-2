@@ -24,13 +24,13 @@ let FilesService = class FilesService {
     constructor(fileRepository) {
         this.fileRepository = fileRepository;
         this.s3Client = new client_s3_1.S3Client({
-            region: process.env.AWS_REGION || 'us-east-1',
-            credentials: {
-                accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-                secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-            },
+            region: process.env.S3_REGION || 'eu-north-1',
+            credentials: process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY ? {
+                accessKeyId: process.env.S3_ACCESS_KEY_ID,
+                secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+            } : undefined,
         });
-        this.bucketName = process.env.AWS_S3_BUCKET_NAME || 'club-corra-uploads';
+        this.bucketName = process.env.S3_BUCKET || 'clubcorrarecieptsbucket';
     }
     async generatePresignedUploadUrl(fileName, mimeType, fileType = file_entity_1.FileType.RECEIPT, userId) {
         try {
@@ -38,13 +38,12 @@ let FilesService = class FilesService {
             this.validateFileType(mimeType);
             // Generate unique file key
             const fileExtension = this.getFileExtension(fileName);
-            const fileKey = `${fileType.toLowerCase()}/${(0, uuid_1.v4)()}${fileExtension}`;
+            const fileKey = `uploads/${fileType.toLowerCase()}/${(0, uuid_1.v4)()}${fileExtension}`;
             // Create presigned URL for upload
             const command = new client_s3_1.PutObjectCommand({
                 Bucket: this.bucketName,
                 Key: fileKey,
                 ContentType: mimeType,
-                ACL: 'public-read', // Make file publicly readable
                 Metadata: {
                     originalName: fileName,
                     uploadedBy: userId || 'anonymous',
@@ -52,7 +51,8 @@ let FilesService = class FilesService {
                 },
             });
             const uploadUrl = await (0, s3_request_presigner_1.getSignedUrl)(this.s3Client, command, { expiresIn: 3600 }); // 1 hour
-            const publicUrl = `https://${this.bucketName}.s3.amazonaws.com/${fileKey}`;
+            const region = process.env.S3_REGION || 'eu-north-1';
+            const publicUrl = `https://${this.bucketName}.s3.${region}.amazonaws.com/${fileKey}`;
             return {
                 uploadUrl,
                 fileKey,

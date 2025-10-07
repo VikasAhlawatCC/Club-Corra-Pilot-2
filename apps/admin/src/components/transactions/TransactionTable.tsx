@@ -190,6 +190,12 @@ export const TransactionTable = memo(function TransactionTable({
         return 'text-status-success bg-green-theme-secondary'
       case 'PAID':
         return 'text-silver-theme-primary bg-silver-theme-secondary'
+      case 'UNPAID':
+        return 'text-status-error bg-red-100'
+      case 'COMPLETED':
+        return 'text-status-success bg-green-theme-secondary'
+      case 'FAILED':
+        return 'text-status-error bg-red-100'
       default:
         return 'text-gray-600 bg-gray-100'
     }
@@ -238,6 +244,12 @@ export const TransactionTable = memo(function TransactionTable({
         return <CurrencyDollarIcon className="w-4 h-4" />
       case 'PAID':
         return <CheckCircleIcon className="w-4 h-4" />
+      case 'UNPAID':
+        return <ExclamationTriangleIcon className="w-4 h-4" />
+      case 'COMPLETED':
+        return <CheckCircleIcon className="w-4 h-4" />
+      case 'FAILED':
+        return <XCircleIcon className="w-4 h-4" />
       default:
         return <ExclamationTriangleIcon className="w-4 h-4" />
     }

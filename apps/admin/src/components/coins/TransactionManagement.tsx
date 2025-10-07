@@ -277,9 +277,9 @@ export function TransactionManagement({
                     type="number"
                     id="paymentAmount"
                     value={paymentData.paymentAmount}
-                    onChange={(e) => setPaymentData(prev => ({ ...prev, paymentAmount: parseFloat(e.target.value) || 0 }))}
+                    onChange={(e) => setPaymentData(prev => ({ ...prev, paymentAmount: parseInt(e.target.value) || 0 }))}
                     className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    step="0.01"
+                    step="1"
                     min="0"
                   />
                 </div>

@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api/v1';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -25,9 +25,11 @@ export interface WaitlistEntry {
 export interface User {
   id: string;
   mobileNumber: string;
-  upiId?: string;
-  totalCoins: number;
+  isMobileVerified: boolean;
+  status: string;
   createdAt: string;
+  upiId?: string;
+  totalCoins?: number;
 }
 
 export interface Transaction {
@@ -110,7 +112,18 @@ export async function verifyOTP(mobileNumber: string, otp: string): Promise<ApiR
     throw new Error(error.message || 'Failed to verify OTP');
   }
 
-  return response.json();
+  const result = await response.json();
+  
+  // Transform the response to match frontend expectations
+  // The API returns nested data structure: result.data.data
+  return {
+    success: result.success,
+    message: result.message,
+    data: {
+      token: result.data.data.accessToken, // Map accessToken to token
+      user: result.data.data.user
+    }
+  };
 }
 
 // User API
@@ -150,7 +163,7 @@ export async function getUserTransactions(token: string): Promise<ApiResponse<Tr
 }
 
 // File upload API
-export async function getPresignedUploadUrl(fileName: string, fileType: string, token?: string): Promise<ApiResponse<{ uploadUrl: string; fileUrl: string }>> {
+export async function getPresignedUploadUrl(fileName: string, mimeType: string, token?: string): Promise<ApiResponse<{ uploadUrl: string; fileUrl: string }>> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -159,10 +172,10 @@ export async function getPresignedUploadUrl(fileName: string, fileType: string, 
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}/files/presigned-url`, {
+  const response = await fetch(`${API_BASE_URL}/public/transactions/upload-url`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ fileName, fileType }),
+    body: JSON.stringify({ fileName, mimeType }),
   });
 
   if (!response.ok) {
@@ -170,7 +183,18 @@ export async function getPresignedUploadUrl(fileName: string, fileType: string, 
     throw new Error(error.message || 'Failed to get upload URL');
   }
 
-  return response.json();
+  const result = await response.json();
+  
+  // Transform the response to match the expected format
+  // The API returns nested data structure: result.data.data
+  return {
+    success: result.success,
+    message: result.message,
+    data: {
+      uploadUrl: result.data.data.uploadUrl,
+      fileUrl: result.data.data.publicUrl, // Map publicUrl to fileUrl
+    }
+  };
 }
 
 // Reward request API

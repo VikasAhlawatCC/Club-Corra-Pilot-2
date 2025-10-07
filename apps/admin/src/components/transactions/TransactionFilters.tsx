@@ -146,6 +146,10 @@ export function TransactionFilters({
               <option value="APPROVED">Approved</option>
               <option value="REJECTED">Rejected</option>
               <option value="PAID">Paid</option>
+              <option value="UNPAID">Unpaid</option>
+              <option value="PROCESSED">Processed</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="FAILED">Failed</option>
             </select>
           </div>
 

@@ -124,7 +124,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
   // Define currentRequest early to avoid declaration order issues
   const currentRequest = useMemo(() => {
     // Filter to only include truly pending transactions
-    const filteredPendingRequestsLocal = pendingRequests.filter(req => req.status === 'PENDING')
+    const filteredPendingRequestsLocal = pendingRequests.filter((req: PendingRequest) => req.status === 'PENDING')
     const fromList = filteredPendingRequestsLocal[currentRequestIndex] || filteredPendingRequestsLocal[0]
     if (fromList) return fromList
     // Fallback to the initially selected transaction until data loads
@@ -146,7 +146,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
 
   // Also filter the pendingRequests array to only include PENDING transactions
   const filteredPendingRequests = useMemo(() => 
-    pendingRequests.filter(req => req.status === 'PENDING')
+    pendingRequests.filter((req: PendingRequest) => req.status === 'PENDING')
   , [pendingRequests])
 
   // Update currentRequestIndex if it's now out of bounds after filtering
@@ -288,7 +288,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
   }
 
   const handleVerificationChange = useCallback((field: keyof VerificationFormData, value: any) => {
-    setVerificationData(prev => ({
+    setVerificationData((prev: VerificationFormData) => ({
       ...prev,
       [field]: value
     }))
@@ -342,9 +342,9 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
 
   const handleZoom = useCallback((direction: 'in' | 'out') => {
     if (direction === 'in') {
-      setImageScale(prev => Math.min(prev * 1.2, 3))
+      setImageScale((prev: number) => Math.min(prev * 1.2, 3))
     } else {
-      setImageScale(prev => Math.max(prev / 1.2, 0.5))
+      setImageScale((prev: number) => Math.max(prev / 1.2, 0.5))
     }
   }, [])
 
@@ -360,7 +360,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
     }
     
     // Additional validation: ensure this transaction is in the filtered pending list
-    const isInPendingList = filteredPendingRequests.some(req => req.id === currentRequest.id)
+    const isInPendingList = filteredPendingRequests.some((req: PendingRequest) => req.id === currentRequest.id)
     if (!isInPendingList) {
       setError('This transaction is no longer pending and cannot be approved.')
       return
@@ -372,7 +372,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
     try {
       // Ensure observedAmount is a number and convert if necessary
       const observedAmount = typeof verificationData.observedAmount === 'string' 
-        ? parseFloat(verificationData.observedAmount) || 0 
+        ? parseInt(verificationData.observedAmount.toString()) || 0 
         : verificationData.observedAmount
 
       // Validate form data using Zod schema with proper type conversion
@@ -389,10 +389,10 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
         await onApprove(currentRequest.id, { adminNotes: validatedData.adminNotes, type: currentRequest.type })
       }
       // Update local state to reflect approval and auto-advance to next pending request
-      setPendingRequests(prev => prev.map(req => req.id === currentRequest.id ? { ...req, status: 'APPROVED' } : req))
+      setPendingRequests((prev: PendingRequest[]) => prev.map((req: PendingRequest) => req.id === currentRequest.id ? { ...req, status: 'APPROVED' } : req))
       // Auto-advance to next pending request if available, otherwise close
       setTimeout(() => {
-        const refreshed = pendingRequestsRef.current.filter(req => req.status === 'PENDING')
+        const refreshed = pendingRequestsRef.current.filter((req: PendingRequest) => req.status === 'PENDING')
         if (refreshed.length === 0) {
           onCloseRef.current()
         } else {
@@ -443,7 +443,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
     if (!verificationData.rejectionNote?.trim()) return
     
     // Additional validation: ensure this transaction is in the filtered pending list
-    const isInPendingList = filteredPendingRequests.some(req => req.id === currentRequest.id)
+    const isInPendingList = filteredPendingRequests.some((req: PendingRequest) => req.id === currentRequest.id)
     if (!isInPendingList) {
       setError('This transaction is no longer pending and cannot be rejected.')
       return
@@ -462,9 +462,9 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
         )
       }
       // Update local state to reflect rejection and auto-advance to next pending request
-      setPendingRequests(prev => prev.map(req => req.id === currentRequest.id ? { ...req, status: 'REJECTED' } : req))
+      setPendingRequests((prev: PendingRequest[]) => prev.map((req: PendingRequest) => req.id === currentRequest.id ? { ...req, status: 'REJECTED' } : req))
       setTimeout(() => {
-        const refreshed = pendingRequestsRef.current.filter(req => req.status === 'PENDING')
+        const refreshed = pendingRequestsRef.current.filter((req: PendingRequest) => req.status === 'PENDING')
         if (refreshed.length === 0) {
           onCloseRef.current()
         } else {
@@ -491,10 +491,10 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
       await onApproveAndPay(currentRequest.id, verificationData)
       
       // Update local state and auto-advance similar to approve
-      setPendingRequests(prev => prev.map(req => req.id === currentRequest.id ? { ...req, status: 'APPROVED' } : req))
+      setPendingRequests((prev: PendingRequest[]) => prev.map((req: PendingRequest) => req.id === currentRequest.id ? { ...req, status: 'APPROVED' } : req))
       setShowSuccessMessage(true)
       setTimeout(() => {
-        const refreshed = pendingRequestsRef.current.filter(req => req.status === 'PENDING')
+        const refreshed = pendingRequestsRef.current.filter((req: PendingRequest) => req.status === 'PENDING')
         if (refreshed.length === 0) {
           onCloseRef.current()
         } else {
@@ -549,7 +549,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
     // Check if this is a redeem request and has pending earn requests
     if (currentRequest.type === 'REDEEM') {
       const hasPendingEarnRequests = filteredPendingRequests.some(
-        req => req.type === 'EARN' && req.status === 'PENDING' && req.id !== currentRequest.id
+        (req: PendingRequest) => req.type === 'EARN' && req.status === 'PENDING' && req.id !== currentRequest.id
       )
       if (hasPendingEarnRequests) {
         return false
@@ -565,7 +565,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
   const getApprovalButtonTooltip = useMemo(() => {
     if (verificationData.verificationConfirmed && verificationData.observedAmount > 0 && verificationData.receiptDate) {
       if (currentRequest?.type === 'REDEEM') {
-        const hasPendingEarnRequests = filteredPendingRequests.some(req => req.type === 'EARN' && req.status === 'PENDING' && req.id !== currentRequest.id)
+        const hasPendingEarnRequests = filteredPendingRequests.some((req: PendingRequest) => req.type === 'EARN' && req.status === 'PENDING' && req.id !== currentRequest.id)
         if (hasPendingEarnRequests) {
           return 'Cannot approve: User has pending earn requests that must be processed first'
         }
@@ -1187,7 +1187,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
                         required
                         type="number"
                         value={verificationData.observedAmount}
-                        onChange={(e) => handleVerificationChange('observedAmount', parseFloat(e.target.value) || 0)}
+                        onChange={(e) => handleVerificationChange('observedAmount', parseInt(e.target.value) || 0)}
                       />
                     </div>
                     <div id="observed-help" className="text-xs text-muted-foreground">
@@ -1255,7 +1255,7 @@ export const TransactionVerificationModal = memo(function TransactionVerificatio
                             <li>User must have sufficient coin balance</li>
                             <li>Receipt verification must be completed</li>
                           </ul>
-                          {filteredPendingRequests.some(req => req.type === 'EARN' && req.status === 'PENDING') && (
+                          {filteredPendingRequests.some((req: PendingRequest) => req.type === 'EARN' && req.status === 'PENDING') && (
                             <p className="mt-2 font-medium text-orange-700">
                               ⚠️ Cannot approve: User has pending earn requests
                             </p>

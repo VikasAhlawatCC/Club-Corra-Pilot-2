@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from 'bcryptjs'
 import { Admin } from '../admin/entities/admin.entity'
 import { AdminService } from '../admin/admin.service'
-import { User } from '../users/entities/user.entity'
+import { User, UserStatus } from '../users/entities/user.entity'
 import { UsersService } from '../users/users.service'
 import { UserLoginDto, UserVerifyOtpDto } from './dto/user-login.dto'
 
@@ -172,7 +172,7 @@ export class AuthService {
       } else {
         // Update existing user
         user.isMobileVerified = true;
-        user.status = 'ACTIVE';
+        user.status = UserStatus.ACTIVE;
         user.lastLoginAt = new Date();
         await this.userRepository.save(user);
       }

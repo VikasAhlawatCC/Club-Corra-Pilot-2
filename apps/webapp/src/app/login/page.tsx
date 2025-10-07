@@ -5,7 +5,7 @@ import { useEffect, useState, Suspense } from "react";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { sendOTP, verifyOTP } from "@/lib/api";
+import { sendOTP as sendOTPApi, verifyOTP } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -45,13 +45,14 @@ function LoginContent() {
     setSending(true);
     
     try {
-      await sendOTP(`+91${phone}`);
+      await sendOTPApi(`+91${phone}`);
       toast.success("OTP sent successfully!");
       setStage("otp");
       setResendTimer(30);
     } catch (error) {
       console.error("Error sending OTP:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to send OTP");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Failed to send OTP: ${errorMessage}`);
     } finally {
       setSending(false);
     }
@@ -73,7 +74,8 @@ function LoginContent() {
       }
     } catch (error) {
       console.error("Error verifying OTP:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to verify OTP");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Failed to verify OTP: ${errorMessage}`);
     } finally {
       setVerifying(false);
     }

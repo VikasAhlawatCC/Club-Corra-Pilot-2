@@ -167,38 +167,35 @@ export const processPaymentResponseSchema = z.object({
 export const balanceResponseSchema = z.object({
   balance: z.union([
     z.string().transform((val) => {
-      const parsed = parseFloat(val);
-      const num = isNaN(parsed) ? 0 : parsed;
-      return Math.round(num);
+      const parsed = parseInt(val, 10);
+      return isNaN(parsed) ? 0 : parsed;
     }),
-    z.number().min(0, 'Balance must be non-negative')
+    z.number().int('Balance must be a whole number').min(0, 'Balance must be non-negative')
   ]).transform((val) => {
-    const num = typeof val === 'number' ? val : parseFloat(val) || 0;
-    return Math.round(num);
+    const num = typeof val === 'number' ? val : parseInt(val.toString(), 10) || 0;
+    return Math.floor(num); // Ensure it's an integer
   }),
   
   totalEarned: z.union([
     z.string().transform((val) => {
-      const parsed = parseFloat(val);
-      const num = isNaN(parsed) ? 0 : parsed;
-      return Math.round(num);
+      const parsed = parseInt(val, 10);
+      return isNaN(parsed) ? 0 : parsed;
     }),
-    z.number().min(0, 'Total earned must be non-negative')
+    z.number().int('Total earned must be a whole number').min(0, 'Total earned must be non-negative')
   ]).transform((val) => {
-    const num = typeof val === 'number' ? val : parseFloat(val) || 0;
-    return Math.round(num);
+    const num = typeof val === 'number' ? val : parseInt(val.toString(), 10) || 0;
+    return Math.floor(num); // Ensure it's an integer
   }),
   
   totalRedeemed: z.union([
     z.string().transform((val) => {
-      const parsed = parseFloat(val);
-      const num = isNaN(parsed) ? 0 : parsed;
-      return Math.round(num);
+      const parsed = parseInt(val, 10);
+      return isNaN(parsed) ? 0 : parsed;
     }),
-    z.number().min(0, 'Total redeemed must be non-negative')
+    z.number().int('Total redeemed must be a whole number').min(0, 'Total redeemed must be non-negative')
   ]).transform((val) => {
-    const num = typeof val === 'number' ? val : parseFloat(val) || 0;
-    return Math.round(num);
+    const num = typeof val === 'number' ? val : parseInt(val.toString(), 10) || 0;
+    return Math.floor(num); // Ensure it's an integer
   }),
   
   lastUpdated: z.union([

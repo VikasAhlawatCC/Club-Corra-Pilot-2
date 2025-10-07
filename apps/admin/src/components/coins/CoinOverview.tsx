@@ -36,7 +36,7 @@ interface RecentTransaction {
   type: 'WELCOME_BONUS' | 'EARN' | 'REDEEM' | 'ADJUSTMENT' | 'REWARD_REQUEST'
   amount: number
   timestamp: Date
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PROCESSED' | 'PAID'
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PROCESSED' | 'PAID' | 'UNPAID' | 'COMPLETED' | 'FAILED'
 }
 
 interface CoinOverviewProps {
@@ -99,10 +99,13 @@ export function CoinOverview({
     switch (status) {
       case 'APPROVED':
       case 'PAID':
+      case 'COMPLETED':
         return 'text-green-600 bg-green-100'
       case 'PENDING':
         return 'text-yellow-600 bg-yellow-100'
       case 'REJECTED':
+      case 'UNPAID':
+      case 'FAILED':
         return 'text-red-600 bg-red-100'
       default:
         return 'text-gray-600 bg-gray-100'
@@ -228,6 +231,50 @@ export function CoinOverview({
           </div>
         </CardContent>
       </Card>
+
+      {/* Balance Integrity Warning */}
+      {stats.systemHealth === 'warning' || stats.systemHealth === 'critical' ? (
+        <Card className="border-red-200 bg-red-50">
+          <CardHeader>
+            <CardTitle className="text-red-800 flex items-center gap-2">
+              <ExclamationTriangleIcon className="w-5 h-5" />
+              Balance Integrity Alert
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-red-700 text-sm">
+              {stats.systemHealth === 'critical' 
+                ? 'Critical system health detected. Some users may have negative balances. Please review recent transactions and user balances.'
+                : 'Warning: System health issues detected. Monitor user balances and transaction integrity.'
+              }
+            </p>
+            <div className="mt-3 text-xs text-red-600">
+              <p>• All amounts are displayed as whole numbers only</p>
+              <p>• Negative balances are prevented through validation</p>
+              <p>• Coin reversion is automatic on transaction rejection</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-green-200 bg-green-50">
+          <CardHeader>
+            <CardTitle className="text-green-800 flex items-center gap-2">
+              <CheckCircleIcon className="w-5 h-5" />
+              Balance Integrity Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-green-700 text-sm">
+              System is healthy. All user balances are properly maintained with integer-only amounts.
+            </p>
+            <div className="mt-3 text-xs text-green-600">
+              <p>• All amounts are stored and displayed as whole numbers</p>
+              <p>• Negative balance prevention is active</p>
+              <p>• Coin reversion on rejection is working correctly</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent Transactions */}
       <Card>

@@ -305,7 +305,7 @@ function RedeemContent() {
               step={50}
               value={redeemAmount}
               onChange={(e) => {
-                const newAmount = Number(e.target.value);
+                const newAmount = Math.round(Number(e.target.value));
                 setRedeemAmount(newAmount);
                 setAmount(String(newAmount));
               }}
@@ -378,13 +378,18 @@ function RedeemContent() {
                   value={amount}
                   onChange={(e) => {
                     const newAmount = e.target.value;
-                    setAmount(newAmount);
-                    const numAmount = Number(newAmount);
-                    if (!Number.isNaN(numAmount) && numAmount > 0) {
-                      setRedeemAmount(Math.min(Math.max(numAmount, 50), 500));
+                    // Only allow whole numbers (integers)
+                    if (newAmount === '' || /^\d+$/.test(newAmount)) {
+                      setAmount(newAmount);
+                      const numAmount = Number(newAmount);
+                      if (!Number.isNaN(numAmount) && numAmount > 0) {
+                        setRedeemAmount(Math.min(Math.max(numAmount, 50), 500));
+                      }
                     }
                   }}
                   inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="Enter amount (whole numbers only)"
                 />
                 <button 
                   onClick={() => {
@@ -428,7 +433,8 @@ function RedeemContent() {
               <button
                 onClick={() => {
                   if (!canContinue) return;
-                  router.push(`/redeem/success?amount=${encodeURIComponent(amount)}`);
+                  const integerAmount = parseInt(amount) || 0;
+                  router.push(`/redeem/success?amount=${encodeURIComponent(integerAmount)}`);
                 }}
                 className={`w-full h-12 rounded-xl text-white font-medium transition ${
                   canContinue ? "bg-green-700 hover:bg-green-800 active:scale-95" : "bg-black/20 cursor-not-allowed"

@@ -24,6 +24,14 @@ Always remember 1 corra coin is 1 rupee!
 
 This document outlines the technical plan to implement the full product specifications for the Club Corra web application and admin panel. The plan is divided into three phases: backend API changes, web app feature implementation, and admin panel enhancements.
 
+## Business Rules Implementation
+
+The following business rules must be enforced throughout the system:
+
+1. **Whole Numbers Only**: All amounts (transaction values, corra coins, redemption amounts) must be stored and processed as integers only.
+2. **Coin Reversion on Rejection**: When a transaction is rejected, any coin balance changes must be reverted to their previous state.
+3. **No Negative Balances**: Prevent approval of transactions that would result in negative coin balances.
+
 ## 2. Phase 1: Backend API & Database Changes
 
 This phase focuses on updating the database schema and exposing the necessary API endpoints to support the new features.
@@ -31,9 +39,23 @@ This phase focuses on updating the database schema and exposing the necessary AP
 ### Task 1.1: Enhance `CoinTransaction` Entity
 
 -   **File**: `apps/api/src/coins/entities/coin-transaction.entity.ts`
--   **Change**: Add `'UNPAID'` to the `CoinTransactionStatus` type.
-    -   `export type CoinTransactionStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'PROCESSED' | 'PAID' | 'UNPAID' | 'COMPLETED' | 'FAILED'`
--   **Rationale**: To accommodate the transaction lifecycle where an approved request with a redemption amount is pending payment.
+-   **Changes**:
+    1.  Add `'UNPAID'` to the `CoinTransactionStatus` type.
+        -   `export type CoinTransactionStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'PROCESSED' | 'PAID' | 'UNPAID' | 'COMPLETED' | 'FAILED'`
+    2.  Ensure all amount fields (`billAmount`, `coinsEarned`, `coinsRedeemed`) are defined as integers.
+    3.  Add fields to track coin balance changes for reversion:
+        -   `previousBalance: number` - User's coin balance before this transaction
+        -   `balanceAfterEarn: number` - User's balance after earning coins (if approved)
+        -   `balanceAfterRedeem: number` - User's balance after redemption (if approved)
+-   **Rationale**: To accommodate the transaction lifecycle and enable proper coin reversion on rejection.
+
+### Task 1.1.1: Update User Entity for Integer Balance
+
+-   **File**: `apps/api/src/users/entities/user.entity.ts`
+-   **Changes**:
+    1.  Ensure `coinBalance` field is defined as an integer type.
+    2.  Add validation to prevent negative balances at the database level if possible.
+-   **Rationale**: To enforce whole number storage and prevent negative balances.
 
 ### Task 1.2: Implement User Authentication
 
@@ -81,8 +103,13 @@ This phase focuses on updating the database schema and exposing the necessary AP
 -   **Changes**:
     1.  When an admin fetches a user's pending transactions for review, the API should enforce that the oldest pending transaction is returned first. Add a query parameter to allow fetching a specific transaction by ID for navigation.
     2.  Add logic that prevents an admin from approving/rejecting a transaction if an older pending transaction exists for the same user.
-    3.  When a transaction with `coinsRedeemed: 0` is approved, automatically set its status to `PAID`. If `coinsRedeemed > 0`, set status to `UNPAID`.
--   **Rationale**: To implement the specific business rules for the admin transaction review process.
+    3.  **Balance Validation**: Before approving a transaction, validate that `user.currentBalance >= transaction.coinsRedeemed`. Return an error if this validation fails.
+    4.  **Coin Balance Management**:
+        -   On approval: Update user's coin balance by adding `coinsEarned` and subtracting `coinsRedeemed`. Store the balance snapshots in the transaction record.
+        -   On rejection: Revert the user's coin balance to `previousBalance` if the transaction was previously approved.
+    5.  When a transaction with `coinsRedeemed: 0` is approved, automatically set its status to `PAID`. If `coinsRedeemed > 0`, set status to `UNPAID`.
+    6.  **Input Validation**: Ensure all amount inputs are integers and validate that no decimal values are accepted.
+-   **Rationale**: To implement the specific business rules for the admin transaction review process and enforce coin balance integrity.
 
 ## 3. Phase 2: Web App Implementation (`apps/webapp`)
 
@@ -125,9 +152,14 @@ This phase involves building the user interface and connecting it to the backend
 -   **Unauthenticated (`/upload`)**:
     -   **File**: `apps/webapp/src/app/upload/page.tsx`
     -   **Changes**: Build a form to select a brand, enter amount, and upload a receipt. The file upload will use the pre-signed S3 URL from the API. On submission, redirect to the login/signup flow.
+    -   **Validation**: Ensure all amount inputs only accept whole numbers (integers).
 -   **Authenticated (`/rewards` or rename `/redeem`)**:
     -   **File**: `apps/webapp/src/app/redeem/page.tsx`
     -   **Changes**: Enhance the form with the redemption slider and UPI ID field. The slider's max value will be calculated based on user's coin balance and brand's redemption rules fetched from the API.
+    -   **Validation**: 
+        -   All amount inputs must be integers only.
+        -   Redemption slider should be constrained to whole numbers.
+        -   Display user's current coin balance prominently to prevent over-redemption.
 -   **Success Page**:
     -   **File**: `apps/webapp/src/app/upload/success/page.tsx`
     -   **Changes**: Update buttons: "Go to Dashboard" to `/dashboard`, and "Upload another" to the authenticated rewards page.
@@ -136,9 +168,10 @@ This phase involves building the user interface and connecting it to the backend
 
 -   **File**: `apps/webapp/src/app/dashboard/page.tsx`
 -   **Changes**:
-    1.  Fetch and display the user's total coin balance.
-    2.  Fetch and display the user's transaction history.
+    1.  Fetch and display the user's total coin balance (as whole numbers only).
+    2.  Fetch and display the user's transaction history with all amounts shown as integers.
     3.  Update the call-to-action button to "Get more rewards", linking to the authenticated rewards page.
+    4.  **Display Format**: Ensure all coin amounts and transaction values are displayed without decimal places.
 
 ## 4. Phase 3: Admin Panel Enhancements (`apps/admin`)
 
@@ -160,9 +193,17 @@ This phase involves updating the admin panel to manage the new data and workflow
     2.  Ensure the default sorting is by creation date, latest first.
     3.  In the transaction detail view, implement the `< >` arrow key navigation between a single user's requests. This will involve fetching the next/previous transaction ID from the API.
     4.  Display a warning or disable the approve/reject buttons if an older pending transaction exists for the user.
+    5.  **Balance Validation UI**:
+        -   Display the user's current coin balance prominently in the transaction detail view.
+        -   Show a warning if the redemption amount exceeds the user's current balance.
+        -   Disable the "Approve" button if `user.balance < transaction.coinsRedeemed`.
+    6.  **Amount Display**: Ensure all amounts (bill amount, coins earned, coins redeemed) are displayed as whole numbers only.
+    7.  **Rejection Handling**: When rejecting a transaction, show a confirmation dialog explaining that coin balances will be reverted.
 
 ### Task 3.3: Update Coins Page
 
 -   **File**: `apps/admin/src/app/coins/page.tsx` (or similar).
 -   **Changes**:
     1.  Ensure the page accurately reflects recent transactions and total coin statistics based on the new, more frequent user activity. Review and potentially optimize the queries if performance issues arise.
+    2.  **Display Format**: Show all coin amounts and statistics as whole numbers only (no decimal places).
+    3.  **Balance Integrity**: Display warnings if any users have negative coin balances (which should never happen with the new validation rules).

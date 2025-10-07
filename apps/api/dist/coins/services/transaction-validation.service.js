@@ -39,9 +39,9 @@ let TransactionValidationService = class TransactionValidationService {
         if (!brand) {
             throw new common_1.NotFoundException('Brand not found or inactive');
         }
-        // Validate bill amount limits
-        if (billAmount < 0.01 || billAmount > 100000) {
-            throw new common_1.BadRequestException('Bill amount must be between $0.01 and $100,000');
+        // Validate bill amount limits (whole numbers only)
+        if (!Number.isInteger(billAmount) || billAmount < 1 || billAmount > 100000) {
+            throw new common_1.BadRequestException('Bill amount must be a whole number between 1 and 100,000');
         }
         // Validate bill date (not future, not too old - max 30 days)
         const billDateObj = new Date(billDate);
@@ -81,7 +81,7 @@ let TransactionValidationService = class TransactionValidationService {
         // Validate redemption amount
         if (coinsToRedeem > 0) {
             const balance = await this.getUserBalance(userId);
-            if (parseInt(balance.balance) < coinsToRedeem) {
+            if (balance.balance < coinsToRedeem) {
                 throw new common_1.BadRequestException('Insufficient coin balance for redemption');
             }
             // Check brand redemption limits
@@ -137,7 +137,7 @@ let TransactionValidationService = class TransactionValidationService {
             throw new common_1.BadRequestException('Redemption amount must be greater than 0');
         }
         const balance = await this.getUserBalance(userId);
-        if (parseInt(balance.balance) < coinsToRedeem) {
+        if (balance.balance < coinsToRedeem) {
             throw new common_1.BadRequestException('Insufficient coin balance for redemption');
         }
         // Check brand redemption limits
@@ -163,7 +163,7 @@ let TransactionValidationService = class TransactionValidationService {
             return false;
         }
         // Check if user has sufficient balance
-        const userBalance = parseInt(balance.balance);
+        const userBalance = balance.balance;
         if (userBalance <= 0) {
             return false;
         }
@@ -179,7 +179,7 @@ let TransactionValidationService = class TransactionValidationService {
             // Create balance if it doesn't exist
             balance = this.balanceRepository.create({
                 user: { id: userId },
-                balance: '0'
+                balance: 0
             });
             await this.balanceRepository.save(balance);
         }

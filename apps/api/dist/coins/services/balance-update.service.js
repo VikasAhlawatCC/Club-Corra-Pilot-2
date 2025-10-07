@@ -42,7 +42,7 @@ let BalanceUpdateService = class BalanceUpdateService {
     }
     async getOptimisticBalance(userId, pendingTransaction) {
         const balance = await this.getUserBalance(userId);
-        const currentBalance = parseInt(balance.balance);
+        const currentBalance = balance.balance;
         // Calculate optimistic balance based on pending transaction
         let optimisticBalance = currentBalance;
         if (pendingTransaction.coinsEarned) {
@@ -60,7 +60,7 @@ let BalanceUpdateService = class BalanceUpdateService {
         if (!balance) {
             balance = this.balanceRepository.create({
                 user: { id: userId },
-                balance: '0'
+                balance: 0
             });
             await this.balanceRepository.save(balance);
         }
@@ -73,11 +73,11 @@ let BalanceUpdateService = class BalanceUpdateService {
         if (!balance) {
             balance = manager.create(coin_balance_entity_1.CoinBalance, {
                 user: { id: userId },
-                balance: '0'
+                balance: 0
             });
         }
-        const currentBalance = parseInt(balance.balance);
-        balance.balance = (currentBalance + amount).toString();
+        const currentBalance = balance.balance;
+        balance.balance = currentBalance + amount;
         await manager.save(coin_balance_entity_1.CoinBalance, balance);
     }
 };

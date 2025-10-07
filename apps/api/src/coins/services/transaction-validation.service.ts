@@ -35,9 +35,9 @@ export class TransactionValidationService {
       throw new NotFoundException('Brand not found or inactive')
     }
 
-    // Validate bill amount limits
-    if (billAmount < 0.01 || billAmount > 100000) {
-      throw new BadRequestException('Bill amount must be between $0.01 and $100,000')
+    // Validate bill amount limits (whole numbers only)
+    if (!Number.isInteger(billAmount) || billAmount < 1 || billAmount > 100000) {
+      throw new BadRequestException('Bill amount must be a whole number between 1 and 100,000')
     }
 
     // Validate bill date (not future, not too old - max 30 days)
@@ -85,7 +85,7 @@ export class TransactionValidationService {
     // Validate redemption amount
     if (coinsToRedeem > 0) {
       const balance = await this.getUserBalance(userId)
-      if (parseInt(balance.balance) < coinsToRedeem) {
+      if (balance.balance < coinsToRedeem) {
         throw new BadRequestException('Insufficient coin balance for redemption')
       }
 
@@ -151,7 +151,7 @@ export class TransactionValidationService {
     }
 
     const balance = await this.getUserBalance(userId)
-    if (parseInt(balance.balance) < coinsToRedeem) {
+    if (balance.balance < coinsToRedeem) {
       throw new BadRequestException('Insufficient coin balance for redemption')
     }
 
@@ -183,7 +183,7 @@ export class TransactionValidationService {
     }
 
     // Check if user has sufficient balance
-    const userBalance = parseInt(balance.balance)
+    const userBalance = balance.balance
     if (userBalance <= 0) {
       return false
     }
@@ -203,7 +203,7 @@ export class TransactionValidationService {
       // Create balance if it doesn't exist
       balance = this.balanceRepository.create({
         user: { id: userId } as User,
-        balance: '0'
+        balance: 0
       })
       await this.balanceRepository.save(balance)
     }

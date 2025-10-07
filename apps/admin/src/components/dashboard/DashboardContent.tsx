@@ -42,7 +42,7 @@ interface DashboardStats {
 interface RecentTransaction {
   id: string
   type: 'EARN' | 'REDEEM' | 'WELCOME_BONUS' | 'ADJUSTMENT'
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID'
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID' | 'UNPAID' | 'PROCESSED' | 'COMPLETED' | 'FAILED'
   userId: string
   brandName?: string
   amount: number
@@ -175,6 +175,12 @@ export function DashboardContent() {
         return 'text-green-600 bg-green-100'
       case 'PAID':
         return 'text-purple-600 bg-purple-100'
+      case 'UNPAID':
+        return 'text-red-600 bg-red-100'
+      case 'COMPLETED':
+        return 'text-green-600 bg-green-100'
+      case 'FAILED':
+        return 'text-red-600 bg-red-100'
       default:
         return 'text-gray-600 bg-gray-100'
     }
@@ -192,6 +198,12 @@ export function DashboardContent() {
         return <CheckCircleIcon className="w-4 h-4" />
       case 'PAID':
         return <CheckCircleIcon className="w-4 h-4" />
+      case 'UNPAID':
+        return <ExclamationTriangleIcon className="w-4 h-4" />
+      case 'COMPLETED':
+        return <CheckCircleIcon className="w-4 h-4" />
+      case 'FAILED':
+        return <XCircleIcon className="w-4 h-4" />
       default:
         return <ClockIcon className="w-4 h-4" />
     }

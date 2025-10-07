@@ -23,8 +23,8 @@ export class CoinTransaction extends BaseEntity {
   @Column({ type: 'varchar', default: 'PENDING' })
   status!: CoinTransactionStatus
 
-  // New fields for unified reward requests
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  // New fields for unified reward requests - all as integers for whole numbers only
+  @Column({ type: 'int', nullable: true })
   billAmount?: number
 
   @Column({ type: 'int', nullable: true })
@@ -32,6 +32,16 @@ export class CoinTransaction extends BaseEntity {
 
   @Column({ type: 'int', nullable: true })
   coinsRedeemed?: number
+
+  // Balance tracking fields for reversion on rejection
+  @Column({ type: 'int', nullable: true })
+  previousBalance?: number
+
+  @Column({ type: 'int', nullable: true })
+  balanceAfterEarn?: number
+
+  @Column({ type: 'int', nullable: true })
+  balanceAfterRedeem?: number
 
   @Column({ type: 'varchar', length: 500, nullable: true })
   receiptUrl?: string

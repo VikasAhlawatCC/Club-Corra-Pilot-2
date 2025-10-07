@@ -23,7 +23,7 @@ export interface AdminCoinTransaction {
   userMobile: string
   type: 'EARN' | 'REDEEM' | 'WELCOME_BONUS' | 'ADJUSTMENT' | 'REWARD_REQUEST'
   amount: number // integer - net change (coinsEarned - coinsRedeemed)
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PROCESSED' | 'PAID'
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PROCESSED' | 'PAID' | 'UNPAID' | 'COMPLETED' | 'FAILED'
   brandName?: string
   brandId?: string
   billAmount?: number

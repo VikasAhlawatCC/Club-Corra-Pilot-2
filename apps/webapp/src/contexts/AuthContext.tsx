@@ -26,8 +26,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     if (storedToken && storedUser) {
       try {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        // Validate user data structure
+        if (parsedUser && typeof parsedUser === 'object' && parsedUser.id && parsedUser.mobileNumber) {
+          setToken(storedToken);
+          setUser(parsedUser);
+        } else {
+          throw new Error('Invalid user data structure');
+        }
       } catch (error) {
         console.error('Error parsing stored user data:', error);
         localStorage.removeItem('auth_token');
@@ -39,6 +45,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = (newToken: string, newUser: User) => {
+    // Validate token and user data
+    if (!newToken || !newUser || !newUser.id || !newUser.mobileNumber) {
+      console.error('Invalid token or user data provided to login');
+      return;
+    }
+    
     setToken(newToken);
     setUser(newUser);
     localStorage.setItem('auth_token', newToken);

@@ -345,9 +345,9 @@ let UsersService = class UsersService {
         await this.userProfileRepository.save(profile);
         // Create coin balance
         const coinBalance = this.coinBalanceRepository.create({
-            balance: '0',
-            totalEarned: '0',
-            totalRedeemed: '0',
+            balance: 0,
+            totalEarned: 0,
+            totalRedeemed: 0,
             user: { id: savedUser.id },
         });
         await this.coinBalanceRepository.save(coinBalance);
@@ -363,14 +363,14 @@ let UsersService = class UsersService {
         if (!coinBalance) {
             // Create coin balance if it doesn't exist
             coinBalance = this.coinBalanceRepository.create({
-                balance: '0',
-                totalEarned: '0',
-                totalRedeemed: '0',
+                balance: 0,
+                totalEarned: 0,
+                totalRedeemed: 0,
                 user: { id: userId },
             });
             coinBalance = await this.coinBalanceRepository.save(coinBalance);
         }
-        const oldBalance = parseInt(coinBalance.balance);
+        const oldBalance = coinBalance.balance;
         let newBalance;
         if (adjustment.newBalance !== undefined) {
             newBalance = adjustment.newBalance;
@@ -382,7 +382,7 @@ let UsersService = class UsersService {
             throw new common_1.BadRequestException('Either newBalance or delta must be provided');
         }
         // Update coin balance
-        coinBalance.balance = newBalance.toString();
+        coinBalance.balance = newBalance;
         await this.coinBalanceRepository.save(coinBalance);
         // Create transaction record
         const transaction = this.coinTransactionRepository.create({

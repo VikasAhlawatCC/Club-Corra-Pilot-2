@@ -33,6 +33,32 @@ let S3Service = class S3Service {
         const command = new client_s3_1.GetObjectCommand({ Bucket: bucket, Key: key });
         return (0, s3_request_presigner_1.getSignedUrl)(this.client, command, { expiresIn: expiresInSeconds });
     }
+    async configureCors(bucket) {
+        const corsConfiguration = {
+            CORSRules: [
+                {
+                    AllowedHeaders: ['*'],
+                    AllowedMethods: ['GET', 'PUT', 'POST', 'HEAD'],
+                    AllowedOrigins: [
+                        'http://localhost:3000',
+                        'http://localhost:3001',
+                        'http://localhost:3004',
+                        'https://admin.clubcorra.com',
+                        'https://clubcorra.com',
+                        'https://*.clubcorra.com',
+                        'https://*.vercel.app'
+                    ],
+                    ExposeHeaders: ['ETag', 'x-amz-version-id'],
+                    MaxAgeSeconds: 3000
+                }
+            ]
+        };
+        const command = new client_s3_1.PutBucketCorsCommand({
+            Bucket: bucket,
+            CORSConfiguration: corsConfiguration
+        });
+        await this.client.send(command);
+    }
 };
 exports.S3Service = S3Service;
 exports.S3Service = S3Service = __decorate([

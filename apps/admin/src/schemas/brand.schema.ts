@@ -19,12 +19,12 @@ export const brandSchema = z.object({
   logoUrl: z.string().url('Invalid logo URL format').optional(),
   categoryId: z.string().uuid('Invalid category ID format'),
   category: brandCategorySchema.optional(),
-  // Backend returns these as strings, so we need to coerce them to numbers
-  earningPercentage: z.coerce.number().min(0, 'Earning percentage must be non-negative').max(100, 'Earning percentage cannot exceed 100').default(10),
-  redemptionPercentage: z.coerce.number().min(0, 'Redemption percentage must be non-negative').max(100, 'Redemption percentage cannot exceed 100').default(30),
-  minRedemptionAmount: z.coerce.number().min(0, 'Minimum redemption amount must be non-negative').default(1),
-  maxRedemptionAmount: z.coerce.number().min(0, 'Maximum redemption amount must be non-negative').default(2000),
-  brandwiseMaxCap: z.coerce.number().min(0, 'Brandwise max cap must be non-negative').default(2000),
+  // Backend returns these as strings, so we need to coerce them to integers
+  earningPercentage: z.coerce.number().int('Earning percentage must be a whole number').min(0, 'Earning percentage must be non-negative').max(100, 'Earning percentage cannot exceed 100').default(10),
+  redemptionPercentage: z.coerce.number().int('Redemption percentage must be a whole number').min(0, 'Redemption percentage must be non-negative').max(100, 'Redemption percentage cannot exceed 100').default(30),
+  minRedemptionAmount: z.coerce.number().int('Minimum redemption amount must be a whole number').min(0, 'Minimum redemption amount must be non-negative').default(1),
+  maxRedemptionAmount: z.coerce.number().int('Maximum redemption amount must be a whole number').min(0, 'Maximum redemption amount must be non-negative').default(2000),
+  brandwiseMaxCap: z.coerce.number().int('Brandwise max cap must be a whole number').min(0, 'Brandwise max cap must be non-negative').default(2000),
   isActive: z.boolean(),
   // Backend returns dates as strings, so we need to coerce them to dates
   createdAt: z.coerce.date(),

@@ -44,7 +44,7 @@ __decorate([
     __metadata("design:type", String)
 ], CoinTransaction.prototype, "status", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'decimal', precision: 10, scale: 2, nullable: true }),
+    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
     __metadata("design:type", Number)
 ], CoinTransaction.prototype, "billAmount", void 0);
 __decorate([
@@ -55,6 +55,18 @@ __decorate([
     (0, typeorm_1.Column)({ type: 'int', nullable: true }),
     __metadata("design:type", Number)
 ], CoinTransaction.prototype, "coinsRedeemed", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    __metadata("design:type", Number)
+], CoinTransaction.prototype, "previousBalance", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    __metadata("design:type", Number)
+], CoinTransaction.prototype, "balanceAfterEarn", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    __metadata("design:type", Number)
+], CoinTransaction.prototype, "balanceAfterRedeem", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'varchar', length: 500, nullable: true }),
     __metadata("design:type", String)

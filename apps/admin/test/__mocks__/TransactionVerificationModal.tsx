@@ -80,7 +80,7 @@ export const TransactionVerificationModal = React.forwardRef<
   const handleApprove = () => {
     setIsLoading(true);
     onApprove?.(transaction.id, {
-      observedAmount: parseFloat(formData.observedAmount),
+      observedAmount: parseInt(formData.observedAmount),
       receiptDate: formData.receiptDate,
       verificationConfirmed: formData.verificationConfirmed,
       rejectionNote: formData.rejectionNote,
@@ -98,7 +98,7 @@ export const TransactionVerificationModal = React.forwardRef<
   const handleApproveAndPay = () => {
     setIsLoading(true);
     onApproveAndPay?.(transaction.id, {
-      observedAmount: parseFloat(formData.observedAmount),
+      observedAmount: parseInt(formData.observedAmount),
       receiptDate: formData.receiptDate,
       verificationConfirmed: formData.verificationConfirmed,
       rejectionNote: formData.rejectionNote,

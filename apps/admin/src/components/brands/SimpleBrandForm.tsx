@@ -239,7 +239,7 @@ export function SimpleBrandForm({
                     type="number"
                     min="0"
                     max="100"
-                    step="0.01"
+                    step="1"
                     required
                   />
                   <span className="absolute right-3 top-2 text-muted-foreground">%</span>
@@ -261,7 +261,7 @@ export function SimpleBrandForm({
                     type="number"
                     min="0"
                     max="100"
-                    step="0.01"
+                    step="1"
                     required
                   />
                   <span className="absolute right-3 top-2 text-muted-foreground">%</span>
@@ -289,7 +289,7 @@ export function SimpleBrandForm({
                     id="brandwiseMaxCap"
                     type="number"
                     min="0"
-                    step="0.01"
+                    step="1"
                     required
                     className="pl-8"
                   />

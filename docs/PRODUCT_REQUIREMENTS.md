@@ -3,6 +3,12 @@
 Here is the entire product that we are implementing in this monorepo: 
 Always remember 1 corra coin is 1 rupee!
 
+## Business Rules
+
+1. **Whole Numbers Only**: All amounts (transaction values, corra coins, redemption amounts) must be stored and processed as whole numbers only. No decimal values are allowed.
+2. **Coin Reversion on Rejection**: When a transaction request is rejected, any corra coins that were added or removed from the user's account during the approval process must be reverted back to their previous state.
+3. **No Negative Balances**: A transaction request cannot be approved if the user's total corra coins would become negative after the redemption. The system must validate that `user_balance >= redemption_amount` before allowing approval.
+
 ## 1. Web App (User Facing) - `http://localhost:3010/`
 
 ### 1.1. Main Home Page
@@ -46,10 +52,16 @@ Always remember 1 corra coin is 1 rupee!
     - A request with redeem amount 0 will be by default set to paid if approved!
     - Make sure that all the functionality on the request form will work correctly.
     - An admin can navigate back and forth using the <> arrow keys from the oldest to the latest request of that particular user whose request is currently opened!
-    - Let’s force the admin to first check the older request which has the status as pending and then only allow him to approve or reject a newer request!
+    - Let's force the admin to first check the older request which has the status as pending and then only allow him to approve or reject a newer request!
+    - **Validation Rules**:
+        - Cannot approve a request if the user's current coin balance is less than the redemption amount (prevents negative balances).
+        - When rejecting a request, any coins that were added/removed during approval must be reverted.
+        - All amounts displayed and processed must be whole numbers only.
 2.  **Brands page**: is fine right now.
 3.  **Coins page**: should show the actual recent transaction and total coins, etc. on the page!
 4.  **Responses page**: should contain the list of all the email ids filled on the homepage of the web app!
 
 ## 3. Database
 1.  Make sure to change the entire DBs of the user as per only the details that we are taking at this point should be mandatory fields ie only Mobile number! Rest will be filled later! But this should be sufficient enough!
+2.  **Data Types**: All coin-related fields (balance, earned, redeemed, transaction amounts) must be stored as integers to ensure whole number handling.
+3.  **Transaction History**: Maintain a complete audit trail of all coin balance changes to enable proper reversion on rejection.

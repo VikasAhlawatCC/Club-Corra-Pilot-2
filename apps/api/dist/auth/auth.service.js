@@ -159,7 +159,7 @@ let AuthService = class AuthService {
             else {
                 // Update existing user
                 user.isMobileVerified = true;
-                user.status = 'ACTIVE';
+                user.status = user_entity_1.UserStatus.ACTIVE;
                 user.lastLoginAt = new Date();
                 await this.userRepository.save(user);
             }
