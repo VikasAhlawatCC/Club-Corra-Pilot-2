@@ -188,9 +188,9 @@ async function seedCoinBalances(users: User[]): Promise<CoinBalance[]> {
   for (const user of users) {
     const balance = new CoinBalance();
     balance.user = user;
-    balance.balance = randomInt(0, 10000);
-    balance.totalEarned = randomInt(1000, 50000);
-    balance.totalRedeemed = randomInt(0, balance.totalEarned);
+    balance.balance = randomInt(0, 10000).toString();
+    balance.totalEarned = randomInt(1000, 50000).toString();
+    balance.totalRedeemed = randomInt(0, parseInt(balance.totalEarned)).toString();
     
     coinBalances.push(balance);
   }

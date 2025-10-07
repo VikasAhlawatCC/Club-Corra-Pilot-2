@@ -17,21 +17,21 @@ let CoinBalance = class CoinBalance extends base_entity_1.BaseEntity {
 };
 exports.CoinBalance = CoinBalance;
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => user_entity_1.User, { onDelete: 'CASCADE' }),
-    (0, typeorm_1.Index)('idx_coin_balance_user_id'),
+    (0, typeorm_1.OneToOne)(() => user_entity_1.User, user => user.coinBalance, { onDelete: 'CASCADE' }),
+    (0, typeorm_1.JoinColumn)(),
     __metadata("design:type", user_entity_1.User)
 ], CoinBalance.prototype, "user", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'int', default: 0 }),
-    __metadata("design:type", Number)
+    (0, typeorm_1.Column)({ type: 'bigint', default: 0 }),
+    __metadata("design:type", String)
 ], CoinBalance.prototype, "balance", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'int', default: 0 }),
-    __metadata("design:type", Number)
+    (0, typeorm_1.Column)({ type: 'bigint', default: 0, name: 'total_earned' }),
+    __metadata("design:type", String)
 ], CoinBalance.prototype, "totalEarned", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'int', default: 0 }),
-    __metadata("design:type", Number)
+    (0, typeorm_1.Column)({ type: 'bigint', default: 0, name: 'total_redeemed' }),
+    __metadata("design:type", String)
 ], CoinBalance.prototype, "totalRedeemed", void 0);
 exports.CoinBalance = CoinBalance = __decorate([
     (0, typeorm_1.Entity)('coin_balances')

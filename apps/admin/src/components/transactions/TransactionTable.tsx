@@ -239,6 +239,8 @@ export const TransactionTable = memo(function TransactionTable({
     if (transaction.status !== 'PENDING') return false
     
     // Check if this transaction is in the processing order (oldest for the user)
+    // Add safety check for processingOrder
+    if (!Array.isArray(processingOrder)) return false
     return processingOrder.some(order => order.transactionId === transaction.id)
   }
 

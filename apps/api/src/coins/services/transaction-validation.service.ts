@@ -133,7 +133,7 @@ export class TransactionValidationService {
     }
 
     const balance = await this.getUserBalance(userId)
-    if (balance.balance < coinsToRedeem) {
+    if (BigInt(balance.balance) < BigInt(coinsToRedeem)) {
       throw new BadRequestException('Insufficient coin balance for redemption')
     }
 
@@ -165,8 +165,8 @@ export class TransactionValidationService {
     }
 
     // Check if user has sufficient balance
-    const userBalance = balance.balance
-    if (userBalance <= 0) {
+    const userBalance = BigInt(balance.balance)
+    if (userBalance <= 0n) {
       return false
     }
 
@@ -184,7 +184,7 @@ export class TransactionValidationService {
   async validateSufficientBalance(userId: string, coinsToRedeem: number): Promise<void> {
     const balance = await this.getUserBalance(userId)
     
-    if (balance.balance < coinsToRedeem) {
+    if (BigInt(balance.balance) < BigInt(coinsToRedeem)) {
       throw new BadRequestException(
         `Insufficient balance. You have ${balance.balance} coins but trying to redeem ${coinsToRedeem} coins`
       )
@@ -196,9 +196,9 @@ export class TransactionValidationService {
    */
   async validateNoNegativeBalance(userId: string, coinsEarned: number, coinsRedeemed: number): Promise<void> {
     const balance = await this.getUserBalance(userId)
-    const finalBalance = balance.balance + coinsEarned - coinsRedeemed
+    const finalBalance = BigInt(balance.balance) + BigInt(coinsEarned) - BigInt(coinsRedeemed)
     
-    if (finalBalance < 0) {
+    if (finalBalance < 0n) {
       throw new BadRequestException('Transaction would result in negative balance')
     }
   }
@@ -301,9 +301,9 @@ export class TransactionValidationService {
       // Create balance if it doesn't exist
       balance = this.balanceRepository.create({
         user: { id: userId } as User,
-        balance: 0,
-        totalEarned: 0,
-        totalRedeemed: 0
+        balance: '0',
+        totalEarned: '0',
+        totalRedeemed: '0'
       })
       await this.balanceRepository.save(balance)
     }

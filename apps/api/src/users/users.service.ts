@@ -418,9 +418,9 @@ export class UsersService {
 
     // Create coin balance
     const coinBalance = this.coinBalanceRepository.create({
-      balance: 0,
-      totalEarned: 0,
-      totalRedeemed: 0,
+      balance: '0',
+      totalEarned: '0',
+      totalRedeemed: '0',
       user: { id: savedUser.id },
     });
 
@@ -440,21 +440,21 @@ export class UsersService {
     if (!coinBalance) {
       // Create coin balance if it doesn't exist
       coinBalance = this.coinBalanceRepository.create({
-        balance: 0,
-        totalEarned: 0,
-        totalRedeemed: 0,
+        balance: '0',
+        totalEarned: '0',
+        totalRedeemed: '0',
         user: { id: userId },
       });
       coinBalance = await this.coinBalanceRepository.save(coinBalance);
     }
 
     const oldBalance = coinBalance.balance;
-    let newBalance: number;
+    let newBalance: string;
 
     if (adjustment.newBalance !== undefined) {
-      newBalance = adjustment.newBalance;
+      newBalance = String(adjustment.newBalance);
     } else if (adjustment.delta !== undefined) {
-      newBalance = oldBalance + adjustment.delta;
+      newBalance = (BigInt(oldBalance) + BigInt(adjustment.delta)).toString();
     } else {
       throw new BadRequestException('Either newBalance or delta must be provided');
     }
@@ -465,8 +465,8 @@ export class UsersService {
 
     // Create transaction record
     const transaction = this.coinTransactionRepository.create({
-      type: newBalance > oldBalance ? 'EARN' : 'REDEEM',
-      amount: Math.abs(newBalance - oldBalance).toString(),
+      type: BigInt(newBalance) > BigInt(oldBalance) ? 'EARN' : 'REDEEM',
+      amount: (BigInt(newBalance) - BigInt(oldBalance)).toString(),
       status: 'COMPLETED',
       user: { id: userId },
     });
@@ -476,7 +476,7 @@ export class UsersService {
     return {
       oldBalance,
       newBalance,
-      delta: newBalance - oldBalance,
+      delta: (BigInt(newBalance) - BigInt(oldBalance)).toString(),
       reason: adjustment.reason,
     };
   }

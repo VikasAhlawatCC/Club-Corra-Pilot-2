@@ -56,16 +56,16 @@ __decorate([
     __metadata("design:type", Number)
 ], CoinTransaction.prototype, "coinsRedeemed", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'int', nullable: true, name: 'previous_balance' }),
-    __metadata("design:type", Number)
+    (0, typeorm_1.Column)({ type: 'bigint', nullable: true, name: 'previous_balance' }),
+    __metadata("design:type", String)
 ], CoinTransaction.prototype, "previousBalance", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'int', nullable: true, name: 'balance_after_earn' }),
-    __metadata("design:type", Number)
+    (0, typeorm_1.Column)({ type: 'bigint', nullable: true, name: 'balance_after_earn' }),
+    __metadata("design:type", String)
 ], CoinTransaction.prototype, "balanceAfterEarn", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'int', nullable: true, name: 'balance_after_redeem' }),
-    __metadata("design:type", Number)
+    (0, typeorm_1.Column)({ type: 'bigint', nullable: true, name: 'balance_after_redeem' }),
+    __metadata("design:type", String)
 ], CoinTransaction.prototype, "balanceAfterRedeem", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'varchar', length: 500, nullable: true, name: 'receipt_url' }),

@@ -77,11 +77,15 @@ export class CoinsService {
     const coinsEarnedRaw = (netBillAmount * (brand?.earningPercentage || 0)) / 100;
     const coinsEarned = Math.max(1, Math.round(coinsEarnedRaw)); // Ensure whole number
 
-    // Get current user balance for tracking (only for authenticated users)
-    let currentBalance = 0;
+    // Get current user balance and totals for tracking (only for authenticated users)
+    let currentBalance = '0';
+    let totalEarned = '0';
+    let totalRedeemed = '0';
     if (user) {
       const userBalance = await this.balanceRepository.findOne({ where: { user: { id: user.id } } });
-      currentBalance = userBalance?.balance || 0;
+      currentBalance = userBalance?.balance || '0';
+      totalEarned = userBalance?.totalEarned || '0';
+      totalRedeemed = userBalance?.totalRedeemed || '0';
     }
 
     // CRITICAL FIX: Wrap transaction creation and balance update in database transaction
@@ -102,8 +106,8 @@ export class CoinsService {
         statusUpdatedAt: new Date(),
         // Balance tracking fields for reversion on rejection
         previousBalance: currentBalance,
-        balanceAfterEarn: currentBalance + coinsEarned,
-        balanceAfterRedeem: currentBalance + coinsEarned - coinsToRedeem,
+        balanceAfterEarn: (BigInt(currentBalance) + BigInt(coinsEarned)).toString(),
+        balanceAfterRedeem: (BigInt(currentBalance) + BigInt(coinsEarned) - BigInt(coinsToRedeem)).toString(),
       });
 
       const savedTransaction = await manager.save(CoinTransaction, transaction);
@@ -222,41 +226,30 @@ export class CoinsService {
   }
 
   async createRedeemTransaction(userId: string, brandId: string, billAmount: number): Promise<CoinTransaction> {
-    // Validate user exists
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    // Validate brand exists and is active
-    const brand = await this.brandRepository.findOne({ where: { id: brandId, isActive: true } });
+    const brand = await this.brandRepository.findOne({ where: { id: brandId } });
     if (!brand) {
-      throw new NotFoundException('Brand not found or inactive');
+      throw new NotFoundException('Brand not found');
     }
-
-    // Calculate coins to redeem based on brand's redemption percentage
-    const coinsToRedeemRaw = (billAmount * brand.redemptionPercentage) / 100;
-    const coinsToRedeem = Math.max(1, Math.round(coinsToRedeemRaw));
-
-    // Check user has sufficient balance
+  
     const balance = await this.getUserBalance(userId);
-    if (balance.balance < coinsToRedeem) {
-      throw new BadRequestException('Insufficient coin balance for redemption');
+    if (BigInt(balance.balance) < BigInt(billAmount)) {
+      throw new BadRequestException('Insufficient balance');
     }
-
-    // Create transaction
+  
     const transaction = this.transactionRepository.create({
-      user: user,
-      brand: brand,
-      amount: (-coinsToRedeem).toString(), // Negative amount for redemption
+      user: { id: userId },
+      brand: { id: brandId },
+      amount: (-billAmount).toString(),
       type: 'REDEEM',
       status: 'COMPLETED',
+      billAmount,
+      coinsRedeemed: billAmount,
     });
-
+  
     const savedTransaction = await this.transactionRepository.save(transaction);
+  
+    await this.updateUserBalance(userId, -billAmount);
 
-    // Update user balance (deduct coins)
-    await this.updateUserBalance(userId, -coinsToRedeem);
 
     return savedTransaction;
   }
@@ -272,9 +265,9 @@ export class CoinsService {
         // Create new balance record
         balance = this.balanceRepository.create({
           user: { id: userId },
-          balance: 0,
-          totalEarned: 0,
-          totalRedeemed: 0,
+          balance: '0',
+          totalEarned: '0',
+          totalRedeemed: '0',
         });
         await this.balanceRepository.save(balance);
       } catch (error: any) {
@@ -298,16 +291,7 @@ export class CoinsService {
 
   async updateUserBalance(userId: string, amount: number): Promise<void> {
     const balance = await this.getUserBalance(userId);
-    const integerAmount = Math.round(amount);
-
-    balance.balance += integerAmount;
-    
-    if (integerAmount > 0) {
-      balance.totalEarned += integerAmount;
-    } else {
-      balance.totalRedeemed += Math.abs(integerAmount);
-    }
-
+    balance.balance = (BigInt(balance.balance) + BigInt(amount)).toString();
     await this.balanceRepository.save(balance);
   }
 
@@ -319,14 +303,14 @@ export class CoinsService {
     const balance = await this.getUserBalance(userId);
     
     // Update balance: add earned coins, subtract redeemed coins
-    balance.balance += coinsEarned - coinsRedeemed;
+    balance.balance = (BigInt(balance.balance) + BigInt(coinsEarned) - BigInt(coinsRedeemed)).toString();
     
     // Track totalEarned and totalRedeemed separately
     if (coinsEarned > 0) {
-      balance.totalEarned += coinsEarned;
+      balance.totalEarned = (BigInt(balance.totalEarned) + BigInt(coinsEarned)).toString();
     }
     if (coinsRedeemed > 0) {
-      balance.totalRedeemed += coinsRedeemed;
+      balance.totalRedeemed = (BigInt(balance.totalRedeemed) + BigInt(coinsRedeemed)).toString();
     }
 
     await this.balanceRepository.save(balance);
@@ -334,19 +318,19 @@ export class CoinsService {
 
   async revertUserBalance(userId: string, targetBalance: number): Promise<void> {
     const balance = await this.getUserBalance(userId);
-    const currentBalance = balance.balance;
-    const difference = targetBalance - currentBalance;
+    const currentBalance = BigInt(balance.balance);
+    const difference = BigInt(targetBalance) - currentBalance;
 
     // Set the balance to the target value
-    balance.balance = targetBalance;
+    balance.balance = (currentBalance + BigInt(targetBalance)).toString();
     
     // Adjust the totals based on the difference
     if (difference > 0) {
       // Balance was reduced, so we need to reduce totalEarned
-      balance.totalEarned = Math.max(0, balance.totalEarned - difference);
+      balance.totalEarned = (BigInt(balance.totalEarned) - BigInt(difference)).toString();
     } else if (difference < 0) {
       // Balance was increased, so we need to reduce totalRedeemed
-      balance.totalRedeemed = Math.max(0, balance.totalRedeemed + difference);
+      balance.totalRedeemed = (BigInt(balance.totalRedeemed) - BigInt(difference)).toString();
     }
 
     await this.balanceRepository.save(balance);
@@ -360,16 +344,16 @@ export class CoinsService {
     const balance = await this.getUserBalance(userId);
     
     // Revert balance to previous state
-    balance.balance = transaction.previousBalance || 0;
+    balance.balance = transaction.previousBalance || '0';
     
     // Revert totalEarned if coins were earned
     if (transaction.coinsEarned && transaction.coinsEarned > 0) {
-      balance.totalEarned = Math.max(0, balance.totalEarned - transaction.coinsEarned);
+      balance.totalEarned = (BigInt(balance.totalEarned) - BigInt(transaction.coinsEarned)).toString();
     }
     
     // Revert totalRedeemed if coins were redeemed
     if (transaction.coinsRedeemed && transaction.coinsRedeemed > 0) {
-      balance.totalRedeemed = Math.max(0, balance.totalRedeemed - transaction.coinsRedeemed);
+      balance.totalRedeemed = (BigInt(balance.totalRedeemed) - BigInt(transaction.coinsRedeemed)).toString();
     }
 
     await this.balanceRepository.save(balance);
@@ -517,9 +501,9 @@ export class CoinsService {
     // Validate that user has sufficient balance for redemption (prevent negative balances)
     if (transaction.coinsRedeemed && transaction.coinsRedeemed > 0 && transaction.user) {
       const userBalance = await this.balanceRepository.findOne({ where: { user: { id: transaction.user.id } } });
-      const currentBalance = userBalance?.balance || 0;
+      const currentBalance = BigInt(userBalance?.balance || '0');
       
-      if (currentBalance < transaction.coinsRedeemed) {
+      if (currentBalance < BigInt(transaction.coinsRedeemed)) {
         throw new BadRequestException(`Cannot approve transaction. User has ${currentBalance} coins but trying to redeem ${transaction.coinsRedeemed} coins. This would result in a negative balance.`);
       }
     }
@@ -809,7 +793,7 @@ export class CoinsService {
         .createQueryBuilder('balance')
         .select('SUM(balance.balance)', 'total')
         .getRawOne()
-        .then(result => parseFloat(result?.total || '0')),
+        .then(result => BigInt(result?.total || '0')),
       
       // Welcome bonuses given (count of WELCOME_BONUS transactions)
       this.transactionRepository.count({ where: { type: 'WELCOME_BONUS' } }),
@@ -824,7 +808,7 @@ export class CoinsService {
         .where('transaction.type = :type', { type: 'EARN' })
         .andWhere('transaction.status = :status', { status: 'COMPLETED' })
         .getRawOne()
-        .then(result => parseFloat(result?.total || '0')),
+        .then(result => BigInt(result?.total || '0')),
       
       // Total redeemed (sum of all REDEEM transactions)
       this.transactionRepository
@@ -833,7 +817,7 @@ export class CoinsService {
         .where('transaction.type = :type', { type: 'REDEEM' })
         .andWhere('transaction.status = :status', { status: 'COMPLETED' })
         .getRawOne()
-        .then(result => parseFloat(result?.total || '0')),
+        .then(result => BigInt(result?.total || '0')),
     ]);
 
     // Calculate transaction success rate
@@ -990,9 +974,9 @@ export class CoinsService {
         mobileNumber: user.mobileNumber,
         profile: user.profile,
         paymentDetails: user.paymentDetails,
-        coinBalance: user.coinBalance?.balance ?? 0,
-        totalEarned: user.coinBalance?.totalEarned ?? 0,
-        totalRedeemed: user.coinBalance?.totalRedeemed ?? 0,
+        coinBalance: BigInt(user.coinBalance?.balance || '0'),
+        totalEarned: BigInt(user.coinBalance?.totalEarned || '0'),
+        totalRedeemed: BigInt(user.coinBalance?.totalRedeemed || '0'),
       },
       pendingRequests: {
         data: pendingRequests,

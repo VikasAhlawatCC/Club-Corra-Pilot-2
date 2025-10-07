@@ -25,13 +25,15 @@ let FormSubmissionsController = class FormSubmissionsController {
         this.partnerApplicationRepository = partnerApplicationRepository;
         this.waitlistEntryRepository = waitlistEntryRepository;
     }
-    async getPartnerApplications(page = 1, limit = 20, status) {
-        const skip = (page - 1) * limit;
+    async getPartnerApplications(page, limit, status) {
+        const pageNum = page ? parseInt(page, 10) : 1;
+        const limitNum = limit ? parseInt(limit, 10) : 20;
+        const skip = (pageNum - 1) * limitNum;
         const queryBuilder = this.partnerApplicationRepository
             .createQueryBuilder('application')
             .orderBy('application.createdAt', 'DESC')
             .skip(skip)
-            .take(limit);
+            .take(limitNum);
         if (status) {
             queryBuilder.andWhere('application.status = :status', { status });
         }
@@ -39,9 +41,9 @@ let FormSubmissionsController = class FormSubmissionsController {
         return {
             data: applications,
             total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
+            page: pageNum,
+            limit: limitNum,
+            totalPages: Math.ceil(total / limitNum),
         };
     }
     async getPartnerApplication(id) {
@@ -151,7 +153,7 @@ __decorate([
     __param(1, (0, common_1.Query)('limit')),
     __param(2, (0, common_1.Query)('status')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Number, String]),
+    __metadata("design:paramtypes", [String, String, String]),
     __metadata("design:returntype", Promise)
 ], FormSubmissionsController.prototype, "getPartnerApplications", null);
 __decorate([

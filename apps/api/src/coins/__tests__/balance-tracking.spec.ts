@@ -135,21 +135,27 @@ describe('Coin Balance Tracking (Phase 1)', () => {
   });
 
   describe('updateUserBalanceForRewardRequest', () => {
+    beforeEach(() => {
+      // Reset mocks before each test
+      jest.clearAllMocks();
+    });
+
     it('should properly track totalEarned and totalRedeemed when earning coins only', async () => {
       // Arrange
       const userId = 'test-user-id';
       const coinsEarned = 50;
       const coinsRedeemed = 0;
       
-      jest.spyOn(balanceRepository, 'findOne').mockResolvedValue(mockBalance as any);
-      jest.spyOn(balanceRepository, 'save').mockResolvedValue(mockBalance as any);
+      const currentBalance = { ...mockBalance };
+      jest.spyOn(balanceRepository, 'findOne').mockResolvedValue(currentBalance as any);
+      jest.spyOn(balanceRepository, 'save').mockResolvedValue(currentBalance as any);
 
       // Act
       await coinsService.updateUserBalanceForRewardRequest(userId, coinsEarned, coinsRedeemed);
 
       // Assert
       expect(balanceRepository.save).toHaveBeenCalledWith({
-        ...mockBalance,
+        ...currentBalance,
         balance: '150', // 100 + 50 - 0
         totalEarned: '150', // 100 + 50
         totalRedeemed: '0' // unchanged
@@ -162,15 +168,16 @@ describe('Coin Balance Tracking (Phase 1)', () => {
       const coinsEarned = 0;
       const coinsRedeemed = 30;
       
-      jest.spyOn(balanceRepository, 'findOne').mockResolvedValue(mockBalance as any);
-      jest.spyOn(balanceRepository, 'save').mockResolvedValue(mockBalance as any);
+      const currentBalance = { ...mockBalance };
+      jest.spyOn(balanceRepository, 'findOne').mockResolvedValue(currentBalance as any);
+      jest.spyOn(balanceRepository, 'save').mockResolvedValue(currentBalance as any);
 
       // Act
       await coinsService.updateUserBalanceForRewardRequest(userId, coinsEarned, coinsRedeemed);
 
       // Assert
       expect(balanceRepository.save).toHaveBeenCalledWith({
-        ...mockBalance,
+        ...currentBalance,
         balance: '70', // 100 + 0 - 30
         totalEarned: '100', // unchanged
         totalRedeemed: '30' // 0 + 30
@@ -183,15 +190,16 @@ describe('Coin Balance Tracking (Phase 1)', () => {
       const coinsEarned = 40;
       const coinsRedeemed = 20;
       
-      jest.spyOn(balanceRepository, 'findOne').mockResolvedValue(mockBalance as any);
-      jest.spyOn(balanceRepository, 'save').mockResolvedValue(mockBalance as any);
+      const currentBalance = { ...mockBalance };
+      jest.spyOn(balanceRepository, 'findOne').mockResolvedValue(currentBalance as any);
+      jest.spyOn(balanceRepository, 'save').mockResolvedValue(currentBalance as any);
 
       // Act
       await coinsService.updateUserBalanceForRewardRequest(userId, coinsEarned, coinsRedeemed);
 
       // Assert
       expect(balanceRepository.save).toHaveBeenCalledWith({
-        ...mockBalance,
+        ...currentBalance,
         balance: '120', // 100 + 40 - 20
         totalEarned: '140', // 100 + 40
         totalRedeemed: '20' // 0 + 20
@@ -207,11 +215,7 @@ describe('Coin Balance Tracking (Phase 1)', () => {
         id: 'test-transaction-id',
         coinsEarned: 50,
         coinsRedeemed: 20,
-        previousBalance: '100',
-        user: null,
-        amount: '30',
-        type: 'REWARD_REQUEST',
-        status: 'PENDING'
+        previousBalance: '100'
       } as CoinTransaction;
       
       const currentBalance = {
@@ -221,8 +225,8 @@ describe('Coin Balance Tracking (Phase 1)', () => {
         totalRedeemed: '20' // 0 + 20
       };
       
-      jest.spyOn(balanceRepository, 'findOne').mockResolvedValue(currentBalance);
-      jest.spyOn(balanceRepository, 'save').mockResolvedValue(currentBalance);
+      jest.spyOn(balanceRepository, 'findOne').mockResolvedValue(currentBalance as CoinBalance);
+      jest.spyOn(balanceRepository, 'save').mockResolvedValue(currentBalance as any);
 
       // Act
       await coinsService.revertUserBalanceForTransaction(userId, transaction);
@@ -243,11 +247,7 @@ describe('Coin Balance Tracking (Phase 1)', () => {
         id: 'test-transaction-id',
         coinsEarned: 50,
         coinsRedeemed: 0,
-        previousBalance: '100',
-        user: null,
-        amount: '50',
-        type: 'REWARD_REQUEST',
-        status: 'PENDING'
+        previousBalance: '100'
       } as CoinTransaction;
       
       const currentBalance = {
@@ -256,8 +256,8 @@ describe('Coin Balance Tracking (Phase 1)', () => {
         totalEarned: '150', // 100 + 50
       };
       
-      jest.spyOn(balanceRepository, 'findOne').mockResolvedValue(currentBalance);
-      jest.spyOn(balanceRepository, 'save').mockResolvedValue(currentBalance);
+      jest.spyOn(balanceRepository, 'findOne').mockResolvedValue(currentBalance as CoinBalance);
+      jest.spyOn(balanceRepository, 'save').mockResolvedValue(currentBalance as any);
 
       // Act
       await coinsService.revertUserBalanceForTransaction(userId, transaction);
@@ -278,11 +278,7 @@ describe('Coin Balance Tracking (Phase 1)', () => {
         id: 'test-transaction-id',
         coinsEarned: 0,
         coinsRedeemed: 30,
-        previousBalance: '100',
-        user: null,
-        amount: '-30',
-        type: 'REWARD_REQUEST',
-        status: 'PENDING'
+        previousBalance: '100'
       } as CoinTransaction;
       
       const currentBalance = {
@@ -291,8 +287,8 @@ describe('Coin Balance Tracking (Phase 1)', () => {
         totalRedeemed: '30' // 0 + 30
       };
       
-      jest.spyOn(balanceRepository, 'findOne').mockResolvedValue(currentBalance);
-      jest.spyOn(balanceRepository, 'save').mockResolvedValue(currentBalance);
+      jest.spyOn(balanceRepository, 'findOne').mockResolvedValue(currentBalance as CoinBalance);
+      jest.spyOn(balanceRepository, 'save').mockResolvedValue(currentBalance as any);
 
       // Act
       await coinsService.revertUserBalanceForTransaction(userId, transaction);
@@ -318,7 +314,7 @@ describe('Coin Balance Tracking (Phase 1)', () => {
         totalRedeemed: '0'
       };
       
-      jest.spyOn(balanceRepository, 'findOne').mockResolvedValue(initialBalance);
+      jest.spyOn(balanceRepository, 'findOne').mockResolvedValue(initialBalance as CoinBalance);
       jest.spyOn(balanceRepository, 'save').mockImplementation((balance) => {
         // Verify the invariant is maintained
         if (balance.balance !== undefined && balance.totalEarned !== undefined && balance.totalRedeemed !== undefined) {

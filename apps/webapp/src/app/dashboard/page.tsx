@@ -59,9 +59,9 @@ export default function DashboardPage() {
     return null; // Will redirect via useEffect
   }
 
-  const totalCoins = user?.totalCoins || 0;
-  const totalEarned = user?.totalEarned || 0;
-  const totalRedeemed = user?.totalRedeemed || 0;
+  const totalCoins = user?.totalCoins || '0';
+  const totalEarned = user?.totalEarned || '0';
+  const totalRedeemed = user?.totalRedeemed || '0';
 
   return (
     <div className="font-sans bg-white min-h-screen">

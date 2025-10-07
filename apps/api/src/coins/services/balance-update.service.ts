@@ -9,14 +9,16 @@ import { User } from '../../users/entities/user.entity'
 export class BalanceUpdateService {
   constructor(
     @InjectRepository(CoinBalance)
-    private readonly balanceRepository: Repository<CoinBalance>,
+    private balanceRepository: Repository<CoinBalance>,
+    @InjectRepository(CoinTransaction)
+    private transactionRepository: Repository<CoinTransaction>,
   ) {}
 
   async updateBalanceForRewardRequest(
     manager: any,
     userId: string,
     coinsEarned: number,
-    coinsRedeemed: number
+    coinsToRedeem: number
   ): Promise<void> {
     let balance = await manager.findOne(CoinBalance, {
       where: { user: { id: userId } }
@@ -25,24 +27,22 @@ export class BalanceUpdateService {
     if (!balance) {
       balance = manager.create(CoinBalance, {
         user: { id: userId } as User,
-        balance: 0,
-        totalEarned: 0,
-        totalRedeemed: 0
+        balance: '0',
+        totalEarned: '0',
+        totalRedeemed: '0'
       })
     }
 
-    // Update balance: add earned coins, subtract redeemed coins
-    balance.balance += coinsEarned - coinsRedeemed
-    
-    // Track totalEarned and totalRedeemed separately
+    // Update balance with proper tracking of totalEarned and totalRedeemed
+    balance.balance = (BigInt(balance.balance) + BigInt(coinsEarned) - BigInt(coinsToRedeem)).toString();
     if (coinsEarned > 0) {
-      balance.totalEarned += coinsEarned
+      balance.totalEarned = (BigInt(balance.totalEarned) + BigInt(coinsEarned)).toString();
     }
-    if (coinsRedeemed > 0) {
-      balance.totalRedeemed += coinsRedeemed
+    if (coinsToRedeem > 0) {
+      balance.totalRedeemed = (BigInt(balance.totalRedeemed) + BigInt(coinsToRedeem)).toString();
     }
 
-    await manager.save(CoinBalance, balance)
+    await manager.save(CoinBalance, balance);
   }
 
   async updateBalanceForEarnRequest(manager: any, userId: string, coinsEarned: number): Promise<void> {
@@ -54,14 +54,14 @@ export class BalanceUpdateService {
       if (!balance) {
         balance = manager.create(CoinBalance, {
           user: { id: userId } as User,
-          balance: 0,
-          totalEarned: 0,
-          totalRedeemed: 0
+          balance: '0',
+          totalEarned: '0',
+          totalRedeemed: '0'
         })
       }
 
-      balance.balance += coinsEarned
-      balance.totalEarned += coinsEarned
+      balance.balance = (BigInt(balance.balance) + BigInt(coinsEarned)).toString()
+      balance.totalEarned = (BigInt(balance.totalEarned) + BigInt(coinsEarned)).toString()
       await manager.save(CoinBalance, balance)
     }
   }
@@ -75,14 +75,14 @@ export class BalanceUpdateService {
       if (!balance) {
         balance = manager.create(CoinBalance, {
           user: { id: userId } as User,
-          balance: 0,
-          totalEarned: 0,
-          totalRedeemed: 0
+          balance: '0',
+          totalEarned: '0',
+          totalRedeemed: '0'
         })
       }
 
-      balance.balance -= coinsRedeemed
-      balance.totalRedeemed += coinsRedeemed
+      balance.balance = (BigInt(balance.balance) - BigInt(coinsRedeemed)).toString()
+      balance.totalRedeemed = (BigInt(balance.totalRedeemed) + BigInt(coinsRedeemed)).toString()
       await manager.save(CoinBalance, balance)
     }
   }
@@ -91,22 +91,21 @@ export class BalanceUpdateService {
     await this.updateUserBalance(manager, userId, -amount)
   }
 
-  async getOptimisticBalance(userId: string, pendingTransaction: CoinTransaction): Promise<number> {
+  async getOptimisticBalance(userId: string, latestTransaction: CoinTransaction): Promise<string> {
     const balance = await this.getUserBalance(userId)
-    const currentBalance = balance.balance
-    
-    // Calculate optimistic balance based on pending transaction
-    let optimisticBalance = currentBalance
-    
-    if (pendingTransaction.coinsEarned) {
-      optimisticBalance += pendingTransaction.coinsEarned
+    const pendingTransactions = await this.getPendingTransactions(userId)
+
+    let optimisticBalance = BigInt(balance.balance)
+
+    // Add back amounts for pending transactions that are NOT the latest one
+    for (const pendingTransaction of pendingTransactions) {
+      if (pendingTransaction.id !== latestTransaction.id) {
+        optimisticBalance += BigInt(pendingTransaction.coinsRedeemed || 0)
+        optimisticBalance -= BigInt(pendingTransaction.coinsEarned || 0)
+      }
     }
-    
-    if (pendingTransaction.coinsRedeemed) {
-      optimisticBalance -= pendingTransaction.coinsRedeemed
-    }
-    
-    return optimisticBalance
+
+    return optimisticBalance.toString()
   }
 
   async getUserBalance(userId: string): Promise<CoinBalance> {
@@ -117,9 +116,9 @@ export class BalanceUpdateService {
     if (!balance) {
       balance = this.balanceRepository.create({
         user: { id: userId } as User,
-        balance: 0,
-        totalEarned: 0,
-        totalRedeemed: 0
+        balance: '0',
+        totalEarned: '0',
+        totalRedeemed: '0'
       })
       await this.balanceRepository.save(balance)
     }
@@ -139,22 +138,22 @@ export class BalanceUpdateService {
     if (!balance) {
       balance = manager.create(CoinBalance, {
         user: { id: userId } as User,
-        balance: transaction.previousBalance || 0,
-        totalEarned: 0,
-        totalRedeemed: 0
+        balance: transaction.previousBalance || '0',
+        totalEarned: '0',
+        totalRedeemed: '0'
       })
     } else {
       // Revert balance to previous state
-      balance.balance = transaction.previousBalance || 0
+      balance.balance = transaction.previousBalance || '0'
       
       // Revert totalEarned if coins were earned
       if (transaction.coinsEarned && transaction.coinsEarned > 0) {
-        balance.totalEarned = Math.max(0, balance.totalEarned - transaction.coinsEarned)
+        balance.totalEarned = (BigInt(balance.totalEarned) - BigInt(transaction.coinsEarned)).toString()
       }
       
       // Revert totalRedeemed if coins were redeemed
       if (transaction.coinsRedeemed && transaction.coinsRedeemed > 0) {
-        balance.totalRedeemed = Math.max(0, balance.totalRedeemed - transaction.coinsRedeemed)
+        balance.totalRedeemed = (BigInt(balance.totalRedeemed) - BigInt(transaction.coinsRedeemed)).toString()
       }
     }
 
@@ -169,12 +168,19 @@ export class BalanceUpdateService {
     if (!balance) {
       balance = manager.create(CoinBalance, {
         user: { id: userId } as User,
-        balance: 0
+        balance: '0'
       })
     }
 
     const currentBalance = balance.balance
-    balance.balance = currentBalance + amount
+    balance.balance = (BigInt(currentBalance) + BigInt(amount)).toString()
     await manager.save(CoinBalance, balance)
+  }
+
+  private async getPendingTransactions(userId: string): Promise<CoinTransaction[]> {
+    return this.transactionRepository.find({
+      where: { user: { id: userId }, status: 'PENDING' },
+      order: { createdAt: 'ASC' },
+    });
   }
 }

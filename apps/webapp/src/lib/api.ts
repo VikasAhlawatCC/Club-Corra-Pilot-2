@@ -29,9 +29,9 @@ export interface User {
   status: string;
   createdAt: string;
   upiId?: string;
-  totalCoins?: number;
-  totalEarned?: number;
-  totalRedeemed?: number;
+  totalCoins?: string;
+  totalEarned?: string;
+  totalRedeemed?: string;
 }
 
 export interface Transaction {

@@ -15,7 +15,7 @@ export class RewardRequestResponseDto {
     brand: Brand | null
     createdAt: Date
   }
-  newBalance!: number
+  newBalance!: string
   transactions!: any[]
   total!: number
   page!: number
