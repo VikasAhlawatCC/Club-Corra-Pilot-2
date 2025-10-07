@@ -50,20 +50,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Check for existing session only after client is confirmed
   useEffect(() => {
-    console.log('AuthContext: Client effect triggered, isClient:', isClient)
     if (isClient) {
       checkAuthStatus()
     }
   }, [isClient])
 
   const checkAuthStatus = async () => {
-    console.log('AuthContext: checkAuthStatus called, isClient:', isClient)
     try {
       // Only run on client side
       if (!isClient) return
 
       const token = localStorage.getItem('admin_token')
-      console.log('AuthContext: Token found:', !!token)
       
       if (token) {
         // Verify token with backend
@@ -78,21 +75,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (response.ok) {
           const data = await response.json()
           if (data.success) {
-            console.log('AuthContext: Token valid, setting user')
             setUser(data.data.user)
           } else {
             // Token is invalid, remove it
-            console.log('AuthContext: Token invalid, removing')
             localStorage.removeItem('admin_token')
           }
         } else {
           // Token is invalid, remove it
-          console.log('AuthContext: Token verification failed, removing')
           localStorage.removeItem('admin_token')
         }
       }
       // If no token or token was invalid, we're done loading
-      console.log('AuthContext: Setting isLoading to false')
       setIsLoading(false)
     } catch (error) {
       console.error('Auth check failed:', error)
@@ -145,17 +138,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       const data = await response.json()
-      console.log('AuthContext: Full API response:', data)
-      
       if (data.success) {
         // Store token
         if (isClient) {
           localStorage.setItem('admin_token', data.data.data.accessToken)
         }
-        console.log('AuthContext: Setting user after login:', data.data.data.user)
-        console.log('AuthContext: Full data.data.data object:', data.data.data)
         setUser(data.data.data.user)
-        console.log('AuthContext: User set, isAuthenticated should be true')
       } else {
         throw new Error(data.message || 'Login failed')
       }

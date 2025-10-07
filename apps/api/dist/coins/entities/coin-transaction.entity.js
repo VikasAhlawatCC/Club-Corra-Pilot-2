@@ -44,55 +44,43 @@ __decorate([
     __metadata("design:type", String)
 ], CoinTransaction.prototype, "status", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    (0, typeorm_1.Column)({ type: 'int', nullable: true, name: 'bill_amount' }),
     __metadata("design:type", Number)
 ], CoinTransaction.prototype, "billAmount", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    (0, typeorm_1.Column)({ type: 'int', nullable: true, name: 'coins_earned' }),
     __metadata("design:type", Number)
 ], CoinTransaction.prototype, "coinsEarned", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    (0, typeorm_1.Column)({ type: 'int', nullable: true, name: 'coins_redeemed' }),
     __metadata("design:type", Number)
 ], CoinTransaction.prototype, "coinsRedeemed", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
-    __metadata("design:type", Number)
-], CoinTransaction.prototype, "previousBalance", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
-    __metadata("design:type", Number)
-], CoinTransaction.prototype, "balanceAfterEarn", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
-    __metadata("design:type", Number)
-], CoinTransaction.prototype, "balanceAfterRedeem", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ type: 'varchar', length: 500, nullable: true }),
+    (0, typeorm_1.Column)({ type: 'varchar', length: 500, nullable: true, name: 'receipt_url' }),
     __metadata("design:type", String)
 ], CoinTransaction.prototype, "receiptUrl", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'text', nullable: true }),
+    (0, typeorm_1.Column)({ type: 'text', nullable: true, name: 'admin_notes' }),
     __metadata("design:type", String)
 ], CoinTransaction.prototype, "adminNotes", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'timestamp', nullable: true }),
+    (0, typeorm_1.Column)({ type: 'timestamp', nullable: true, name: 'processed_at' }),
     __metadata("design:type", Date)
 ], CoinTransaction.prototype, "processedAt", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'varchar', length: 100, nullable: true }),
+    (0, typeorm_1.Column)({ type: 'varchar', length: 100, nullable: true, name: 'transaction_id' }),
     __metadata("design:type", String)
 ], CoinTransaction.prototype, "transactionId", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'date', nullable: true }),
+    (0, typeorm_1.Column)({ type: 'date', nullable: true, name: 'bill_date' }),
     __metadata("design:type", Date)
 ], CoinTransaction.prototype, "billDate", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'timestamp', nullable: true }),
+    (0, typeorm_1.Column)({ type: 'timestamp', nullable: true, name: 'payment_processed_at' }),
     __metadata("design:type", Date)
 ], CoinTransaction.prototype, "paymentProcessedAt", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'timestamp', nullable: true }),
+    (0, typeorm_1.Column)({ type: 'timestamp', nullable: true, name: 'status_updated_at' }),
     __metadata("design:type", Date)
 ], CoinTransaction.prototype, "statusUpdatedAt", void 0);
 __decorate([

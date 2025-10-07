@@ -58,7 +58,14 @@ export async function addToWaitlist(email: string): Promise<ApiResponse<Waitlist
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.message || 'Failed to add to waitlist');
+    // Provide more specific error messages
+    if (response.status === 409) {
+      throw new Error('Email already exists in waitlist');
+    } else if (response.status === 400) {
+      throw new Error('Invalid email address');
+    } else {
+      throw new Error(error.message || 'Failed to add to waitlist');
+    }
   }
 
   return response.json();
@@ -146,7 +153,7 @@ export async function getUserProfile(token: string): Promise<ApiResponse<User>> 
 
 // Transaction API
 export async function getUserTransactions(token: string): Promise<ApiResponse<Transaction[]>> {
-  const response = await fetch(`${API_BASE_URL}/transactions/user`, {
+  const response = await fetch(`${API_BASE_URL}/transactions`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',

@@ -306,7 +306,7 @@ export function EnhancedDashboardContent() {
       // Fetch recent transactions from API or generate realistic ones
       try {
         const recentTxs = await transactionApi.getAllTransactions(1, 10)
-        if (recentTxs.success && recentTxs.data?.data) {
+        if (recentTxs.success && recentTxs.data?.data && Array.isArray(recentTxs.data.data)) {
           setRecentTransactions(recentTxs.data.data.slice(0, 5).map((tx: any) => ({
             id: tx.id,
             type: tx.type,

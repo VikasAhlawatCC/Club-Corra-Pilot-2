@@ -14,7 +14,7 @@ export default function RewardsPage() {
   const { user, token, isAuthenticated, isLoading } = useAuth();
   const [brands, setBrands] = useState<Brand[]>([]);
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
-  const [billAmount, setBillAmount] = useState<number>(1000);
+  const [billAmount, setBillAmount] = useState<number>(0);
   const [coinsRedeemed, setCoinsRedeemed] = useState<number>(0);
   const [upiId, setUpiId] = useState<string>(user?.upiId || "");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -22,6 +22,18 @@ export default function RewardsPage() {
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [loadingBrands, setLoadingBrands] = useState(true);
+  
+  // Brand carousel state
+  const ITEMS_PER_PAGE = 3;
+  const [page, setPage] = useState(0);
+  const totalPages = Math.ceil(brands.length / ITEMS_PER_PAGE);
+  const [showAllBrands, setShowAllBrands] = useState(false);
+  
+  // Overlay pagination state
+  const OVERLAY_PER_PAGE = 8;
+  const [overlayPage, setOverlayPage] = useState(0);
+  const overlayTotalPages = Math.ceil(brands.length / OVERLAY_PER_PAGE);
+  const overlayBrands = brands.slice(overlayPage * OVERLAY_PER_PAGE, overlayPage * OVERLAY_PER_PAGE + OVERLAY_PER_PAGE);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -35,18 +47,73 @@ export default function RewardsPage() {
     }
   }, [token, isAuthenticated]);
 
+  // Pagination helpers
+  function prevPage() {
+    setPage(p => (p - 1 + totalPages) % totalPages);
+  }
+  function nextPage() {
+    setPage(p => (p + 1) % totalPages);
+  }
+
+  function handleSelectBrand(brand: Brand) {
+    setSelectedBrand(brand);
+  }
+
   const fetchBrands = async () => {
     try {
+      console.log("Fetching brands from API...");
       const response = await getActiveBrands();
-      if (response.success && response.data && Array.isArray(response.data)) {
-        const validBrands = response.data.filter((brand: Brand) => brand && brand.id && brand.name);
-        setBrands(validBrands);
-        setSelectedBrand(validBrands[0] || null);
+      console.log("Brands API response:", response);
+      
+      if (response.success && response.data) {
+        // Handle nested response structure: response.data.data contains the brands array
+        const brandsData = (response.data as any).data || response.data;
+        
+        if (Array.isArray(brandsData)) {
+          const validBrands = brandsData.filter((brand: Brand) => brand && brand.id && brand.name);
+          console.log("Valid brands found:", validBrands);
+          setBrands(validBrands);
+          setSelectedBrand(validBrands[0] || null);
+          
+          if (validBrands.length === 0) {
+            toast.error("No active brands found. Please contact support.");
+          } else {
+            toast.success(`Loaded ${validBrands.length} brands successfully!`);
+          }
+        } else {
+          console.error("Invalid brands data format:", brandsData);
+          toast.error("Invalid brands data format from API");
+        }
+      } else {
+        console.error("Invalid response format:", response);
+        toast.error("Invalid response from brands API");
       }
     } catch (error) {
       console.error("Error fetching brands:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       toast.error(`Failed to load brands: ${errorMessage}`);
+      
+      // Set fallback brands for development
+      const fallbackBrands = [
+        {
+          id: 'fallback-1',
+          name: 'Adidas',
+          logoUrl: 'https://example.com/adidas-logo.png',
+          earningPercentage: 5,
+          redemptionPercentage: 2,
+          isActive: true,
+        },
+        {
+          id: 'fallback-2',
+          name: 'Nike',
+          logoUrl: 'https://example.com/nike-logo.png',
+          earningPercentage: 4,
+          redemptionPercentage: 2,
+          isActive: true,
+        },
+      ];
+      setBrands(fallbackBrands);
+      setSelectedBrand(fallbackBrands[0]);
     } finally {
       setLoadingBrands(false);
     }
@@ -85,8 +152,29 @@ export default function RewardsPage() {
   };
 
   const handleSubmit = async () => {
-    if (!selectedBrand || !receiptUrl || !token) {
-      toast.error("Please fill in all required fields");
+    // Enhanced validation with specific error messages
+    if (!selectedBrand) {
+      toast.error("Please select a brand");
+      return;
+    }
+    
+    if (!receiptUrl) {
+      toast.error("Please upload a receipt");
+      return;
+    }
+    
+    if (!token) {
+      toast.error("Authentication required. Please log in again.");
+      return;
+    }
+    
+    if (billAmount <= 0) {
+      toast.error("Please enter a valid transaction amount");
+      return;
+    }
+    
+    if (coinsRedeemed > 0 && !upiId) {
+      toast.error("Please enter your UPI ID for redemption");
       return;
     }
 
@@ -103,6 +191,8 @@ export default function RewardsPage() {
       if (response.success) {
         toast.success("Reward request submitted successfully!");
         router.push("/dashboard");
+      } else {
+        toast.error(response.message || "Failed to submit request");
       }
     } catch (error) {
       console.error("Error submitting reward request:", error);
@@ -128,103 +218,154 @@ export default function RewardsPage() {
     return null; // Will redirect via useEffect
   }
 
+  // Calculate maximum redeemable coins based on business rules
   const maxRedeemable = Math.min(
-    user?.totalCoins || 0,
-    selectedBrand ? Math.round(billAmount * selectedBrand.redemptionPercentage / 100) : 0,
-    selectedBrand?.redemptionPercentage ? Math.round(billAmount * 0.5) : 0 // Max 50% of bill
+    user?.totalCoins || 0, // User's current coin balance
+    selectedBrand ? Math.floor(billAmount * selectedBrand.redemptionPercentage / 100) : 0, // Brand's redemption percentage
+    Math.floor(billAmount * 0.5) // Max 50% of bill amount
   );
 
-  const coinsEarned = selectedBrand 
-    ? Math.round((billAmount - coinsRedeemed) * selectedBrand.earningPercentage / 100)
+  // Calculate coins earned: earn percentage of (bill amount - redeemed amount)
+  // This follows the business rule: "earn percentage of (MRP - redeem amount)"
+  const coinsEarned = selectedBrand && billAmount > 0
+    ? Math.floor((billAmount - coinsRedeemed) * selectedBrand.earningPercentage / 100)
     : 0;
 
   return (
-    <div className="font-sans bg-white min-h-screen">
-      <main className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8 py-12">
-        <h1 className="text-3xl sm:text-4xl font-bold mb-8">Get Rewards</h1>
+    <>
+      <h1 className="text-center text-3xl sm:text-4xl font-bold">
+        Get Rewards
+      </h1>
+      <p className="text-center text-black/70 mt-2">
+        Upload your receipt and redeem coins for cashback
+      </p>
 
-        <div className="space-y-6">
-          {/* Brand Selection */}
-          <div className="rounded-2xl border border-black/10 bg-white p-6">
-            <h2 className="font-semibold mb-4">Select Brand</h2>
+      <section className="mt-10 rounded-2xl border border-black/10 shadow-soft bg-white animate-fade-up delay-100 relative">
+        <div className="px-6 py-6 border-b border-black/10">
+          <h2 className="text-xl sm:text-2xl font-semibold">
+            Submit Reward Request
+          </h2>
+          <p className="text-black/70 mt-2">
+            Upload your receipt and choose how many coins to redeem for cashback
+          </p>
+        </div>
+        <div className="p-6">
+          {/* Brand selector */}
+          <div className="mb-6">
+            <div className="text-sm font-medium mb-2">Select a brand</div>
             {loadingBrands ? (
-              <div className="text-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600 mx-auto"></div>
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
                 <p className="mt-2 text-gray-600">Loading brands...</p>
               </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                {brands.map((brand) => (
+            ) : brands.length > 0 ? (
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => {
+                    const currentIndex = brands.findIndex(b => b.id === selectedBrand?.id);
+                    const prevIndex = currentIndex > 0 ? currentIndex - 1 : brands.length - 1;
+                    setSelectedBrand(brands[prevIndex]);
+                  }}
+                  aria-label="Previous brands"
+                  className="h-8 w-8 rounded-full border border-black/10 grid place-items-center hover:bg-black/5 hover:scale-110 transition-all duration-500 ease-out group/prev"
+                >
+                  <span className="group-hover/prev:-translate-x-0.5 transition-transform duration-300 ease-out">‹</span>
+                </button>
+
+                {/* Brand display */}
+                <div className="flex-1 flex justify-center">
                   <button
-                    key={brand.id}
-                    onClick={() => setSelectedBrand(brand)}
-                    className={`p-4 rounded-lg border-2 text-left transition-all ${
-                      selectedBrand?.id === brand.id
-                        ? "border-green-600 bg-green-50"
-                        : "border-black/10 hover:border-green-300"
+                    className={`rounded-lg border-2 p-4 flex flex-col items-center gap-3 text-center transition-all duration-500 ease-out ${
+                      selectedBrand?.id 
+                        ? "border-green-600 bg-green-50 scale-105 shadow-md" 
+                        : "border-black/10 hover:bg-black/5 hover:scale-102 hover:border-green-300"
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
-                        {brand.logoUrl ? (
-                          <Image
-                            src={brand.logoUrl}
-                            alt={brand.name}
-                            width={40}
-                            height={40}
-                            className="h-8 w-8 object-contain"
-                          />
-                        ) : (
-                          <span className="text-xs font-semibold">{brand.name.substring(0, 2)}</span>
-                        )}
-                      </div>
-                      <div>
-                        <div className="font-medium text-sm">{brand.name}</div>
-                        <div className="text-xs text-gray-500">
-                          {brand.earningPercentage}% earn, {brand.redemptionPercentage}% redeem
-                        </div>
-                      </div>
+                    <div
+                      className={`h-12 w-12 rounded-full grid place-items-center overflow-hidden ring-1 ring-black/10 transition-all duration-500 ease-out bg-gray-100 ${
+                        selectedBrand?.id ? "ring-green-300" : ""
+                      }`}
+                    >
+                      {selectedBrand?.logoUrl ? (
+                        <Image
+                          src={selectedBrand.logoUrl}
+                          alt={selectedBrand.name}
+                          width={48}
+                          height={48}
+                          className={`h-8 w-8 object-contain transition-all duration-500 ease-out ${
+                            selectedBrand?.id ? "scale-110" : "scale-100"
+                          }`}
+                          unoptimized
+                          draggable={false}
+                        />
+                      ) : (
+                        <span className="text-sm font-semibold text-gray-600">{selectedBrand?.name?.substring(0, 2) || "?"}</span>
+                      )}
                     </div>
+                    <div className={`font-medium text-sm transition-colors duration-500 ease-out ${
+                      selectedBrand?.id ? "text-green-700" : "text-gray-700"
+                    }`}>
+                      {selectedBrand?.name || "Select Brand"}
+                    </div>
+                    {selectedBrand && (
+                      <div className="text-xs text-gray-500">
+                        {selectedBrand.earningPercentage}% earn, {selectedBrand.redemptionPercentage}% redeem
+                      </div>
+                    )}
                   </button>
-                ))}
+                </div>
+
+                <button 
+                  onClick={() => {
+                    const currentIndex = brands.findIndex(b => b.id === selectedBrand?.id);
+                    const nextIndex = currentIndex < brands.length - 1 ? currentIndex + 1 : 0;
+                    setSelectedBrand(brands[nextIndex]);
+                  }}
+                  aria-label="Next brands"
+                  className="h-8 w-8 rounded-full border border-black/10 grid place-items-center hover:bg-black/5 hover:scale-110 transition-all duration-500 ease-out group/next"
+                >
+                  <span className="group-hover/next:translate-x-0.5 transition-transform duration-300 ease-out">›</span>
+                </button>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-gray-400 text-4xl mb-4">🏪</div>
+                <p className="text-gray-600 mb-2">No brands available</p>
+                <p className="text-sm text-gray-500">Please try refreshing the page or contact support</p>
+                <button 
+                  onClick={fetchBrands}
+                  className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  Retry
+                </button>
               </div>
             )}
           </div>
 
-          {/* Bill Amount */}
-          <div className="rounded-2xl border border-black/10 bg-white p-6">
-            <h2 className="font-semibold mb-4">Transaction Value</h2>
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              {[500, 1000, 2500].map((amount) => (
-                <button
-                  key={amount}
-                  onClick={() => setBillAmount(amount)}
-                  className={`h-12 rounded-xl border text-sm font-medium ${
-                    billAmount === amount
-                      ? "border-green-600 bg-green-50"
-                      : "border-black/15 hover:bg-black/5"
-                  }`}
-                >
-                  ₹ {amount}
-                </button>
-              ))}
-            </div>
-            <Input
-              type="number"
-              placeholder="Enter custom amount"
-              value={billAmount}
-              onChange={(e) => setBillAmount(Number(e.target.value) || 0)}
-              className="w-full"
-            />
+          {/* Requirements */}
+          <div className="rounded-xl border border-blue-200 bg-blue-50 text-blue-700 p-4 text-sm">
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Make sure the receipt photo is clear</li>
+              <li>
+                Total transaction value & Unique Order Id must be present on the
+                receipt
+              </li>
+            </ul>
           </div>
 
-          {/* Receipt Upload */}
-          <div className="rounded-2xl border border-black/10 bg-white p-6">
-            <h2 className="font-semibold mb-4">Upload Receipt</h2>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+          {/* Dropzone */}
+          <div className="mt-6">
+            <label
+              className={`block rounded-2xl border-2 border-dashed px-6 py-12 text-center text-black/70 cursor-pointer transition-colors ${
+                receiptUrl
+                  ? "border-green-500 bg-green-50"
+                  : "border-black/15 hover:bg-black/5"
+              }`}
+            >
               <input
                 type="file"
-                accept="image/*"
+                accept="image/png,image/jpeg"
+                className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
@@ -232,42 +373,70 @@ export default function RewardsPage() {
                     handleFileUpload(file);
                   }
                 }}
-                className="hidden"
-                id="receipt-upload"
               />
-              <label
-                htmlFor="receipt-upload"
-                className="cursor-pointer block"
-              >
-                {uploading ? (
-                  <div>
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
-                    <p className="mt-2 text-gray-600">Uploading...</p>
+              {uploading ? (
+                <div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+                  <p className="mt-2 text-gray-600">Uploading...</p>
+                </div>
+              ) : receiptUrl ? (
+                <div className="animate-fade-in">
+                  <div className="text-green-600 text-2xl">✓</div>
+                  <div className="mt-3 text-sm">
+                    Receipt uploaded successfully!
                   </div>
-                ) : receiptUrl ? (
-                  <div>
-                    <div className="text-green-600 text-2xl">✓</div>
-                    <p className="mt-2 text-green-600">Receipt uploaded successfully!</p>
+                </div>
+              ) : (
+                <>
+                  <div className="mx-auto h-12 w-12 rounded-full border border-black/20 grid place-items-center text-2xl">
+                    ↥
                   </div>
-                ) : (
-                  <div>
-                    <div className="text-gray-400 text-2xl">📷</div>
-                    <p className="mt-2 text-gray-600">Click to upload receipt</p>
-                    <p className="text-sm text-gray-500">JPG, PNG, PDF up to 10MB</p>
+                  <div className="mt-3 font-medium">
+                    Click to upload or drag and drop
                   </div>
-                )}
-              </label>
+                  <div className="text-xs text-black/50">PNG, JPG up to 10MB</div>
+                </>
+              )}
+            </label>
+          </div>
+
+          {/* Amount */}
+          <div className="mt-6">
+            <label className="text-sm font-medium">
+              Transaction Value (₹)
+            </label>
+            <div className="mt-1 relative">
+              <input
+                className="w-full h-12 rounded-xl border border-black/15 px-4 pr-10 outline-none focus:border-green-600 transition"
+                value={billAmount}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Only allow whole numbers (integers)
+                  if (value === '' || /^\d+$/.test(value)) {
+                    setBillAmount(Number(value) || 0);
+                  }
+                }}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="Enter amount (whole numbers only)"
+              />
+              <button className="absolute right-2.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-md border border-black/15 grid place-items-center text-xs">
+                ↻
+              </button>
             </div>
           </div>
 
           {/* Redemption Slider */}
-          <div className="rounded-2xl border border-black/10 bg-white p-6">
-            <h2 className="font-semibold mb-4">Redeem Coins (Optional)</h2>
-            <div className="space-y-4">
+          <div className="mt-6">
+            <label className="text-sm font-medium">
+              Redeem Coins (Optional)
+            </label>
+            <div className="mt-3 space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  Coins to Redeem: {coinsRedeemed}
-                </label>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-gray-700">Coins to Redeem</span>
+                  <span className="text-sm font-semibold text-green-600">{coinsRedeemed}</span>
+                </div>
                 <input
                   type="range"
                   min="0"
@@ -275,6 +444,9 @@ export default function RewardsPage() {
                   value={coinsRedeemed}
                   onChange={(e) => setCoinsRedeemed(Number(e.target.value))}
                   className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  style={{
+                    background: `linear-gradient(to right, #10B981 0%, #10B981 ${(coinsRedeemed / maxRedeemable) * 100}%, #E5E7EB ${(coinsRedeemed / maxRedeemable) * 100}%, #E5E7EB 100%)`
+                  }}
                 />
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
                   <span>0</span>
@@ -284,55 +456,98 @@ export default function RewardsPage() {
 
               {coinsRedeemed > 0 && (
                 <div>
-                  <label htmlFor="upi" className="block text-sm font-medium mb-2">
+                  <label htmlFor="upi" className="text-sm font-medium">
                     UPI ID
                   </label>
-                  <Input
-                    id="upi"
-                    type="text"
-                    placeholder="Enter your UPI ID"
-                    value={upiId}
-                    onChange={(e) => setUpiId(e.target.value)}
-                    className="w-full"
-                  />
+                  <div className="mt-1">
+                    <input
+                      id="upi"
+                      type="text"
+                      placeholder="Enter your UPI ID"
+                      value={upiId}
+                      onChange={(e) => setUpiId(e.target.value)}
+                      className="w-full h-12 rounded-xl border border-black/15 px-4 outline-none focus:border-green-600 transition"
+                    />
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
           {/* Summary */}
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
-            <h2 className="font-semibold mb-4">Summary</h2>
+          <div className="mt-6 bg-green-50 border border-green-200 rounded-xl p-4">
+            <h3 className="font-semibold text-gray-900 mb-3">Summary</h3>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span>Bill Amount:</span>
-                <span>₹{billAmount}</span>
+                <span className="text-gray-600">Bill Amount:</span>
+                <span className="font-medium">₹{billAmount}</span>
               </div>
               <div className="flex justify-between">
-                <span>Coins Redeemed:</span>
-                <span className="text-rose-600">-₹{coinsRedeemed}</span>
+                <span className="text-gray-600">Coins Redeemed:</span>
+                <span className="font-medium text-red-600">-{coinsRedeemed} coins</span>
               </div>
               <div className="flex justify-between">
-                <span>Coins Earned:</span>
-                <span className="text-green-600">+₹{coinsEarned}</span>
+                <span className="text-gray-600">Coins Earned:</span>
+                <span className="font-medium text-green-600">+{coinsEarned} coins</span>
               </div>
-              <div className="border-t pt-2 flex justify-between font-semibold">
-                <span>Net Earning:</span>
-                <span className="text-green-600">₹{coinsEarned}</span>
-              </div>
+              {selectedBrand && (
+                <div className="text-xs text-gray-500 mt-3 pt-2 border-t border-green-200">
+                  <div>Brand: {selectedBrand.name} ({selectedBrand.earningPercentage}% earn, {selectedBrand.redemptionPercentage}% redeem)</div>
+                  <div>Your Balance: {user?.totalCoins || 0} coins</div>
+                  <div>Max Redeemable: {maxRedeemable} coins</div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Submit Button */}
-          <Button
-            onClick={handleSubmit}
-            disabled={!selectedBrand || !receiptUrl || submitting}
-            className="w-full h-12 rounded-xl bg-green-700 text-white font-medium hover:bg-green-800"
-          >
-            {submitting ? "Submitting..." : "Submit Request"}
-          </Button>
+          {/* Notes */}
+          <div className="mt-4 space-y-2 text-sm">
+            <div className="rounded-lg bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3">
+              Verifying your transaction will take 2–3 business days
+            </div>
+            <div className="rounded-lg bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3">
+              You can get cashback on earned Corra Coins on purchase
+            </div>
+          </div>
+
+          {/* Debug Info - Remove in production */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mt-4 border border-gray-200 bg-gray-50 rounded-lg p-4 text-xs">
+              <h3 className="font-semibold mb-2">Debug Info:</h3>
+              <div className="space-y-1">
+                <div>Selected Brand: {selectedBrand ? 'Yes' : 'No'}</div>
+                <div>Receipt Uploaded: {receiptUrl ? 'Yes' : 'No'}</div>
+                <div>Bill Amount: {billAmount}</div>
+                <div>Coins Redeemed: {coinsRedeemed}</div>
+                <div>UPI ID: {upiId || 'Not provided'}</div>
+                <div>Token: {token ? 'Present' : 'Missing'}</div>
+                <div>Button Disabled: {(!selectedBrand || !receiptUrl || billAmount <= 0 || submitting || (coinsRedeemed > 0 && !upiId)) ? 'Yes' : 'No'}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="mt-6 flex items-center justify-center gap-3">
+            <button className="h-11 px-4 rounded-xl border border-black/15 bg-white hover:bg-black/5 flex items-center gap-2 transition active:scale-95">
+              <span className="h-6 w-6 rounded-md border border-black/15 grid place-items-center">
+                📷
+              </span>
+              Take Photo
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={!selectedBrand || !receiptUrl || billAmount <= 0 || submitting || (coinsRedeemed > 0 && !upiId)}
+              className={`flex-1 h-12 rounded-xl text-white font-medium transition ${
+                !selectedBrand || !receiptUrl || billAmount <= 0 || submitting || (coinsRedeemed > 0 && !upiId)
+                  ? "bg-black/20 cursor-not-allowed"
+                  : "bg-green-700 hover:bg-green-800 active:scale-95"
+              }`}
+            >
+              {submitting ? "Submitting..." : "Submit Request"}
+            </button>
+          </div>
         </div>
-      </main>
-    </div>
+      </section>
+    </>
   );
 }

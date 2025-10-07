@@ -116,7 +116,7 @@ let CoinsService = class CoinsService {
             const userBalance = await this.balanceRepository.findOne({ where: { user: { id: user.id } } });
             currentBalance = userBalance?.balance || 0;
         }
-        // Create transaction with all new fields including balance tracking
+        // Create transaction with all new fields
         const transaction = this.transactionRepository.create({
             user: user,
             brand: brand,
@@ -129,10 +129,10 @@ let CoinsService = class CoinsService {
             receiptUrl: receiptUrl,
             billDate: new Date(billDate),
             statusUpdatedAt: new Date(),
-            // Balance tracking fields for reversion on rejection
-            previousBalance: currentBalance,
-            balanceAfterEarn: currentBalance + coinsEarned,
-            balanceAfterRedeem: currentBalance + coinsEarned - coinsToRedeem,
+            // TODO: Add balance tracking fields when database columns are available
+            // previousBalance: currentBalance,
+            // balanceAfterEarn: currentBalance + coinsEarned,
+            // balanceAfterRedeem: currentBalance + coinsEarned - coinsToRedeem,
         });
         const savedTransaction = await this.transactionRepository.save(transaction);
         // Get updated balance and transaction list for response
@@ -479,10 +479,11 @@ let CoinsService = class CoinsService {
         // Revert coin balance changes if transaction was previously approved
         // Note: This check is for cases where a transaction might have been approved and then rejected
         if (transaction.status === 'PAID' || transaction.status === 'UNPAID') {
-            if (transaction.user && transaction.previousBalance !== undefined) {
-                // Revert to previous balance
-                await this.revertUserBalance(transaction.user.id, transaction.previousBalance);
-            }
+            // TODO: Implement balance reversion when balance tracking fields are available
+            // if (transaction.user && transaction.previousBalance !== undefined) {
+            //   // Revert to previous balance
+            //   await this.revertUserBalance(transaction.user.id, transaction.previousBalance);
+            // }
         }
         // Update transaction status
         transaction.status = 'REJECTED';
@@ -496,8 +497,27 @@ let CoinsService = class CoinsService {
         try {
             console.log('getAllTransactions called with:', { page, limit, filters });
             const skip = (page - 1) * limit;
+            // Build where clause based on filters
+            const whereClause = {};
+            // Filter by user ID if provided (for user-specific queries)
+            if (filters.userId) {
+                whereClause.user = { id: filters.userId };
+            }
+            // Filter by status if provided
+            if (filters.status) {
+                whereClause.status = filters.status;
+            }
+            // Filter by type if provided
+            if (filters.type) {
+                whereClause.type = filters.type;
+            }
+            // Filter by brand ID if provided
+            if (filters.brandId) {
+                whereClause.brand = { id: filters.brandId };
+            }
             // Use findAndCount with relations to get both data and total count
             const [allTransactions, total] = await this.transactionRepository.findAndCount({
+                where: whereClause,
                 relations: ['user', 'brand'],
                 order: { createdAt: 'DESC' },
                 skip,

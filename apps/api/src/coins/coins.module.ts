@@ -13,9 +13,13 @@ import { TransactionApprovalService } from './services/transaction-approval.serv
 import { BalanceUpdateService } from './services/balance-update.service'
 import { FilesService } from '../files/files.service'
 import { File } from '../files/file.entity'
+import { BrandsModule } from '../brands/brands.module'
 
 @Module({
-  imports: [TypeOrmModule.forFeature([CoinBalance, CoinTransaction, Brand, User, File])],
+  imports: [
+    TypeOrmModule.forFeature([CoinBalance, CoinTransaction, Brand, User, File]),
+    BrandsModule,
+  ],
   controllers: [CoinAdminController, TransactionController, CoinPublicController],
   providers: [
     CoinsService,

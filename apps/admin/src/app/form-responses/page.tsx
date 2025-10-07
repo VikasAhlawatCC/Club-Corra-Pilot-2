@@ -69,8 +69,11 @@ export default function FormResponsesPage() {
     try {
       setIsLoading(true)
       
+      // Get API base URL
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api/v1'
+      
       // Fetch waitlist entries
-      const waitlistResponse = await fetch('/api/admin/form-submissions/waitlist-entries', {
+      const waitlistResponse = await fetch(`${apiBaseUrl}/admin/form-submissions/waitlist-entries`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
           'Content-Type': 'application/json'
@@ -84,7 +87,7 @@ export default function FormResponsesPage() {
       const waitlistData = await waitlistResponse.json()
       
       // Fetch partner applications
-      const partnerResponse = await fetch('/api/admin/form-submissions/partner-applications', {
+      const partnerResponse = await fetch(`${apiBaseUrl}/admin/form-submissions/partner-applications`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
           'Content-Type': 'application/json'

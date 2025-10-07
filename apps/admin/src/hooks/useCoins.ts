@@ -100,9 +100,19 @@ export const useCoins = (skipInitialFetch = false) => {
       
       const response = await transactionApi.getAllTransactions(undefined, undefined, undefined, queryParams.toString())
       if (response.success) {
-        const { data, total, totalPages } = response.data
+        const { data: responseData, total, totalPages } = response.data
+        
+        // The actual array is nested inside data.data
+        const data = responseData.data || responseData
         
         // Transform backend data to admin format
+        if (!Array.isArray(data)) {
+          console.error('Data is not an array:', data)
+          setTransactions([])
+          setPagination({ page: 1, limit: 20, total: 0, totalPages: 0 })
+          return
+        }
+        
         const adminTransactions: AdminCoinTransaction[] = data.map((tx: any) => ({
           id: tx.id,
           userId: tx.userId,
@@ -143,10 +153,10 @@ export const useCoins = (skipInitialFetch = false) => {
         
         setTransactions(adminTransactions)
         setPagination({
-          page,
-          limit,
-          total,
-          totalPages
+          page: responseData.page || page,
+          limit: responseData.limit || limit,
+          total: responseData.total || total,
+          totalPages: responseData.totalPages || totalPages
         })
       }
     } catch (err) {

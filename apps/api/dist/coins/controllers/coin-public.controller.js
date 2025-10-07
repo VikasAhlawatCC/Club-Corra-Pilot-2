@@ -16,6 +16,7 @@ exports.CoinPublicController = void 0;
 const common_1 = require("@nestjs/common");
 const files_service_1 = require("../../files/files.service");
 const coins_service_1 = require("../coins.service");
+const brands_service_1 = require("../../brands/brands.service");
 const class_validator_1 = require("class-validator");
 const file_entity_1 = require("../../files/file.entity");
 class GenerateUploadUrlDto {
@@ -66,9 +67,10 @@ __decorate([
     __metadata("design:type", String)
 ], CreatePublicRewardRequestDto.prototype, "upiId", void 0);
 let CoinPublicController = class CoinPublicController {
-    constructor(filesService, coinsService) {
+    constructor(filesService, coinsService, brandsService) {
         this.filesService = filesService;
         this.coinsService = coinsService;
+        this.brandsService = brandsService;
     }
     async generateUploadUrl(body) {
         try {
@@ -89,16 +91,28 @@ let CoinPublicController = class CoinPublicController {
     }
     async createPublicRewardRequest(body) {
         try {
-            // For now, return a simple success response to test the endpoint
-            // This will help us isolate whether the issue is with the endpoint or database operations
             console.log('Received reward request:', body);
+            // Create a temporary user ID for unauthenticated users
+            const tempUserId = 'temp_' + Date.now();
+            // Create the reward request using the coins service
+            const result = await this.coinsService.createRewardRequest(tempUserId, {
+                brandId: body.brandId,
+                billAmount: body.billAmount,
+                billDate: body.billDate,
+                receiptUrl: body.receiptUrl,
+                coinsToRedeem: body.coinsToRedeem || 0,
+                upiId: body.upiId,
+            });
             return {
                 success: true,
                 message: 'Reward request submitted successfully. Please log in to complete the process.',
                 data: {
-                    tempTransactionId: 'temp_' + Date.now(),
+                    transactionId: result.transaction.id,
+                    tempTransactionId: tempUserId,
                     requiresLogin: true,
                     redirectUrl: '/login',
+                    coinsEarned: result.transaction.coinsEarned,
+                    coinsRedeemed: result.transaction.coinsRedeemed,
                 }
             };
         }
@@ -136,11 +150,27 @@ let CoinPublicController = class CoinPublicController {
     }
     async getActiveBrands() {
         try {
-            // This would typically come from a brands service
-            // For now, return a placeholder response with proper UUIDs
+            // Get active brands from database
+            const brands = await this.brandsService.findActiveBrands();
             return {
                 success: true,
                 message: 'Active brands retrieved successfully',
+                data: brands.map(brand => ({
+                    id: brand.id,
+                    name: brand.name,
+                    logoUrl: brand.logoUrl,
+                    earningPercentage: brand.earningPercentage,
+                    redemptionPercentage: brand.redemptionPercentage,
+                    isActive: brand.isActive,
+                }))
+            };
+        }
+        catch (error) {
+            console.error('Error fetching brands:', error);
+            // Fallback to hardcoded data if database fails
+            return {
+                success: true,
+                message: 'Active brands retrieved successfully (fallback)',
                 data: [
                     {
                         id: '550e8400-e29b-41d4-a716-446655440001',
@@ -161,9 +191,6 @@ let CoinPublicController = class CoinPublicController {
                 ]
             };
         }
-        catch (error) {
-            throw error;
-        }
     }
 };
 exports.CoinPublicController = CoinPublicController;
@@ -178,7 +205,7 @@ __decorate([
     (0, common_1.Post)('reward-request'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [CreatePublicRewardRequestDto]),
     __metadata("design:returntype", Promise)
 ], CoinPublicController.prototype, "createPublicRewardRequest", null);
 __decorate([
@@ -204,5 +231,6 @@ __decorate([
 exports.CoinPublicController = CoinPublicController = __decorate([
     (0, common_1.Controller)('public/transactions'),
     __metadata("design:paramtypes", [files_service_1.FilesService,
-        coins_service_1.CoinsService])
+        coins_service_1.CoinsService,
+        brands_service_1.BrandsService])
 ], CoinPublicController);

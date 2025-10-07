@@ -22,12 +22,16 @@ const transaction_approval_service_1 = require("./services/transaction-approval.
 const balance_update_service_1 = require("./services/balance-update.service");
 const files_service_1 = require("../files/files.service");
 const file_entity_1 = require("../files/file.entity");
+const brands_module_1 = require("../brands/brands.module");
 let CoinsModule = class CoinsModule {
 };
 exports.CoinsModule = CoinsModule;
 exports.CoinsModule = CoinsModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([coin_balance_entity_1.CoinBalance, coin_transaction_entity_1.CoinTransaction, brand_entity_1.Brand, user_entity_1.User, file_entity_1.File])],
+        imports: [
+            typeorm_1.TypeOrmModule.forFeature([coin_balance_entity_1.CoinBalance, coin_transaction_entity_1.CoinTransaction, brand_entity_1.Brand, user_entity_1.User, file_entity_1.File]),
+            brands_module_1.BrandsModule,
+        ],
         controllers: [coin_admin_controller_1.CoinAdminController, transaction_controller_1.TransactionController, coin_public_controller_1.CoinPublicController],
         providers: [
             coins_service_1.CoinsService,

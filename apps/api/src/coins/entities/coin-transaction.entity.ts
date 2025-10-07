@@ -24,44 +24,45 @@ export class CoinTransaction extends BaseEntity {
   status!: CoinTransactionStatus
 
   // New fields for unified reward requests - all as integers for whole numbers only
-  @Column({ type: 'int', nullable: true })
+  @Column({ type: 'int', nullable: true, name: 'bill_amount' })
   billAmount?: number
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ type: 'int', nullable: true, name: 'coins_earned' })
   coinsEarned?: number
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ type: 'int', nullable: true, name: 'coins_redeemed' })
   coinsRedeemed?: number
 
   // Balance tracking fields for reversion on rejection
-  @Column({ type: 'int', nullable: true })
-  previousBalance?: number
+  // TODO: Add these columns to database via migration
+  // @Column({ type: 'int', nullable: true, name: 'previous_balance' })
+  // previousBalance?: number
 
-  @Column({ type: 'int', nullable: true })
-  balanceAfterEarn?: number
+  // @Column({ type: 'int', nullable: true, name: 'balance_after_earn' })
+  // balanceAfterEarn?: number
 
-  @Column({ type: 'int', nullable: true })
-  balanceAfterRedeem?: number
+  // @Column({ type: 'int', nullable: true, name: 'balance_after_redeem' })
+  // balanceAfterRedeem?: number
 
-  @Column({ type: 'varchar', length: 500, nullable: true })
+  @Column({ type: 'varchar', length: 500, nullable: true, name: 'receipt_url' })
   receiptUrl?: string
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'text', nullable: true, name: 'admin_notes' })
   adminNotes?: string
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamp', nullable: true, name: 'processed_at' })
   processedAt?: Date
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 100, nullable: true, name: 'transaction_id' })
   transactionId?: string
 
-  @Column({ type: 'date', nullable: true })
+  @Column({ type: 'date', nullable: true, name: 'bill_date' })
   billDate?: Date
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamp', nullable: true, name: 'payment_processed_at' })
   paymentProcessedAt?: Date
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamp', nullable: true, name: 'status_updated_at' })
   statusUpdatedAt?: Date
 
   @BeforeInsert()

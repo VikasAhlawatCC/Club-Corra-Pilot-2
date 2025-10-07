@@ -38,14 +38,21 @@ const handleGetEarlyAccess = async () => {
 	} catch (error) {
 		console.error("Error adding to waitlist:", error);
 		const errorMessage = error instanceof Error ? error.message : "Unknown error";
-		toast.error(`Failed to add to waitlist: ${errorMessage}`);
+		
+		// Handle specific error cases with user-friendly messages
+		if (errorMessage.includes("Email already exists")) {
+			toast.success("You're already on our early access list! 🎉 We'll notify you when we launch!");
+			setEmail(""); // Clear the email field
+		} else {
+			toast.error(`Failed to add to waitlist: ${errorMessage}`);
+		}
 	}
 };
 
 
 
   const scrollToActionSection = () => {
-    document.querySelector('#action-section')?.scrollIntoView({ 
+    document.querySelector('#about')?.scrollIntoView({ 
       behavior: 'smooth' 
     });
   };
