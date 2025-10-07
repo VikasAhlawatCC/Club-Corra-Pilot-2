@@ -145,3 +145,4 @@ export const createErrorFallback = (error: AppError | Error, retry?: () => void)
     error: error.message,
   }
 }
+

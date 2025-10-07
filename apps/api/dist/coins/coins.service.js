@@ -75,7 +75,37 @@ let CoinsService = class CoinsService {
             await this.transactionValidationService.validateRewardRequest(userId, createRewardRequestDto);
             user = await this.userRepository.findOne({ where: { id: userId } });
         }
-        const brand = await this.brandRepository.findOne({ where: { id: brandId } });
+        let brand = await this.brandRepository.findOne({ where: { id: brandId } });
+        // For temporary users, create a mock brand if it doesn't exist
+        if (!brand && userId.startsWith('temp_')) {
+            const mockBrands = {
+                '550e8400-e29b-41d4-a716-446655440001': {
+                    id: '550e8400-e29b-41d4-a716-446655440001',
+                    name: 'Adidas',
+                    earningPercentage: 5,
+                    redemptionPercentage: 2,
+                    isActive: true
+                },
+                '550e8400-e29b-41d4-a716-446655440002': {
+                    id: '550e8400-e29b-41d4-a716-446655440002',
+                    name: 'Nike',
+                    earningPercentage: 4,
+                    redemptionPercentage: 2,
+                    isActive: true
+                }
+            };
+            const mockBrand = mockBrands[brandId];
+            if (mockBrand) {
+                // Create a mock brand object that matches the Brand entity structure
+                brand = {
+                    id: mockBrand.id,
+                    name: mockBrand.name,
+                    earningPercentage: mockBrand.earningPercentage,
+                    redemptionPercentage: mockBrand.redemptionPercentage,
+                    isActive: mockBrand.isActive,
+                };
+            }
+        }
         // Calculate coins earned based on brand's earning percentage (whole numbers only)
         const netBillAmount = billAmount - coinsToRedeem;
         const coinsEarnedRaw = (netBillAmount * (brand?.earningPercentage || 0)) / 100;

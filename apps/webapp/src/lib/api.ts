@@ -216,10 +216,20 @@ export async function createRewardRequest(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}/public/transactions`, {
+  // Transform the data to match the API expectations
+  const requestData = {
+    brandId: data.brandId,
+    billAmount: data.billAmount,
+    billDate: new Date().toISOString(), // Use current date
+    receiptUrl: data.receiptUrl,
+    coinsToRedeem: data.coinsRedeemed, // Map coinsRedeemed to coinsToRedeem
+    upiId: data.upiId,
+  };
+
+  const response = await fetch(`${API_BASE_URL}/public/transactions/reward-request`, {
     method: 'POST',
     headers,
-    body: JSON.stringify(data),
+    body: JSON.stringify(requestData),
   });
 
   if (!response.ok) {
