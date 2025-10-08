@@ -176,7 +176,12 @@ npm install --production --omit=dev
 
 print_status "Creating environment file..."
 if [ ! -f "$REMOTE_DIR/.env" ]; then
-    cat > "$REMOTE_DIR/.env" << 'EOF'
+    # Copy production environment from deployment directory
+    if [ -f "$(dirname "$0")/production.env" ]; then
+        cp "$(dirname "$0")/production.env" "$REMOTE_DIR/.env"
+        print_status "✅ Production environment file created with your actual values"
+    else
+        cat > "$REMOTE_DIR/.env" << 'EOF'
 NODE_ENV=production
 PORT=8080
 HOST=127.0.0.1
@@ -184,7 +189,8 @@ DATABASE_URL=postgresql://username:password@hostname:5432/database_name
 JWT_SECRET=your-super-secure-jwt-secret-key-here
 CORS_ORIGIN=https://admin.clubcorra.com,https://clubcorra.com,https://*.clubcorra.com,https://*.vercel.app
 EOF
-    print_status "⚠️  Environment file created - please update with your actual values"
+        print_status "⚠️  Environment file created - please update with your actual values"
+    fi
 fi
 
 print_status "Creating systemd service..."
