@@ -8,7 +8,7 @@ set -e
 # Configuration
 EC2_HOST="16.170.179.71"
 EC2_USER="ec2-user"
-SSH_KEY="$HOME/.ssh/club-corra-api-key.pem"
+SSH_KEY="../club-corra-api-key.pem"
 REMOTE_DIR="/home/ec2-user/club-corra-api"
 
 # Colors
@@ -49,7 +49,7 @@ mkdir -p "$TEMP_DIR/api"
 # Copy only necessary files
 cp -r apps/api/dist "$TEMP_DIR/api/"
 cp apps/api/package.json "$TEMP_DIR/api/"
-cp -r apps/api/node_modules "$TEMP_DIR/api/" 2>/dev/null || echo "No node_modules to copy"
+# Don't copy node_modules - we'll install them on the server for correct architecture
 
 # Copy deployment scripts
 cp scripts/deployment/production.env "$TEMP_DIR/"
@@ -75,6 +75,11 @@ cd /home/ec2-user/club-corra-api
 if [ -f production.env ]; then
     cp production.env api/.env.production
 fi
+
+# Install production dependencies on the server
+echo "Installing production dependencies..."
+cd api
+npm install --production --legacy-peer-deps
 
 # Create systemd service
 sudo tee /etc/systemd/system/club-corra-api.service > /dev/null << 'EOF'
