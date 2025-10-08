@@ -13,7 +13,8 @@ export class CreatePendingTransactionDto {
   @Max(100000)
   billAmount!: number
 
-  @IsUrl()
+  @IsString()
+  @MaxLength(500)
   receiptUrl!: string
 
   @IsOptional()
