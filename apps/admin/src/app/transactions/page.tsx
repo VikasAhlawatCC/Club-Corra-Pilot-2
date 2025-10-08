@@ -316,6 +316,7 @@ export default function TransactionsPage() {
   const [selectedTransaction, setSelectedTransaction] = useState<AdminCoinTransaction | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [showVerificationModal, setShowVerificationModal] = useState(false)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [isSelectingTransaction, setIsSelectingTransaction] = useState(false)
   const [showShortcutsModal, setShowShortcutsModal] = useState(false)
 
@@ -359,7 +360,11 @@ export default function TransactionsPage() {
   }, [])
 
   const handlePaymentModalClose = useCallback(() => {
-    // Payment modal is controlled by the TransactionList component
+    setShowPaymentModal(false)
+  }, [])
+
+  const handleOpenPaymentModal = useCallback(() => {
+    setShowPaymentModal(true)
   }, [])
 
   // Handle search submit
@@ -561,6 +566,8 @@ export default function TransactionsPage() {
         onDetailModalClose={handleDetailModalClose}
         onVerificationModalClose={handleVerificationModalClose}
         onPaymentModalClose={handlePaymentModalClose}
+        onOpenPaymentModal={handleOpenPaymentModal}
+        showPaymentModal={showPaymentModal}
         onApproveEarn={handleApproveTransaction}
         onRejectEarn={handleRejectTransaction}
         onApproveRedeem={handleApproveTransaction}

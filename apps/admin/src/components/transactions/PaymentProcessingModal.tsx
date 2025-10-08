@@ -110,6 +110,14 @@ export function PaymentProcessingModal({
                 {transaction.coinsRedeemed || 0} coins
               </span>
             </div>
+            {transaction.userUpiId && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">User UPI ID:</span>
+                <span className="font-mono text-sm bg-blue-50 px-2 py-1 rounded border">
+                  {transaction.userUpiId}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

@@ -312,6 +312,25 @@ export async function createRewardRequest(
   return response.json();
 }
 
+// Update UPI ID API
+export async function updateUpiId(upiId: string, token: string): Promise<ApiResponse<any>> {
+  const response = await fetch(`${API_BASE_URL}/auth/user/upi-id`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ upiId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to update UPI ID');
+  }
+
+  return response.json();
+}
+
 // Pending Transaction API
 export interface PendingTransaction {
   id: string;
