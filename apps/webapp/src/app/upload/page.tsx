@@ -134,8 +134,29 @@ function UploadContent() {
       // Upload file to S3 using presigned URL (no auth required for public endpoint)
       setUploading(true);
       try {
+        console.log("Getting presigned upload URL for:", file.name, file.type);
         const response = await getPresignedUploadUrl(file.name, file.type);
+        console.log("Presigned URL response:", response);
+        console.log("Response data:", response.data);
+        console.log("Upload URL:", response.data?.uploadUrl);
+        console.log("File URL:", response.data?.fileUrl);
+        
         if (response.success && response.data) {
+          console.log("Uploading to S3 URL:", response.data.uploadUrl);
+          console.log("File key:", response.data.fileKey);
+          console.log("Public URL:", response.data.fileUrl);
+          
+          // Check if the upload URL exists and looks correct
+          if (!response.data.uploadUrl) {
+            console.error("Upload URL is undefined:", response.data);
+            throw new Error("Upload URL is undefined in response");
+          }
+          
+          if (!response.data.uploadUrl.includes('amazonaws.com') && !response.data.uploadUrl.includes('s3.')) {
+            console.error("Invalid S3 URL format:", response.data.uploadUrl);
+            throw new Error("Invalid S3 upload URL format");
+          }
+          
           // Upload file to S3
           const uploadResponse = await fetch(response.data.uploadUrl, {
             method: 'PUT',
@@ -145,12 +166,21 @@ function UploadContent() {
             },
           });
 
+          console.log("S3 upload response status:", uploadResponse.status);
+          console.log("S3 upload response headers:", uploadResponse.headers);
+
           if (uploadResponse.ok) {
             setReceiptUrl(response.data.fileUrl);
             toast.success("Receipt uploaded successfully!");
+            console.log("File uploaded successfully, receipt URL:", response.data.fileUrl);
           } else {
-            throw new Error("Failed to upload file");
+            const errorText = await uploadResponse.text();
+            console.error("S3 upload failed:", uploadResponse.status, errorText);
+            throw new Error(`Failed to upload file to S3: ${uploadResponse.status} ${errorText}`);
           }
+        } else {
+          console.error("Invalid response from presigned URL API:", response);
+          throw new Error("Invalid response from upload URL API");
         }
       } catch (error) {
         console.error("Error uploading file:", error);
@@ -512,11 +542,14 @@ function UploadContent() {
                 setSubmitting(true);
                 try {
                   // Create pending transaction in backend
+                  // For now, use a placeholder URL since we're not uploading to S3 yet
+                  const placeholderUrl = `local://${fileName}_${Date.now()}`;
+                  
                   const response = await createPendingTransaction({
                     sessionId: sessionId,
                     brandId: selectedBrand!.id,
                     billAmount: parseInt(amount) || 0,
-                    receiptUrl: receiptUrl,
+                    receiptUrl: placeholderUrl,
                     fileName: fileName,
                   });
 

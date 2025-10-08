@@ -30,7 +30,8 @@ __decorate([
     __metadata("design:type", Number)
 ], CreatePendingTransactionDto.prototype, "billAmount", void 0);
 __decorate([
-    (0, class_validator_1.IsUrl)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(500),
     __metadata("design:type", String)
 ], CreatePendingTransactionDto.prototype, "receiptUrl", void 0);
 __decorate([

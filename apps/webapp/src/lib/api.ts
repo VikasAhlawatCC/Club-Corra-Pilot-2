@@ -256,10 +256,15 @@ export async function getPresignedUploadUrl(fileName: string, mimeType: string, 
   }
 
   const result = await response.json();
+  console.log("Raw API response:", result);
+  console.log("Result data:", result.data);
+  console.log("Upload URL in result:", result.data?.uploadUrl);
+  console.log("Public URL in result:", result.data?.publicUrl);
   
   // Transform the response to match the expected format
-  // The API returns nested data structure: result.data.data
-  return {
+  // The response interceptor wraps the response, so the actual structure is:
+  // result.data.data.uploadUrl, result.data.data.publicUrl
+  const transformedResponse = {
     success: result.success,
     message: result.message,
     data: {
@@ -267,6 +272,9 @@ export async function getPresignedUploadUrl(fileName: string, mimeType: string, 
       fileUrl: result.data.data.publicUrl, // Map publicUrl to fileUrl
     }
   };
+  
+  console.log("Transformed response:", transformedResponse);
+  return transformedResponse;
 }
 
 // Reward request API
