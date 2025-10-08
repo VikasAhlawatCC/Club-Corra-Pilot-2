@@ -26,6 +26,10 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
 print_step() {
     echo -e "${BLUE}[STEP]${NC} $1"
 }
