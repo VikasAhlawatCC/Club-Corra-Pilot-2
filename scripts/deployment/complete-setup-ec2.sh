@@ -1,8 +1,7 @@
 #!/bin/bash
 
-# Direct EC2 Setup Script for Club Corra API
-# Run this script directly on your EC2 instance
-# Usage: ./setup-ec2-direct.sh
+# Complete EC2 Setup Script - Run after HTTPS setup
+# This script completes the API setup without package conflicts
 
 set -e
 
@@ -29,101 +28,51 @@ print_step() {
     echo -e "${BLUE}[STEP]${NC} $1"
 }
 
-# Check if running as ec2-user
-if [[ "$USER" != "ec2-user" ]]; then
-    print_warning "This script is designed to run as ec2-user. Current user: $USER"
-    read -p "Continue anyway? (y/n): " CONTINUE
-    if [[ ! $CONTINUE =~ ^[Yy]$ ]]; then
-        exit 1
-    fi
-fi
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
 
-print_step "Setting up Club Corra API on EC2..."
+print_step "Completing Club Corra API setup on EC2..."
 
-# Update system
-print_status "Updating system packages..."
-sudo dnf update -y
-
-# Install Node.js 20
-print_status "Installing Node.js 20..."
-if ! command -v node >/dev/null 2>&1; then
-    curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
-    sudo dnf install -y nodejs
-    print_success "Node.js installed: $(node --version)"
+# Find project directory
+PROJECT_DIR=""
+if [ -d "/home/ec2-user/club-corra-api/Club-Corra-Pilot-2" ]; then
+    PROJECT_DIR="/home/ec2-user/club-corra-api/Club-Corra-Pilot-2"
+elif [ -d "/home/ec2-user/Club-Corra-Pilot-2" ]; then
+    PROJECT_DIR="/home/ec2-user/Club-Corra-Pilot-2"
 else
-    print_status "Node.js already installed: $(node --version)"
+    print_error "Could not find project directory"
+    print_status "Please ensure the project is cloned in one of these locations:"
+    print_status "  - /home/ec2-user/club-corra-api/Club-Corra-Pilot-2"
+    print_status "  - /home/ec2-user/Club-Corra-Pilot-2"
+    exit 1
 fi
 
-# Install Yarn
-print_status "Installing Yarn..."
-if ! command -v yarn >/dev/null 2>&1; then
-    sudo npm install -g yarn
-    print_success "Yarn installed: $(yarn --version)"
-else
-    print_status "Yarn already installed: $(yarn --version)"
-fi
+print_status "Found project at: $PROJECT_DIR"
 
-# Install additional tools
-print_status "Installing additional tools..."
-sudo dnf install -y git wget unzip
+# Navigate to project directory
+cd "$PROJECT_DIR"
 
-# Install nginx
-print_status "Installing nginx..."
-sudo dnf install -y nginx
-
-# Install certbot for SSL
-print_status "Installing certbot..."
-sudo dnf install -y certbot
-
-# Start and enable nginx
-print_status "Starting nginx..."
-sudo systemctl start nginx
-sudo systemctl enable nginx
-
-# Install PM2 for process management
-print_status "Installing PM2..."
-sudo npm install -g pm2
-
-print_success "✅ System setup completed!"
-
-print_step "Setting up project directory..."
-
-# Create project directory
-mkdir -p ~/club-corra-api
-cd ~/club-corra-api
-
-# Clone repository if not exists
-if [ ! -d "Club-Corra-Pilot-2" ]; then
-    print_status "Cloning repository..."
-    git clone https://github.com/VikasAhlawatCC/Club-Corra-Pilot-2.git
-    print_success "Repository cloned successfully"
-else
-    print_status "Repository already exists, updating..."
-    cd Club-Corra-Pilot-2
-    git pull origin main
-    cd ..
-fi
-
-cd Club-Corra-Pilot-2
-
-print_status "Installing dependencies..."
+# Install dependencies
+print_step "Installing dependencies..."
 yarn install
 
-print_status "Building API..."
+# Navigate to API directory
 cd apps/api
+
+# Build the application
+print_step "Building application..."
 yarn build
 
-print_success "✅ Project setup completed!"
-
+# Create production environment file
 print_step "Creating production environment..."
 
-# Create production environment file
 cat > .env.production << 'EOF'
 # Club Corra API Environment Configuration
 NODE_ENV=production
 PORT=8080
 HOST=127.0.0.1
-HTTPS_MODE=false
+HTTPS_MODE=true
 
 SSL_DOMAIN="16.170.179.71.nip.io"
 # SSL Configuration
@@ -153,7 +102,6 @@ TWILIO_ACCOUNT_SID=AC4029ed0224b16807b34ed4aeba690bc6
 TWILIO_AUTH_TOKEN=49635e9c36d7b1d4c9a992bf9576c1d4
 TWILIO_PHONE_NUMBER=+19284148255
 
-
 # SMTP (for emails)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
@@ -172,7 +120,6 @@ S3_REGION=eu-north-1
 S3_ACCESS_KEY_ID=AKIAR2BL2TDHJMDEOEGO
 S3_SECRET_ACCESS_KEY=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
 
-
 # CDN Configuration
 CLOUDFRONT_URL=https://d3apij49dzeclm.cloudfront.net
 
@@ -186,9 +133,9 @@ EOF
 
 print_success "✅ Production environment created!"
 
-print_step "Setting up systemd service..."
-
 # Create systemd service
+print_step "Creating systemd service..."
+
 sudo tee /etc/systemd/system/club-corra-api.service > /dev/null << EOF
 [Unit]
 Description=Club Corra API Service
@@ -227,50 +174,8 @@ sudo systemctl enable club-corra-api
 
 print_success "✅ Systemd service created!"
 
-print_step "Setting up nginx reverse proxy..."
-
-# Create nginx configuration
-sudo tee /etc/nginx/conf.d/club-corra-api.conf > /dev/null << 'EOF'
-server {
-    listen 80;
-    server_name 16.170.179.71;
-
-    # API proxy
-    location /api/ {
-        proxy_pass http://127.0.0.1:8080;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
-
-    # Health check
-    location /health {
-        proxy_pass http://127.0.0.1:8080/api/v1/health;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-EOF
-
-# Test nginx configuration
-sudo nginx -t
-
-# Restart nginx
-sudo systemctl restart nginx
-
-print_success "✅ Nginx configured!"
-
-print_step "Starting services..."
-
 # Start the API service
+print_step "Starting API service..."
 sudo systemctl start club-corra-api
 
 # Wait for service to start
@@ -285,9 +190,8 @@ else
     exit 1
 fi
 
-print_step "Verifying deployment..."
-
 # Test API endpoint
+print_step "Testing API endpoint..."
 if curl -f -s "http://localhost:8080/api/v1/health" > /dev/null; then
     print_success "✅ API health check passed!"
 else
@@ -295,17 +199,21 @@ else
 fi
 
 # Test through nginx
-if curl -f -s "http://localhost/health" > /dev/null; then
-    print_success "✅ Nginx proxy working!"
-else
-    print_warning "⚠️ Nginx proxy test failed"
+if sudo systemctl is-active --quiet nginx; then
+    print_step "Testing nginx proxy..."
+    if curl -f -s "http://localhost/health" > /dev/null; then
+        print_success "✅ Nginx proxy working!"
+    else
+        print_warning "⚠️ Nginx proxy test failed"
+    fi
 fi
 
-print_success "🎉 EC2 setup completed successfully!"
+print_success "🎉 Setup completed successfully!"
 echo ""
 echo "📋 Your API is now running at:"
 echo "   - Direct: http://16.170.179.71:8080/api/v1"
 echo "   - Through nginx: http://16.170.179.71/api/v1"
+echo "   - HTTPS: https://16.170.179.71.nip.io/api/v1"
 echo "   - Health check: http://16.170.179.71/health"
 echo ""
 echo "🔧 Useful commands:"
@@ -314,5 +222,5 @@ echo "   - View logs: sudo journalctl -u club-corra-api -f"
 echo "   - Restart service: sudo systemctl restart club-corra-api"
 echo "   - Check nginx: sudo systemctl status nginx"
 echo ""
-echo "🌐 Next step: Run HTTPS setup script for SSL certificates"
-echo "   ./setup-https-ec2.sh"
+echo "📊 Service logs:"
+sudo systemctl status club-corra-api --no-pager -l
