@@ -22,3 +22,4 @@ export class AddTotalEarnedRedeemed1759793000000 implements MigrationInterface {
   }
 }
 
+
