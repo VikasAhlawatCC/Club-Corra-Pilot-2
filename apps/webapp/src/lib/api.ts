@@ -235,7 +235,7 @@ export async function getUserTransactions(token: string): Promise<ApiResponse<Tr
 }
 
 // File upload API
-export async function getPresignedUploadUrl(fileName: string, mimeType: string, token?: string): Promise<ApiResponse<{ uploadUrl: string; fileUrl: string }>> {
+export async function getPresignedUploadUrl(fileName: string, mimeType: string, token?: string): Promise<ApiResponse<{ uploadUrl: string; fileUrl: string; fileKey: string }>> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -256,25 +256,19 @@ export async function getPresignedUploadUrl(fileName: string, mimeType: string, 
   }
 
   const result = await response.json();
-  console.log("Raw API response:", result);
-  console.log("Result data:", result.data);
-  console.log("Upload URL in result:", result.data?.uploadUrl);
-  console.log("Public URL in result:", result.data?.publicUrl);
   
   // Transform the response to match the expected format
   // The response interceptor wraps the response, so the actual structure is:
   // result.data.data.uploadUrl, result.data.data.publicUrl
-  const transformedResponse = {
+  return {
     success: result.success,
     message: result.message,
     data: {
       uploadUrl: result.data.data.uploadUrl,
       fileUrl: result.data.data.publicUrl, // Map publicUrl to fileUrl
+      fileKey: result.data.data.fileKey,
     }
   };
-  
-  console.log("Transformed response:", transformedResponse);
-  return transformedResponse;
 }
 
 // Reward request API
