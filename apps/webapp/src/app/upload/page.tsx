@@ -137,9 +137,26 @@ function UploadContent() {
         console.log("Getting presigned upload URL for:", file.name, file.type);
         const response = await getPresignedUploadUrl(file.name, file.type);
         console.log("Presigned URL response:", response);
+        console.log("Response data:", response.data);
+        console.log("Upload URL:", response.data?.uploadUrl);
+        console.log("File URL:", response.data?.fileUrl);
         
         if (response.success && response.data) {
           console.log("Uploading to S3 URL:", response.data.uploadUrl);
+          console.log("File key:", response.data.fileKey);
+          console.log("Public URL:", response.data.fileUrl);
+          
+          // Check if the upload URL exists and looks correct
+          if (!response.data.uploadUrl) {
+            console.error("Upload URL is undefined:", response.data);
+            throw new Error("Upload URL is undefined in response");
+          }
+          
+          if (!response.data.uploadUrl.includes('amazonaws.com') && !response.data.uploadUrl.includes('s3.')) {
+            console.error("Invalid S3 URL format:", response.data.uploadUrl);
+            throw new Error("Invalid S3 upload URL format");
+          }
+          
           // Upload file to S3
           const uploadResponse = await fetch(response.data.uploadUrl, {
             method: 'PUT',

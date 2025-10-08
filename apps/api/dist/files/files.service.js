@@ -34,11 +34,17 @@ let FilesService = class FilesService {
     }
     async generatePresignedUploadUrl(fileName, mimeType, fileType = file_entity_1.FileType.RECEIPT, userId) {
         try {
+            console.log('Generating presigned URL with config:', {
+                bucketName: this.bucketName,
+                region: process.env.S3_REGION || 'eu-north-1',
+                hasCredentials: !!(process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY)
+            });
             // Validate file type and size
             this.validateFileType(mimeType);
             // Generate unique file key
             const fileExtension = this.getFileExtension(fileName);
             const fileKey = `uploads/${fileType.toLowerCase()}/${(0, uuid_1.v4)()}${fileExtension}`;
+            console.log('Generated file key:', fileKey);
             // Create presigned URL for upload
             const command = new client_s3_1.PutObjectCommand({
                 Bucket: this.bucketName,
@@ -53,6 +59,10 @@ let FilesService = class FilesService {
             const uploadUrl = await (0, s3_request_presigner_1.getSignedUrl)(this.s3Client, command, { expiresIn: 3600 }); // 1 hour
             const region = process.env.S3_REGION || 'eu-north-1';
             const publicUrl = `https://${this.bucketName}.s3.${region}.amazonaws.com/${fileKey}`;
+            console.log('Generated URLs:', {
+                uploadUrl: uploadUrl.substring(0, 100) + '...',
+                publicUrl
+            });
             return {
                 uploadUrl,
                 fileKey,
@@ -60,6 +70,7 @@ let FilesService = class FilesService {
             };
         }
         catch (error) {
+            console.error('Error generating presigned URL:', error);
             throw new common_1.BadRequestException(`Failed to generate upload URL: ${error.message}`);
         }
     }

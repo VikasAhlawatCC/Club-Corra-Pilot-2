@@ -36,12 +36,20 @@ export class FilesService {
     publicUrl: string
   }> {
     try {
+      console.log('Generating presigned URL with config:', {
+        bucketName: this.bucketName,
+        region: process.env.S3_REGION || 'eu-north-1',
+        hasCredentials: !!(process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY)
+      });
+
       // Validate file type and size
       this.validateFileType(mimeType)
       
       // Generate unique file key
       const fileExtension = this.getFileExtension(fileName)
       const fileKey = `uploads/${fileType.toLowerCase()}/${uuidv4()}${fileExtension}`
+      
+      console.log('Generated file key:', fileKey);
       
       // Create presigned URL for upload
       const command = new PutObjectCommand({
@@ -59,12 +67,18 @@ export class FilesService {
       const region = process.env.S3_REGION || 'eu-north-1'
       const publicUrl = `https://${this.bucketName}.s3.${region}.amazonaws.com/${fileKey}`
 
+      console.log('Generated URLs:', {
+        uploadUrl: uploadUrl.substring(0, 100) + '...',
+        publicUrl
+      });
+
       return {
         uploadUrl,
         fileKey,
         publicUrl,
       }
     } catch (error) {
+      console.error('Error generating presigned URL:', error);
       throw new BadRequestException(`Failed to generate upload URL: ${(error as Error).message}`)
     }
   }
