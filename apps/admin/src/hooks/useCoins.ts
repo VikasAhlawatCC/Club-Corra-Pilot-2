@@ -159,6 +159,8 @@ export const useCoins = (skipInitialFetch = false) => {
           processedAt: tx.processedAt ? new Date(tx.processedAt) : undefined,
           paymentProcessedAt: tx.paymentProcessedAt ? new Date(tx.paymentProcessedAt) : undefined,
           statusUpdatedAt: tx.statusUpdatedAt ? new Date(tx.statusUpdatedAt) : tx.updatedAt ? new Date(tx.updatedAt) : undefined,
+          // User UPI ID for payment processing
+          userUpiId: tx.userUpiId || tx.user?.paymentDetails?.upiId,
           // Brand object for compatibility
           brand: tx.brand ? {
             id: tx.brand.id,

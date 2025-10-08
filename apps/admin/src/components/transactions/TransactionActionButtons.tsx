@@ -399,6 +399,19 @@ export function TransactionActionButtons({
               </p>
             </div>
 
+            {/* Transaction Summary with UPI ID */}
+            {transaction.userUpiId && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <h4 className="text-sm font-medium text-blue-900 mb-2">Payment Information</h4>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-blue-700">User UPI ID:</span>
+                  <span className="font-mono text-sm bg-white px-2 py-1 rounded border text-blue-900">
+                    {transaction.userUpiId}
+                  </span>
+                </div>
+              </div>
+            )}
+
             <form
               onSubmit={(e) => {
                 e.preventDefault()

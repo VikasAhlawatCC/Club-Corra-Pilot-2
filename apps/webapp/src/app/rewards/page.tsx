@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { getActiveBrands, getPresignedUploadUrl, createRewardRequest, Brand } from "@/lib/api";
+import { getActiveBrands, getPresignedUploadUrl, createRewardRequest, updateUpiId, Brand } from "@/lib/api";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,8 @@ export default function RewardsPage() {
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
   const [billAmount, setBillAmount] = useState<number>(0);
   const [coinsRedeemed, setCoinsRedeemed] = useState<number>(0);
-  const [upiId, setUpiId] = useState<string>(user?.upiId || "");
+  const [upiId, setUpiId] = useState<string>("");
+  const [originalUpiId, setOriginalUpiId] = useState<string>("");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptUrl, setReceiptUrl] = useState<string>("");
   const [uploading, setUploading] = useState(false);
@@ -46,6 +47,14 @@ export default function RewardsPage() {
       fetchBrands();
     }
   }, [token, isAuthenticated]);
+
+  // Auto-fill UPI ID when user data is available
+  useEffect(() => {
+    if (user?.upiId) {
+      setUpiId(user.upiId);
+      setOriginalUpiId(user.upiId);
+    }
+  }, [user?.upiId]);
 
   // Pagination helpers
   function prevPage() {
@@ -180,6 +189,17 @@ export default function RewardsPage() {
 
     setSubmitting(true);
     try {
+      // Update UPI ID if it has changed and user has a redemption amount
+      if (coinsRedeemed > 0 && upiId && upiId !== originalUpiId) {
+        try {
+          await updateUpiId(upiId, token);
+          toast.success("UPI ID updated successfully!");
+        } catch (error) {
+          console.error("Error updating UPI ID:", error);
+          // Continue with the request even if UPI ID update fails
+        }
+      }
+
       const response = await createRewardRequest({
         brandId: selectedBrand.id,
         billAmount,
@@ -224,7 +244,7 @@ export default function RewardsPage() {
 
   // Calculate maximum redeemable coins based on business rules
   const maxRedeemable = Math.min(
-    user?.totalCoins || 0, // User's current coin balance
+    parseInt(user?.totalCoins || '0'), // User's current coin balance
     selectedBrand ? Math.floor(billAmount * selectedBrand.redemptionPercentage / 100) : 0, // Brand's redemption percentage
     Math.floor(billAmount * 0.5) // Max 50% of bill amount
   );
@@ -597,7 +617,7 @@ export default function RewardsPage() {
                     <input
                       id="upi"
                       type="text"
-                      placeholder="Enter your UPI ID"
+                      placeholder={originalUpiId ? "Your saved UPI ID (you can edit it)" : "Enter your UPI ID"}
                       value={upiId}
                       onChange={(e) => setUpiId(e.target.value)}
                       className="w-full h-12 rounded-xl border border-black/15 px-4 outline-none focus:border-green-600 transition"

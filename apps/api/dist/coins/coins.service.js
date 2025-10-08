@@ -53,6 +53,7 @@ const coin_balance_entity_1 = require("./entities/coin-balance.entity");
 const coin_transaction_entity_1 = require("./entities/coin-transaction.entity");
 const brand_entity_1 = require("../brands/entities/brand.entity");
 const user_entity_1 = require("../users/entities/user.entity");
+const payment_details_entity_1 = require("../users/entities/payment-details.entity");
 const transaction_validation_service_1 = require("./services/transaction-validation.service");
 const transaction_approval_service_1 = require("./services/transaction-approval.service");
 const balance_update_service_1 = require("./services/balance-update.service");
@@ -67,7 +68,7 @@ let CoinsService = class CoinsService {
         this.balanceUpdateService = balanceUpdateService;
     }
     async createRewardRequest(userId, createRewardRequestDto) {
-        const { brandId, billAmount, billDate, receiptUrl, coinsToRedeem = 0 } = createRewardRequestDto;
+        const { brandId, billAmount, billDate, receiptUrl, coinsToRedeem = 0, upiId } = createRewardRequestDto;
         // For temporary users (unauthenticated), skip user validation
         let user = null;
         if (!userId.startsWith('temp_')) {
@@ -147,6 +148,29 @@ let CoinsService = class CoinsService {
             if (user) {
                 // Update balance with proper tracking of totalEarned and totalRedeemed
                 await this.balanceUpdateService.updateBalanceForRewardRequest(manager, userId, coinsEarned, coinsToRedeem);
+                // Save UPI ID if provided and user doesn't have one saved yet
+                if (upiId && coinsToRedeem > 0) {
+                    const userWithPaymentDetails = await manager.findOne(user_entity_1.User, {
+                        where: { id: userId },
+                        relations: ['paymentDetails']
+                    });
+                    if (userWithPaymentDetails) {
+                        if (!userWithPaymentDetails.paymentDetails) {
+                            // Create payment details if they don't exist
+                            const paymentDetails = manager.create(payment_details_entity_1.PaymentDetails, {
+                                userId: userId,
+                                upiId: upiId,
+                                user: { id: userId },
+                            });
+                            await manager.save(payment_details_entity_1.PaymentDetails, paymentDetails);
+                        }
+                        else if (!userWithPaymentDetails.paymentDetails.upiId) {
+                            // Update UPI ID if user doesn't have one saved
+                            userWithPaymentDetails.paymentDetails.upiId = upiId;
+                            await manager.save(payment_details_entity_1.PaymentDetails, userWithPaymentDetails.paymentDetails);
+                        }
+                    }
+                }
             }
             return savedTransaction;
         });

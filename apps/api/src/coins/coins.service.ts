@@ -5,6 +5,7 @@ import { CoinBalance } from './entities/coin-balance.entity';
 import { CoinTransaction } from './entities/coin-transaction.entity';
 import { Brand } from '../brands/entities/brand.entity';
 import { User } from '../users/entities/user.entity';
+import { PaymentDetails } from '../users/entities/payment-details.entity';
 import { TransactionValidationService } from './services/transaction-validation.service';
 import { TransactionApprovalService } from './services/transaction-approval.service';
 import { BalanceUpdateService } from './services/balance-update.service';
@@ -28,7 +29,7 @@ export class CoinsService {
   ) {}
 
   async createRewardRequest(userId: string, createRewardRequestDto: CreateRewardRequestDto): Promise<RewardRequestResponseDto> {
-    const { brandId, billAmount, billDate, receiptUrl, coinsToRedeem = 0 } = createRewardRequestDto;
+    const { brandId, billAmount, billDate, receiptUrl, coinsToRedeem = 0, upiId } = createRewardRequestDto;
 
     // For temporary users (unauthenticated), skip user validation
     let user = null;
@@ -117,6 +118,30 @@ export class CoinsService {
       if (user) {
         // Update balance with proper tracking of totalEarned and totalRedeemed
         await this.balanceUpdateService.updateBalanceForRewardRequest(manager, userId, coinsEarned, coinsToRedeem);
+        
+        // Save UPI ID if provided and user doesn't have one saved yet
+        if (upiId && coinsToRedeem > 0) {
+          const userWithPaymentDetails = await manager.findOne(User, {
+            where: { id: userId },
+            relations: ['paymentDetails']
+          });
+          
+          if (userWithPaymentDetails) {
+            if (!userWithPaymentDetails.paymentDetails) {
+              // Create payment details if they don't exist
+              const paymentDetails = manager.create(PaymentDetails, {
+                userId: userId,
+                upiId: upiId,
+                user: { id: userId } as User,
+              });
+              await manager.save(PaymentDetails, paymentDetails);
+            } else if (!userWithPaymentDetails.paymentDetails.upiId) {
+              // Update UPI ID if user doesn't have one saved
+              userWithPaymentDetails.paymentDetails.upiId = upiId;
+              await manager.save(PaymentDetails, userWithPaymentDetails.paymentDetails);
+            }
+          }
+        }
       }
 
       return savedTransaction;

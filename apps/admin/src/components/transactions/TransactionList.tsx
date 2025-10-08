@@ -15,10 +15,12 @@ interface TransactionListProps {
   selectedTransaction: AdminCoinTransaction | null
   showDetailModal: boolean
   showVerificationModal: boolean
+  showPaymentModal: boolean
   onTransactionSelect: (transaction: AdminCoinTransaction) => void
   onDetailModalClose: () => void
   onVerificationModalClose: () => void
   onPaymentModalClose: () => void
+  onOpenPaymentModal: () => void
   onApproveEarn: (transactionId: string, adminNotes?: string) => Promise<void>
   onRejectEarn: (transactionId: string, adminNotes: string) => Promise<void>
   onApproveRedeem: (transactionId: string, adminNotes?: string) => Promise<void>
@@ -43,10 +45,12 @@ export const TransactionList = memo(function TransactionList({
   selectedTransaction,
   showDetailModal,
   showVerificationModal,
+  showPaymentModal,
   onTransactionSelect,
   onDetailModalClose,
   onVerificationModalClose,
   onPaymentModalClose,
+  onOpenPaymentModal,
   onApproveEarn,
   onRejectEarn,
   onApproveRedeem,
@@ -124,7 +128,8 @@ export const TransactionList = memo(function TransactionList({
               onApproveAndPay={selectedTransaction.type === 'REDEEM' ? async (transactionId: string, verificationData: any) => {
                 // For redeem transactions, we can process payment after approval
                 await onApproveRedeem(transactionId, verificationData.adminNotes)
-                // TODO: Handle payment processing
+                // Open payment processing modal
+                onOpenPaymentModal()
               } : undefined}
             />
           </div>
@@ -146,7 +151,7 @@ export const TransactionList = memo(function TransactionList({
         {selectedTransaction && selectedTransaction.type === 'REDEEM' && (
           <PaymentProcessingModal
             transaction={selectedTransaction}
-            isOpen={false} // This will be controlled by the parent
+            isOpen={showPaymentModal}
             onClose={onPaymentModalClose}
             onProcessPayment={onProcessPayment}
           />

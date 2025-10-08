@@ -20,6 +20,7 @@ const admin_guard_1 = require("../common/guards/admin.guard");
 const user_guard_1 = require("../common/guards/user.guard");
 const class_validator_1 = require("class-validator");
 const user_login_dto_1 = require("./dto/user-login.dto");
+const users_service_1 = require("../users/users.service");
 class AdminLoginDto {
 }
 __decorate([
@@ -30,9 +31,17 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], AdminLoginDto.prototype, "password", void 0);
+class UpdateUpiIdDto {
+}
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateUpiIdDto.prototype, "upiId", void 0);
 let AuthController = class AuthController {
-    constructor(authService) {
+    constructor(authService, usersService) {
         this.authService = authService;
+        this.usersService = usersService;
     }
     // Admin endpoints
     async adminLogin(body) {
@@ -68,6 +77,19 @@ let AuthController = class AuthController {
     }
     async userVerify(req) {
         return this.authService.userVerify(req.user);
+    }
+    async updateUpiId(req, body) {
+        try {
+            const result = await this.usersService.updatePaymentDetails(req.user.id, { upiId: body.upiId });
+            return {
+                success: true,
+                message: 'UPI ID updated successfully',
+                data: result
+            };
+        }
+        catch (error) {
+            throw error;
+        }
     }
 };
 exports.AuthController = AuthController;
@@ -108,7 +130,17 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "userVerify", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, user_guard_1.UserGuard),
+    (0, common_1.Patch)('user/upi-id'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, UpdateUpiIdDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "updateUpiId", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
-    __metadata("design:paramtypes", [auth_service_1.AuthService])
+    __metadata("design:paramtypes", [auth_service_1.AuthService,
+        users_service_1.UsersService])
 ], AuthController);
