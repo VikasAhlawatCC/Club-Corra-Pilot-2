@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "installCommand": "yarn install --frozen-lockfile",
+  "installCommand": "yarn install",
   "buildCommand": "yarn build",
   "env": {
-    "NEXT_PUBLIC_API_BASE_URL": "@NEXT_PUBLIC_API_BASE_URL",
-    "NEXT_PUBLIC_APP_NAME": "@NEXT_PUBLIC_APP_NAME"
+    "NEXT_PUBLIC_API_BASE_URL": "https://16.170.179.71.nip.io/api/v1",
+    "NEXT_PUBLIC_APP_NAME": "Club Corra Admin"
   }
 }
 
