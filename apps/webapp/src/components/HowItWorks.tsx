@@ -1,11 +1,14 @@
 "use client";
 
+import * as React from "react";
 import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { EARNING_BRANDS as FALLBACK_BRANDS } from "@/data/brands";
 import type { EarningBrand } from "@/data/brands";
 import { motion } from "motion/react";
+import { ChevronDown, Upload as UploadIcon, ShieldCheck, Wallet, Clock, Coins } from "lucide-react";
+import type { ComponentType } from "react";
 import { getActiveBrands, Brand } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -52,6 +55,7 @@ export default function HowItWorks() {
             // Handle both percentage (15) and decimal (0.15) formats
             // Ensure rate is always between 0 and 1
             rate: Math.min(1, Math.max(0, brand.earningPercentage > 1 ? brand.earningPercentage / 100 : brand.earningPercentage)),
+            off: Math.round(brand.earningPercentage > 1 ? brand.earningPercentage : brand.earningPercentage * 100),
           }));
           
           setBrands(apiBrands);
@@ -89,120 +93,41 @@ export default function HowItWorks() {
     setPage(p => (p + 1) % totalPages);
   }
 
-  // Enhanced timeline steps with animated SVGs
-  const steps = [
+  // Timeline steps
+  type IconType = ComponentType<{ className?: string }>;
+  const steps: {
+    number: number;
+    title: string;
+    description: string;
+    highlight?: string;
+    icon: IconType;
+    iconColor: string;
+    isActive?: boolean;
+  }[] = [
     {
-      key: "upload",
-      label: "Upload Receipt",
-      desc: "Upload receipt of latest order to verify details.",
-      icon: (
-        <svg viewBox="0 0 24 24" className="h-5 w-5 group-hover:animate-upload">
-          <path
-            d="M12 3l5 5h-3v5h-4V8H7l5-5z"
-            fill="currentColor"
-            className="transition-all duration-800 ease-out group-hover:fill-green-600"
-          />
-          <path
-            d="M6 18h12v2H6z"
-            fill="currentColor"
-            className="transition-all duration-800 ease-out group-hover:fill-green-600"
-          />
-          {/* Animated upload arrow */}
-          <path
-            d="M12 3l5 5h-3v5h-4V8H7l5-5z"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            fill="none"
-            className="opacity-0 group-hover:opacity-100 transition-opacity duration-700 ease-out animate-upload-arrow"
-          />
-        </svg>
-      ),
+      number: 1,
+      title: "Upload Receipt",
+      description: "Snap & upload your latest order receipt — that's all it takes!",
+      icon: UploadIcon,
+      iconColor: "from-green-400 via-emerald-500 to-green-600",
+      isActive: true,
     },
     {
-      key: "verify",
-      label: "Verify",
-      desc: "Get coins in your Corra Wallet. Convert to cash for next transaction.",
-      icon: (
-        <svg viewBox="0 0 24 24" className="h-5 w-5 group-hover:animate-verify">
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            strokeWidth="2"
-            fill="none"
-            className="transition-all duration-800 ease-out group-hover:stroke-green-600"
-          />
-          <path
-            d="M9 12l2 2 4-4"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="transition-all duration-800 ease-out group-hover:stroke-green-600 animate-check-draw"
-          />
-          {/* Animated checkmark */}
-          <path
-            d="M9 12l2 2 4-4"
-            stroke="currentColor"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-            className="opacity-0 group-hover:opacity-100 transition-opacity duration-700 ease-out animate-check-pulse"
-          />
-        </svg>
-      ),
+      number: 2,
+      title: "Instant Corra Coins in your wallet",
+      description:
+        "We'll verify your purchase and credit coins instantly.",
+      icon: ShieldCheck,
+      iconColor: "from-blue-400 via-indigo-500 to-blue-600",
     },
     {
-      key: "earn",
-      label: "Earn Coins",
-      desc: "Upload proof of next transaction & get Corra coins to cash.",
-      note: "1 CorraCoin = ₹1",
-      icon: (
-        <svg viewBox="0 0 24 24" className="h-5 w-5 group-hover:animate-earn">
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            strokeWidth="2"
-            fill="none"
-            className="transition-all duration-800 ease-out group-hover:stroke-green-600"
-          />
-          <path
-            d="M12 6v12m6-6H6"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            className="transition-all duration-800 ease-out group-hover:stroke-green-600"
-          />
-          {/* Animated plus with glow effect */}
-          <path
-            d="M12 6v12m6-6H6"
-            stroke="currentColor"
-            strokeWidth="4"
-            strokeLinecap="round"
-            fill="none"
-            className="opacity-0 group-hover:opacity-100 transition-opacity duration-700 ease-out animate-plus-glow"
-          />
-          {/* Floating coins animation */}
-          <circle
-            cx="8"
-            cy="8"
-            r="1"
-            fill="currentColor"
-            className="opacity-0 group-hover:opacity-100 transition-opacity duration-700 ease-out animate-coin-float-1"
-          />
-          <circle
-            cx="16"
-            cy="8"
-            r="1"
-            fill="currentColor"
-            className="opacity-0 group-hover:opacity-100 transition-opacity duration-700 ease-out animate-coin-float-2"
-          />
-        </svg>
-      ),
+      number: 3,
+      title: "Convert your Corra Coins to Cash",
+      description:
+        "Get instant cash back on your next purchase.",
+      highlight: "1 CorraCoin = ₹1",
+      icon: Wallet,
+      iconColor: "from-yellow-300 via-yellow-400 to-amber-500",
     },
   ];
 
@@ -211,114 +136,272 @@ export default function HowItWorks() {
       {/* Background glows */}
       <div className="pointer-events-none absolute -top-10 -left-10 h-40 w-40 rounded-full bg-green-200/40 blur-3xl" aria-hidden></div>
       <div className="pointer-events-none absolute -bottom-10 -right-12 h-48 w-48 rounded-full bg-blue-200/40 blur-3xl" aria-hidden></div>
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
         <div className="animate-fade-up relative">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-10">How to Earn Corra Coins?</h2>
+          <motion.h2 
+              initial={{ opacity: 0, y: -20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              viewport={{ once: true }}
+              className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 px-4"
+            >
+              Shop. Upload. Earn.<br />
+              Get Cash Back with <span className="text-green-600">Corra Coins</span>
+              <motion.div 
+                className="inline-block ml-2 relative"
+                initial={{ scale: 0, rotate: -180 }}
+                whileInView={{ scale: 1, rotate: 0 }}
+                transition={{ delay: 0.3, duration: 0.6, type: "spring" }}
+                viewport={{ once: true }}
+              >
+                <div className="w-8 h-8 bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-lg border-2 border-yellow-200 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent rounded-full"></div>
+                  <span className="text-yellow-900 font-bold text-xs relative z-10 drop-shadow-sm">CC</span>
+                </div>
+                {/* Shine effect */}
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent rounded-full"
+                  animate={{ rotate: [0, 360] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                />
+              </motion.div>
+            </motion.h2>
 
-          {/* Enhanced Animated Timeline */}
-          <div className="relative">
-            {/* Animated vertical line with gradient */}
-            <div className="pointer-events-none absolute left-6 top-0 bottom-0 w-px bg-gradient-to-b from-green-600 via-green-500 to-green-400">
-              <div className="absolute inset-0 bg-green-600 animate-grow origin-top" />
-              {/* Animated shimmer effect */}
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/30 to-transparent animate-shimmer" />
-            </div>
+            <motion.p
+              initial={{ opacity: 0, y: -10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              viewport={{ once: true }}
+              className="text-gray-600 mb-8 sm:mb-12 px-4"
+            >
+              3 simple steps to your first cash back
+            </motion.p>
 
-            <ol className="space-y-10">
-              {steps.map((s, i) => (
-                <li key={s.key} className="relative group">
-                  {/* Enhanced Icon node with smooth hover effects */}
-                  <div
-                    className="absolute left-6 -translate-x-1/2 top-1.5 h-10 w-10 rounded-full bg-white shadow-md ring-1 ring-black/5 grid place-items-center text-green-700 z-10 animate-pop hover:scale-105 hover:shadow-md hover:ring-green-300 transition-all duration-1000 ease-out cursor-pointer group-hover:bg-green-50"
-                    style={{ animationDelay: `${i * 160}ms` }}
+          {/* Animated Timeline Container */}
+          <div className="relative pl-6 sm:pl-8">
+            {/* Animated Connecting Line */}
+            <motion.div 
+              className="absolute left-4 sm:left-6 top-0 w-0.5 bg-gradient-to-b from-green-400 via-emerald-500 to-green-600 rounded-full"
+              initial={{ height: 0 }}
+              whileInView={{ height: "85%" }}
+              transition={{ duration: 1.5, delay: 0.3 }}
+              viewport={{ once: true }}
+            />
+
+            {/* Steps with Enhanced Animation */}
+            <div className="space-y-8 sm:space-y-12">
+              {steps.map((step, index) => (
+                <motion.div
+                  key={step.number}
+                  initial={{ opacity: 0, x: -30 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  transition={{ 
+                    duration: 0.7, 
+                    delay: index * 0.3 + 0.5,
+                    type: "spring",
+                    bounce: 0.4
+                  }}
+                  viewport={{ once: true }}
+                  className="relative group"
+                >
+                  {/* Animated Circle Node */}
+                  <motion.div 
+                    className="absolute -left-6 sm:-left-8 top-2"
+                    initial={{ scale: 0, rotate: -180 }}
+                    whileInView={{ scale: 1, rotate: 0 }}
+                    transition={{ 
+                      duration: 0.6, 
+                      delay: index * 0.3 + 0.7,
+                      type: "spring",
+                      bounce: 0.6
+                    }}
+                    viewport={{ once: true }}
                   >
-                    <div className="group-hover:scale-105 transition-transform duration-1000 ease-out">
-                      {s.icon}
-                    </div>
-                    {/* Pulse ring on hover */}
-                    <div className="absolute inset-0 rounded-full ring-2 ring-green-400 opacity-0 group-hover:opacity-100 group-hover:animate-ping transition-opacity duration-1000 ease-out" />
-                  </div>
-
-                  {/* Enhanced Card with smooth hover effects */}
-                  <div className="ml-14 relative">
-                    <div
-                      className="rounded-2xl border border-green-100 bg-white shadow-sm px-6 py-5 animate-slide-in opacity-0 hover:shadow-lg hover:border-green-200 hover:-translate-y-1 hover:scale-[1.01] transition-all duration-1000 ease-out cursor-pointer group overflow-hidden"
-                      style={{ animationDelay: `${200 + i * 160}ms` }}
-                    >
-                      {/* Animated background gradient on hover */}
-                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-green-50/0 to-green-50/0 group-hover:from-green-50/30 group-hover:to-green-50/20 transition-all duration-1200 ease-out" />
+          <div className="relative">
+                      {/* Outer glowing ring - only for active step */}
+                      {step.isActive && (
+                        <motion.div 
+                          className="absolute inset-0 w-12 h-12 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full opacity-30"
+                          animate={{ 
+                            scale: [1, 1.2, 1],
+                            opacity: [0.3, 0.6, 0.3]
+                          }}
+                          transition={{ 
+                            duration: 2, 
+                            repeat: Infinity, 
+                            delay: index * 0.5 
+                          }}
+                        />
+                      )}
                       
-                      {/* Animated border glow */}
-                      <div className="absolute inset-0 rounded-2xl border-2 border-transparent group-hover:border-green-200/30 transition-all duration-1000 ease-out" />
-                      
-                      {/* Floating particles effect */}
-                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000 ease-out">
-                        <div className="absolute top-2 right-2 w-1 h-1 bg-green-400 rounded-full animate-float-1" />
-                        <div className="absolute top-4 right-6 w-1 h-1 bg-green-300 rounded-full animate-float-2" />
-                        <div className="absolute bottom-4 left-4 w-1 h-1 bg-green-500 rounded-full animate-float-3" />
-                      </div>
-                      
-                      <div className="relative z-10">
-                        <div className={`font-semibold text-lg transition-all duration-1000 ease-out ${i === 0 ? "text-green-700" : "text-black group-hover:text-green-700"}`}>
-                          {s.label}
-                          {/* Enhanced animated underline */}
-                          <span className="block w-0 group-hover:w-full h-0.5 bg-gradient-to-r from-green-500 to-green-600 transition-all duration-1200 ease-out mt-1 rounded-full" />
-                        </div>
-                        <p className="mt-1 text-black/70 text-sm group-hover:text-black/90 transition-all duration-1000 ease-out">{s.desc}</p>
-                        {s.note && (
-                          <div className="mt-3 inline-flex items-center rounded-md bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 group-hover:bg-green-200 group-hover:scale-105 group-hover:shadow-sm transition-all duration-1000 ease-out">
-                            {s.note}
-                          </div>
+                      {/* Main circle */}
+                      <div className={`relative w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br ${step.iconColor} rounded-full flex items-center justify-center shadow-lg border-2 border-white group-hover:shadow-xl transition-shadow duration-300`}>
+                        <motion.div 
+                          className="text-white"
+                          initial={{ scale: 0 }}
+                          whileInView={{ scale: 1 }}
+                          transition={{ 
+                            duration: 0.4, 
+                            delay: index * 0.3 + 1,
+                            type: "spring",
+                            bounce: 0.8
+                          }}
+                          viewport={{ once: true }}
+                        >
+                          <step.icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </motion.div>
+                        
+                        {/* Inner shine effect - only for active step */}
+                        {step.isActive && (
+                          <motion.div
+                            className="absolute inset-1 bg-gradient-to-br from-white/20 via-transparent to-transparent rounded-full"
+                            animate={{ rotate: [0, 360] }}
+                            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                          />
                         )}
+                    </div>
+                  </div>
+                  </motion.div>
+
+                  {/* Content Card */}
+                  <motion.div
+                    className={`bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-4 sm:p-6 ml-6 sm:ml-8 border ${step.isActive ? 'border-green-200 bg-green-50/30' : 'border-gray-100'} group-hover:border-green-200`}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    transition={{ type: "spring", bounce: 0.4 }}
+                  >
+                    <div className="space-y-3">
+                      <motion.h3 
+                        className={`text-lg sm:text-xl font-bold ${step.isActive ? 'text-green-700' : 'text-gray-900'} group-hover:text-green-700 transition-colors duration-300 ${step.number === 3 ? 'flex items-center gap-2' : ''}`}
+                        initial={{ opacity: 0, y: 10 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: index * 0.3 + 1.2 }}
+                        viewport={{ once: true }}
+                      >
+                        {step.number === 3 ? (
+                          <>
+                            Convert your 
+                            <motion.div 
+                              className="inline-block relative"
+                              initial={{ scale: 0, rotate: -180 }}
+                              whileInView={{ scale: 1, rotate: 0 }}
+                              transition={{ delay: index * 0.3 + 1.4, duration: 0.6, type: "spring" }}
+                              viewport={{ once: true }}
+                            >
+                              <div className="w-6 h-6 bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-lg border-2 border-yellow-200 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent rounded-full"></div>
+                                <span className="text-yellow-900 font-bold text-xs relative z-10 drop-shadow-sm">CC</span>
                       </div>
+                              {/* Shine effect */}
+                              <motion.div
+                                className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent rounded-full"
+                                animate={{ rotate: [0, 360] }}
+                                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                              />
+                            </motion.div>
+                            to Cash
+                          </>
+                        ) : (
+                          step.title
+                        )}
+                      </motion.h3>
+                      
+                      <motion.div 
+                        className="text-gray-600 leading-relaxed"
+                        initial={{ opacity: 0, y: 10 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: index * 0.3 + 1.4 }}
+                        viewport={{ once: true }}
+                      >
+                        <p className="font-bold font-normal">{step.description}</p>
+                        {step.highlight && (
+                          <motion.div 
+                            className="font-bold text-green-700 mt-2 px-3 py-1 bg-green-50 rounded-lg inline-block"
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            whileInView={{ scale: 1, opacity: 1 }}
+                            transition={{ duration: 0.4, delay: index * 0.3 + 1.6 }}
+                            viewport={{ once: true }}
+                          >
+                            {step.number === 3 ? (
+                              <span className="flex items-center gap-1">
+                                100{' '}
+                                <motion.div
+                                  className="inline-block relative"
+                                  initial={{ scale: 0, rotate: -180 }}
+                                  whileInView={{ scale: 1, rotate: 0 }}
+                                  transition={{ delay: index * 0.3 + 1.8, duration: 0.6, type: "spring" }}
+                                  viewport={{ once: true }}
+                                >
+                                  <div className="w-4 h-4 bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-lg border border-yellow-200 relative overflow-hidden">
+                                    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent rounded-full"></div>
+                                    <span className="text-yellow-900 font-bold text-xs relative z-10 drop-shadow-sm">CC</span>
+                        </div>
+                                  {/* Shine effect */}
+                                  <motion.div
+                                    className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent rounded-full"
+                                    animate={{ rotate: [0, 360] }}
+                                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                                  />
+                                </motion.div>
+                                {' '}= 100 ₹
+                              </span>
+                            ) : (
+                              step.highlight
+                            )}
+                          </motion.div>
+                        )}
+                      </motion.div>
                     </div>
 
-                    {/* Enhanced animated chevron with smooth effects */}
-                    {i < steps.length - 1 && (
-                      <div
-                        className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-5 h-5 text-green-600 flex items-center justify-center animate-fade-in hover:scale-110 hover:text-green-700 transition-all duration-1000 ease-out cursor-pointer group/chevron"
-                        style={{ animationDelay: `${260 + i * 160}ms` }}
-                        aria-hidden
+                    {/* Decorative arrow for better flow */}
+                    {index < steps.length - 1 && (
+                      <motion.div
+                        className="absolute -bottom-6 left-1/2 transform -translate-x-1/2"
+                        initial={{ opacity: 0, y: -10 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: index * 0.3 + 1.8 }}
+                        viewport={{ once: true }}
                       >
-                        <svg viewBox="0 0 20 20" className="w-5 h-5 animate-bounce-subtle group-hover/chevron:animate-bounce-smooth transition-all duration-1000 ease-out">
-                          <path
-                            d="M5 7l5 5 5-5"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            fill="none"
-                            className="transition-all duration-1000 ease-out group-hover/chevron:stroke-green-700"
-                          />
-                          {/* Animated glow effect */}
-                          <path
-                            d="M5 7l5 5 5-5"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            fill="none"
-                            className="opacity-0 group-hover/chevron:opacity-30 transition-opacity duration-1000 ease-out animate-chevron-glow"
-                          />
-                        </svg>
-                      </div>
+                        <motion.div
+                          className="w-6 h-6 text-green-500"
+                          animate={{ y: [0, 5, 0] }}
+                          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                        >
+                          <ChevronDown />
+                        </motion.div>
+                      </motion.div>
                     )}
-                  </div>
-                </li>
+                  </motion.div>
+                </motion.div>
               ))}
-            </ol>
-
-            {/* Enhanced Footer marker with smooth animations */}
-            <div className="mt-12 flex items-center justify-center text-green-700 text-sm font-medium animate-fade-in hover:scale-102 transition-all duration-1000 ease-out cursor-pointer group" style={{ animationDelay: `${steps.length * 160 + 300}ms` }}>
-              <span className="mx-2 h-2 w-2 rounded-full bg-green-600 group-hover:animate-pulse group-hover:scale-110 transition-all duration-1000 ease-out"></span>
-              <span className="group-hover:text-green-800 transition-colors duration-1000 ease-out">Start earning today!</span>
-              <span className="mx-2 h-2 w-2 rounded-full bg-green-600 group-hover:animate-pulse group-hover:scale-110 transition-all duration-1000 ease-out"></span>
             </div>
           </div>
+
+          {/* Bottom decorative element */}
+          <motion.div
+            className="mt-12 flex justify-center"
+            initial={{ opacity: 0, scale: 0.8 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, delay: 2.5 }}
+            viewport={{ once: true }}
+          >
+            <div className="flex items-center space-x-2 text-green-600">
+              <motion.div
+                className="w-2 h-2 bg-green-500 rounded-full"
+                animate={{ scale: [1, 1.3, 1], opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              />
+              <span className="text-sm font-medium">Start earning today!</span>
+              <motion.div
+                className="w-2 h-2 bg-green-500 rounded-full"
+                animate={{ scale: [1, 1.3, 1], opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 1.5, repeat: Infinity, delay: 0.5 }}
+              />
+                      </div>
+          </motion.div>
         </div>
 
         <div id="brands" className="w-full">
-          <div className="relative rounded-2xl border border-black/10 bg-white shadow-sm p-6 animate-fade-up delay-100">
+          <div className="relative rounded-2xl border border-black/10 bg-white shadow-sm p-4 sm:p-6 animate-fade-up delay-100">
             {/* Card accents */}
             <svg
               viewBox="0 0 28 28"
@@ -338,7 +421,7 @@ export default function HowItWorks() {
             
             {/* Select a brand title */}
             <div className="mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Select a brand</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800">Select a brand</h3>
             </div>
             
             <div className="flex items-center gap-3">
@@ -346,9 +429,9 @@ export default function HowItWorks() {
               <button
                 onClick={prevPage}
                 aria-label="Previous brands"
-                className="h-8 w-8 rounded-full border border-black/10 grid place-items-center hover:bg-black/5 hover:scale-110 transition-all duration-500 ease-out group/prev"
+                className="h-8 w-8 sm:h-10 sm:w-10 rounded-full border border-black/10 grid place-items-center hover:bg-black/5 hover:scale-110 transition-all duration-500 ease-out group/prev touch-target"
               >
-                <span className="group-hover/prev:-translate-x-0.5 transition-transform duration-300 ease-out">‹</span>
+                <span className="group-hover/prev:-translate-x-0.5 transition-transform duration-300 ease-out text-sm sm:text-base">‹</span>
               </button>
 
               {/* Smooth scrolling brands container */}
@@ -360,33 +443,33 @@ export default function HowItWorks() {
                   {Array.from({ length: totalPages }).map((_, pageIndex) => (
                     <div key={pageIndex} className="flex gap-4 min-w-full">
                       {brands.slice(pageIndex * ITEMS_PER_PAGE, pageIndex * ITEMS_PER_PAGE + ITEMS_PER_PAGE).map(b => (
-                        <button
-                          key={b.key}
-                          className={`flex-1 rounded-lg border-2 p-4 flex flex-col items-center gap-3 text-center transition-all duration-500 ease-out mt-4 mb-4 ml-2 mr-4${
+                  <button
+                    key={b.key}
+                          className={`flex-1 rounded-lg border-2 p-3 sm:p-4 flex flex-col items-center gap-2 sm:gap-3 text-center transition-all duration-500 ease-out mt-4 mb-4 ml-2 mr-4 touch-target${
                             selected.key === b.key 
                               ? "border-green-600 bg-green-50 scale-105 shadow-md" 
                               : "border-black/10 hover:bg-black/5 hover:scale-102 hover:border-green-300"
-                          }`}
-                          onClick={() => handleSelectBrand(b)}
-                        >
-                          <div
-                            className={`h-12 w-12 rounded-full grid place-items-center overflow-hidden ring-1 ring-black/10 transition-all duration-500 ease-out ${b.color} ${
+                    }`}
+                    onClick={() => handleSelectBrand(b)}
+                  >
+                    <div
+                            className={`h-10 w-10 sm:h-12 sm:w-12 grid place-items-center overflow-hidden transition-all duration-500 ease-out ${
                               selected.key === b.key ? "ring-green-300" : ""
                             }`}
-                          >
-                            <Image
-                              src={b.icon}
-                              alt={b.name}
-                              width={48}
-                              height={48}
-                              className={`h-8 w-8 object-contain transition-all duration-500 ease-out ${
-                                selected.key === b.key ? "scale-110" : "scale-100"
-                              }`}
-                              unoptimized
-                              draggable={false}
-                            />
+                    >
+                            {b.icon ? (
+                      <Image
+                        src={b.icon}
+                        alt={b.name}
+                                width={48}
+                                height={48}
+                                className="w-full h-full object-contain"
+                              />
+                            ) : (
+                              <span className="text-xs font-semibold text-neutral-700">{b.short}</span>
+                            )}
                           </div>
-                          <div className={`font-medium text-sm transition-colors duration-500 ease-out ${
+                          <div className={`font-medium text-xs sm:text-sm transition-colors duration-500 ease-out ${
                             selected.key === b.key ? "text-green-700" : "text-gray-700"
                           }`}>
                             {b.name}
@@ -401,14 +484,14 @@ export default function HowItWorks() {
               <button
                 onClick={nextPage}
                 aria-label="Next brands"
-                className="h-8 w-8 rounded-full border border-black/10 grid place-items-center hover:bg-black/5 hover:scale-110 transition-all duration-500 ease-out group/next"
+                className="h-8 w-8 sm:h-10 sm:w-10 rounded-full border border-black/10 grid place-items-center hover:bg-black/5 hover:scale-110 transition-all duration-500 ease-out group/next touch-target"
               >
-                <span className="group-hover/next:translate-x-0.5 transition-transform duration-300 ease-out">›</span>
+                <span className="group-hover/next:translate-x-0.5 transition-transform duration-300 ease-out text-sm sm:text-base">›</span>
               </button>
             </div>
 
-            {/* Enhanced Pagination Dots with smooth animations */}
-            <div className="mt-3 flex justify-center gap-2">
+            {/* Enhanced Pagination Dots with smooth animations - Hidden on mobile */}
+            <div className="mt-3 hidden sm:flex justify-center gap-2">
               {Array.from({ length: totalPages }).map((_, i) => (
                 <button
                   key={i}
@@ -527,11 +610,17 @@ export default function HowItWorks() {
               )}
             </div>
 
-            <div className="mt-6 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 p-4 text-sm">
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Your purchase must be within 1 month</li>
-                <li>Earned coins will be available for cashback on next purchase</li>
-              </ul>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Clock className="w-4 h-4 text-blue-600" />
+                      <p className="text-sm text-blue-800">Make sure your receipt is from the last 1 month 🗓️</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Coins className="w-4 h-4 text-blue-600" />
+                      <p className="text-sm text-blue-800">Use your earned coins for cashback on your next purchase</p>
+                    </div>
+                  </div>
             </div>
 
             <div className="mt-6">
@@ -582,7 +671,7 @@ export default function HowItWorks() {
                   />
                 </motion.div>
               </div>
-              <div className="text-black/70 mt-1">Corra Coins Earned</div>
+              <div className="text-black/70 mt-1">Corra Coins Available</div>
             </div>
 
             <div className="mt-6">
@@ -590,32 +679,16 @@ export default function HowItWorks() {
                 onClick={() => router.push(`/upload?brand=${selected.key}&amount=${amount}`)}
                 className="w-full h-12 rounded-xl bg-green-700 text-white font-medium hover:bg-green-800"
               >
-                Earn Coins Now →
+                Upload Receipt & Earn Coins Now
               </button>
-              <button
-                onClick={() => {
-                  try {
-                    const isAuthed = typeof window !== "undefined" && !!localStorage.getItem("auth");
-                    if (isAuthed) {
-                      router.push("/dashboard");
-                    } else {
-                      router.push("/login?redirect=dashboard");
-                    }
-                  } catch {
-                    router.push("/login?redirect=dashboard");
-                  }
-                }}
-                className="mt-3 w-full h-12 rounded-xl border border-black/15 text-green-700 font-medium hover:bg-green-50"
-              >
-                Already Earned? Convert To Cash →
-              </button>
+
             </div>
           </div>
         </div>
       </div>
 
       {/* Enhanced scoped animations with smooth SVG animations */}
-      <style jsx>{`
+      <style>{`
         @keyframes grow {
           0% { transform: scaleY(0); }
           100% { transform: scaleY(1); }

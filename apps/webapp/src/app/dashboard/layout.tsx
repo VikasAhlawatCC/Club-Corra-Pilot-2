@@ -1,38 +1,33 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { usePathname } from "next/navigation";
-import BackButton from "@/components/BackButton";
 import React from "react";
-import { StepsTimeline } from "@/components/StepsTimeline";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
-const steps = [
-  { key: "upload", label: "Upload Receipt", href: "/upload" },
-  { key: "phone", label: "Phone Verification", href: "/upload/phone" },
-  { key: "success", label: "Success", href: "/upload/success" },
-];
-
-export default function UploadLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const activeIdx =
-    pathname.endsWith("/phone") ? 1 :
-    pathname.endsWith("/success") ? 2 : 0;
-  const onNavigate = (page: string) => router.push(`/${page}`);
+
+  function handleLogout() {
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("auth");
+      }
+    } catch {}
+    router.push("/login");
+  }
 
   return (
     <div className="font-sans min-h-screen relative overflow-hidden">
       <div className="fixed top-6 right-6 z-50 flex items-center gap-2">
-        <span className="text-gray-600">Already a member?</span>
         <Button
-          onClick={() => onNavigate?.('login')}
+          onClick={handleLogout}
           variant="outline"
           className="bg-white/90 backdrop-blur-sm border-2 border-green-600 hover:border-green-700 text-green-600 hover:text-green-700 hover:bg-green-50 px-6 py-2 font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-300"
         >
-          Log-In
+          Logout
         </Button>
       </div>
+
       {/* Coordinated background with main theme */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-green-50/60 to-emerald-50/40" />
       <div className="absolute inset-0 bg-gradient-to-tl from-white/80 via-transparent to-green-100/30" />
@@ -50,13 +45,6 @@ export default function UploadLayout({ children }: { children: React.ReactNode }
       <div className="absolute bottom-40 left-1/4 w-44 h-44 bg-gradient-to-tr from-green-200/15 to-emerald-300/15 rounded-full blur-3xl" />
 
       <main className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-10">
-        <div className="mb-6">
-          <BackButton />
-        </div>
-        {/* Stepper */}
-        <div className="mb-10">
-          <StepsTimeline currentStep={(activeIdx + 1) as 1 | 2 | 3} />
-        </div>
         {children}
       </main>
     </div>

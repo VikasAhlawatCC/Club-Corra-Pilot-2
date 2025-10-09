@@ -1,3 +1,4 @@
+import { Footer } from "@/components/footer";
 import Hero from "@/components/Hero";
 import HowItWorks from "@/components/HowItWorks";
 import SelectedBrands from "@/components/SelectedBrands";
@@ -9,6 +10,7 @@ export default function Home() {
         <Hero />
         <SelectedBrands />
         <HowItWorks />
+        <Footer />
       </main>
     </div>
   );

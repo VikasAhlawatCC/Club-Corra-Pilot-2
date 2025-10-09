@@ -8,18 +8,18 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
+    // Allow Google Drive-hosted images used in brand icons
+    domains: ["drive.google.com"],
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'drive.google.com',
-        port: '',
-        pathname: '/uc**',
+        protocol: "https",
+        hostname: "drive.google.com",
+        pathname: "/uc",
       },
       {
-        protocol: 'https',
-        hostname: 'drive.google.com',
-        port: '',
-        pathname: '/file/**',
+        protocol: "https",
+        hostname: "drive.google.com",
+        pathname: "/file/**",
       },
       {
         protocol: 'https',
