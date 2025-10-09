@@ -1,13 +1,14 @@
 "use client";
-import React from "react";
+import * as React from "react";
 import Image from "next/image";
 import { ALL_BRANDS } from "../data/brands";
+import { motion } from "motion/react";
 
 export default function SelectedBrands() {
   return (
     <section
       id="partners"
-      className="relative w-full pt-20 pb-10 md:pt-24 md:pb-16 border-t-2 border-green-500/70"
+      className="relative w-full pt-10 pb-10  md:pb-16 border-t-2 border-green-500/70"
       aria-labelledby="partners-heading"
     >
       {/* decorative gradient line */}
@@ -18,17 +19,24 @@ export default function SelectedBrands() {
 
       {/* Heading */}
       <div className="mx-auto max-w-7xl px-4 md:px-8">
-        <div className="text-center mb-10 md:mb-12">
-          <h2
-            id="partners-heading"
-            className="text-2xl md:text-[32px] font-semibold tracking-tight text-neutral-900"
-          >
-            A personalised ecosystem starting with{" "}
-            <span className="text-green-600">30+ Selected Brands</span>
+        <div className="text-center mb-8 md:mb-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          viewport={{ once: true }}
+          className="text-center"
+        >
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 px-4">
+            A personalised rewards world built around{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-emerald-600">
+              30+ exclusive brands
+            </span>
           </h2>
-          <p className="mt-3 text-sm md:text-base text-neutral-600 max-w-2xl mx-auto">
-            Join Corra Club - Your perfectly curated brand eco-system to maximize your savings
+          <p className="text-gray-600 max-w-2xl mx-auto mt-4 px-4 text-sm sm:text-base">
+            Meet Corra Club — your go-to destination to earn and save more on every purchase
           </p>
+        </motion.div>
         </div>
       </div>
 
@@ -39,12 +47,12 @@ export default function SelectedBrands() {
             {[...ALL_BRANDS, ...ALL_BRANDS].map((b, i) => (
               <div
                 key={`${b.name}-${i}`}
-                className="mx-2 first:ml-4 last:mr-4 md:first:ml-8 md:last:mr-8 min-w-[170px] md:min-w-[200px] flex-shrink-0 rounded-xl border border-neutral-200 bg-white shadow-sm hover:shadow-md transition-all duration-200 px-4 py-4"
+                className="mx-1 sm:mx-2 first:ml-2 sm:first:ml-4 last:mr-2 sm:last:mr-4 md:first:ml-8 md:last:mr-8 min-w-[140px] sm:min-w-[170px] md:min-w-[200px] flex-shrink-0 rounded-xl border border-neutral-200 bg-white shadow-sm hover:shadow-md transition-all duration-200 px-3 py-3 sm:px-4 sm:py-4"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   {/* Brand Icon */}
                   <div
-                    className={`h-10 w-10 rounded-lg flex items-center justify-center ${b.color} ring-1 ring-black/5 overflow-hidden`}
+                    className={`h-8 w-8 sm:h-10 sm:w-10 rounded-lg flex items-center justify-center  ring-1 ring-black/5 overflow-hidden`}
                   >
                     {b.icon ? (
                       <Image
@@ -52,21 +60,21 @@ export default function SelectedBrands() {
                         alt={b.name}
                         width={32}
                         height={32}
-                        className="h-8 w-8 object-contain"
-                        onError={(e) => (e.currentTarget.style.display = "none")}
+                        className="h-6 w-6 sm:h-8 sm:w-8 object-contain"
+                        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => (e.currentTarget.style.display = "none")}
                       />
                     ) : (
-                      <span className="text-xs font-semibold text-neutral-700">{b.short}</span>
+                      <span className="text-xs font-semibold text-neutral-700">{b.off}</span>
                     )}
                   </div>
 
                   {/* Brand Name */}
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-neutral-900 leading-tight">
+                    <span className="text-xs sm:text-sm font-medium text-neutral-900 leading-tight">
                       {b.name}
                     </span>
-                    <span className="text-[11px] uppercase tracking-wide text-neutral-500">
-                      {b.short || ""}
+                    <span className="text-[10px] sm:text-[11px] uppercase tracking-wide text-neutral-500">
+                      {b.off || ""}%
                     </span>
                   </div>
                 </div>
@@ -83,12 +91,29 @@ export default function SelectedBrands() {
       {/* Status indicators */}
       <div className="mx-auto max-w-7xl px-4 md:px-8">
         <div className="mt-6 flex flex-col items-center gap-3 md:mt-8">
-          <div className="flex items-center gap-6 text-xs md:text-sm font-medium text-neutral-700">
-            <StatusDot label="3L+ Active Partners" />
-            <Divider />
-            <StatusDot label="Growing Daily" />
-            <Divider />
-            <StatusDot label="Verified Brands" />
+          <div className="flex items-center gap-3 sm:gap-6 text-xs md:text-sm font-medium text-neutral-700">
+          <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          viewport={{ once: true }}
+          className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-8 text-center px-4"
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            <span className="text-xs sm:text-sm text-gray-600">100+ new brands joining soon</span>
+          </div>
+          <div className="hidden sm:block w-px h-4 bg-gray-300"></div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+            <span className="text-xs sm:text-sm text-gray-600">Growing Daily</span>
+          </div>
+          <div className="hidden sm:block w-px h-4 bg-gray-300"></div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-green-600 rounded-full animate-pulse"></div>
+            <span className="text-xs sm:text-sm text-gray-600">Earn cashback on every purchase</span>
+          </div>
+        </motion.div>
           </div>
         </div>
       </div>
@@ -99,7 +124,7 @@ export default function SelectedBrands() {
         <div className="absolute bottom-0 left-1/4 h-60 w-60 rounded-full bg-blue-100/40 blur-3xl" />
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes marquee {
           0% {
             transform: translateX(0);
@@ -124,15 +149,3 @@ export default function SelectedBrands() {
   );
 }
 
-function StatusDot({ label }: { label: string }) {
-  return (
-    <span className="inline-flex items-center gap-2">
-      <span className="size-2 rounded-full bg-green-500" />
-      <span>{label}</span>
-    </span>
-  );
-}
-
-function Divider() {
-  return <span className="h-1 w-1 rounded-full bg-neutral-300" />;
-}
