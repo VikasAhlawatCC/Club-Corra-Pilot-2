@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Coins, History } from "lucide-react";
 import Image from "next/image";
 
+
 export default function DashboardPage() {
   const router = useRouter();
   const { user, token, isAuthenticated, isLoading } = useAuth();
@@ -69,7 +70,7 @@ export default function DashboardPage() {
   const totalRedeemed = Number(user?.totalRedeemed || 0);
 
   const handleGetCashback = () => {
-    router.push("/redeem");
+    router.push("/rewards");
   };
 
   return (

@@ -3,7 +3,7 @@
 import React from "react";
 import BackButton from "@/components/BackButton";
 
-export default function RedeemLayout({ children }: { children: React.ReactNode }) {
+export default function RewardsLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="font-sans min-h-screen relative overflow-hidden">
       {/* Backgrounds */}
@@ -31,5 +31,3 @@ export default function RedeemLayout({ children }: { children: React.ReactNode }
     </div>
   );
 }
-
-
