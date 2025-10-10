@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Coins, History } from "lucide-react";
 import Image from "next/image";
 
+
 export default function DashboardPage() {
   const router = useRouter();
   const { user, token, isAuthenticated, isLoading } = useAuth();
@@ -68,9 +69,6 @@ export default function DashboardPage() {
   const totalEarned = Number(user?.totalEarned || 0);
   const totalRedeemed = Number(user?.totalRedeemed || 0);
 
-  const handleGetCashback = () => {
-    router.push("/redeem");
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/30 to-green-50/50">
@@ -310,19 +308,10 @@ export default function DashboardPage() {
 
           {/* Primary CTA */}
           <Button
-            onClick={handleGetCashback}
-            className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 touch-target"
-          >
-            Get Cashback Now →
-          </Button>
-
-          {/* Secondary CTA */}
-          <Button
-            variant="outline"
             onClick={() => router.push('/rewards')}
-            className="w-full border-2 border-green-600 text-green-600 hover:bg-green-50 py-3 text-sm sm:text-base font-semibold rounded-lg flex items-center justify-center gap-2 touch-target"
+            className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 touch-target flex items-center justify-center gap-2"
           >
-            <span>Earn More</span>
+            <span>Get More Rewards</span>
             <div className="w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-sm border border-yellow-200 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent rounded-full"></div>
               <span className="text-yellow-900 font-bold text-xs relative z-10 drop-shadow-sm">CC</span>
