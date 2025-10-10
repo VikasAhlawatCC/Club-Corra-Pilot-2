@@ -237,46 +237,42 @@ function UploadContent() {
           {/* Brand selector */}
           <div className="mb-6">
             <div className="text-sm font-medium mb-2">Select a brand</div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <button 
                 onClick={prevPage}
                 aria-label="Previous brands"
-                className="h-8 w-8 rounded-full border border-black/10 grid place-items-center hover:bg-black/5 hover:scale-110 transition-all duration-500 ease-out group/prev"
+                className="h-10 w-10 sm:h-8 sm:w-8 rounded-full border border-black/10 grid place-items-center hover:bg-black/5 hover:scale-110 transition-all duration-500 ease-out group/prev flex-shrink-0"
               >
-                <span className="group-hover/prev:-translate-x-0.5 transition-transform duration-300 ease-out">‹</span>
+                <span className="group-hover/prev:-translate-x-0.5 transition-transform duration-300 ease-out text-lg sm:text-base">‹</span>
               </button>
 
               {/* Smooth scrolling brands container */}
               <div className="flex-1 overflow-hidden">
                 <div 
-                  className="flex gap-4 transition-transform duration-700 ease-out"
+                  className="flex transition-transform duration-700 ease-out"
                   style={{ transform: `translateX(-${page * (100 / ITEMS_PER_PAGE)}%)` }}
                 >
                   {Array.from({ length: totalPages }).map((_, pageIndex) => (
-                    <div key={pageIndex} className="flex gap-4 min-w-full">
+                    <div key={pageIndex} className="flex min-w-full gap-2">
                       {brands.slice(pageIndex * ITEMS_PER_PAGE, pageIndex * ITEMS_PER_PAGE + ITEMS_PER_PAGE).map(b => (
                         <button
                           key={b.id}
-                          className={`flex-1 rounded-lg border-2 p-4 flex flex-col items-center gap-3 text-center transition-all duration-500 ease-out mt-4 mb-4 ml-2 mr-4 ${
+                          className={`flex-1 rounded-lg p-2 sm:p-4 flex flex-col items-center gap-2 sm:gap-3 text-center transition-all duration-500 ease-out mt-2 sm:mt-4 mb-2 sm:mb-4 ${
                             selectedBrand?.id === b.id 
-                              ? "border-green-600 bg-green-50 scale-105 shadow-md" 
-                              : "border-black/10 hover:bg-black/5 hover:scale-102 hover:border-green-300"
+                              ? "bg-green-50 shadow-md" 
+                              : "hover:bg-gray-50"
                           }`}
                           onClick={() => handleSelectBrand(b)}
                         >
                           <div
-                            className={`h-12 w-12 rounded-full grid place-items-center overflow-hidden ring-1 ring-black/10 transition-all duration-500 ease-out bg-gray-100 ${
-                              selectedBrand?.id === b.id ? "ring-green-300" : ""
-                            }`}
+                            className={`h-10 w-10 sm:h-12 sm:w-12 rounded-full grid place-items-center overflow-hidden transition-all duration-500 ease-out bg-gray-100`}
                           >
                             <Image
                               src={b.logoUrl}
                               alt={b.name}
                               width={48}
                               height={48}
-                              className={`h-8 w-8 object-contain transition-all duration-500 ease-out ${
-                                selectedBrand?.id === b.id ? "scale-110" : "scale-100"
-                              }`}
+                              className="h-6 w-6 sm:h-8 sm:w-8 object-contain transition-all duration-500 ease-out"
                               unoptimized
                               draggable={false}
                             />
@@ -296,20 +292,20 @@ function UploadContent() {
               <button 
                 onClick={nextPage}
                 aria-label="Next brands"
-                className="h-8 w-8 rounded-full border border-black/10 grid place-items-center hover:bg-black/5 hover:scale-110 transition-all duration-500 ease-out group/next"
+                className="h-10 w-10 sm:h-8 sm:w-8 rounded-full border border-black/10 grid place-items-center hover:bg-black/5 hover:scale-110 transition-all duration-500 ease-out group/next flex-shrink-0"
               >
-                <span className="group-hover/next:translate-x-0.5 transition-transform duration-300 ease-out">›</span>
+                <span className="group-hover/next:translate-x-0.5 transition-transform duration-300 ease-out text-lg sm:text-base">›</span>
               </button>
             </div>
 
-            {/* Pagination Dots - Hidden on mobile */}
-            <div className="mt-3 hidden sm:flex justify-center gap-2">
+            {/* Pagination Dots - Always visible */}
+            <div className="mt-3 flex justify-center gap-2">
               {Array.from({ length: totalPages }).map((_, i) => (
                 <button
                   key={i}
                   aria-label={`Go to brand set ${i + 1}`}
                   onClick={() => setPage(i)}
-                  className={`relative h-3 w-3 rounded-full transition-all duration-500 ease-out hover:scale-125 group/dot ${
+                  className={`relative h-3 w-3 sm:h-3 sm:w-3 rounded-full transition-all duration-500 ease-out hover:scale-125 group/dot touch-manipulation ${
                     page === i 
                       ? "bg-green-600 scale-125 shadow-md" 
                       : "bg-black/20 hover:bg-black/30 hover:scale-110"
@@ -344,15 +340,15 @@ function UploadContent() {
               </button>
 
               {showAllBrands && (
-                <div className="absolute left-0 z-30 mt-2 w-72 rounded-xl border border-black/10 bg-white shadow-lg p-3">
-                  <div className="grid grid-cols-2 gap-3">
+                <div className="absolute left-0 z-30 mt-2 w-72 sm:w-72 rounded-xl border border-black/10 bg-white shadow-lg p-3 max-w-[calc(100vw-2rem)]">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3">
                     {overlayBrands.map(b => (
                       <button
                         key={b.id}
-                        className={`rounded-md border-2 p-1.5 flex items-center gap-1.5 text-left text-xs transition-all duration-300 ease-out ${
+                        className={`rounded-md p-1.5 sm:p-1.5 flex items-center gap-1 sm:gap-1.5 text-left text-xs transition-all duration-300 ease-out touch-manipulation ${
                           selectedBrand?.id === b.id
-                            ? "border-green-600 bg-green-50"
-                            : "border-black/10 hover:bg-black/5 hover:border-green-300"
+                            ? "bg-green-50"
+                            : "hover:bg-gray-50"
                         }`}
                         onClick={() => {
                           handleSelectBrand(b);
@@ -361,7 +357,7 @@ function UploadContent() {
                         }}
                       >
                         <div
-                          className={`h-6 w-6 rounded-full grid place-items-center overflow-hidden ring-1 ring-black/10 bg-gray-100`}
+                          className={`h-5 w-5 sm:h-6 sm:w-6 rounded-full grid place-items-center overflow-hidden bg-gray-100`}
                         >
                           <Image
                             src={b.logoUrl}
