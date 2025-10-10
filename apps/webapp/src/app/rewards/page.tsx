@@ -305,13 +305,13 @@ function RewardsContent() {
       <section className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-10 animate-fade-up">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900 flex items-center justify-center gap-3">
-            Get Cashback on your 
+            Earn & Get Cashback on Your Purchases
             <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 via-yellow-500 to-amber-600 rounded-full flex items-center justify-center shadow-lg border-2 border-yellow-200 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent rounded-full"></div>
               <span className="text-yellow-900 font-bold text-sm relative z-10 drop-shadow-sm">CC</span>
             </div>
           </h1>
-          <p className="text-gray-600 mt-1">Upload receipt of your recent purchase to get cashback in your bank account</p>
+          <p className="text-gray-600 mt-1">Upload your receipt to earn Corra Coins and get instant cashback on your purchases</p>
         </div>
         
 
@@ -587,35 +587,10 @@ function RewardsContent() {
                   {getRewardPercentage(selectedStaticBrand.name)}%
                 </motion.span>
                 <span className="text-green-700 font-medium">
-                  worth rewards on purchase from {selectedStaticBrand.name}
+                  Corra Coins earned on purchases from {selectedStaticBrand.name}
                 </span>
               </motion.div>
             </motion.div>
-
-            <section className="mt-6 rounded-2xl border border-black/10 bg-white p-6">
-              <div className="flex items-center justify-between">
-                <h2 className="font-semibold">Get Cashback Now!</h2>
-                <div className="text-green-700 font-semibold text-xl">₹{coinsRedeemed}</div>
-              </div>
-              <div className="mt-4">
-                <input
-                  type="range"
-                  min={0}
-                  max={maxRedeemable}
-                  step={1}
-                  value={coinsRedeemed}
-                  onChange={(e) => {
-                    const newAmount = Math.round(Number(e.target.value));
-                    setCoinsRedeemed(newAmount);
-                  }}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                />
-                <div className="flex justify-between text-sm text-black/60 mt-2">
-                  <span>₹0</span>
-                  <span>₹{maxRedeemable}</span>
-                </div>
-              </div>
-            </section>
 
             {/* Dropzone */}
             <div className="mt-6">
@@ -706,6 +681,31 @@ function RewardsContent() {
                 </button>
               </div>
             </div>
+
+            <section className="mt-6 rounded-2xl border border-black/10 bg-white p-6">
+              <div className="flex items-center justify-between">
+                <h2 className="font-semibold">Redeem Corra Coins for Cashback</h2>
+                <div className="text-green-700 font-semibold text-xl">₹{coinsRedeemed}</div>
+              </div>
+              <div className="mt-4">
+                <input
+                  type="range"
+                  min={0}
+                  max={maxRedeemable}
+                  step={1}
+                  value={coinsRedeemed}
+                  onChange={(e) => {
+                    const newAmount = Math.round(Number(e.target.value));
+                    setCoinsRedeemed(newAmount);
+                  }}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                />
+                <div className="flex justify-between text-sm text-black/60 mt-2">
+                  <span>₹0</span>
+                  <span>₹{maxRedeemable}</span>
+                </div>
+              </div>
+            </section>
 
             {/* UPI ID */}
             <div className="mt-4">

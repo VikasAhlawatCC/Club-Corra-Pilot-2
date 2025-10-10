@@ -5,10 +5,11 @@ import { circleBrands } from "@/data/brands";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
+import WaitlistSuccessModal from "./WaitlistSuccessModal";
 
 // Brands displayed in the orbit are sourced from circleBrands (data/brands)
 
@@ -18,45 +19,108 @@ import { toast } from "sonner";
 
 
 export default function Hero({}:HeroSectionProps) {
+  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [submittedEmail, setSubmittedEmail] = useState("");
 
-
-	  const [email, setEmail] = useState("");
+// Email validation function
+const validateEmail = (email: string): { isValid: boolean; message?: string } => {
+  if (!email.trim()) {
+    return { isValid: false, message: "Please enter your email address" };
+  }
+  
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return { isValid: false, message: "Please enter a valid email address" };
+  }
+  
+  return { isValid: true };
+};
 
 const handleGetEarlyAccess = async () => {
-	if (!email) {
-		toast.error("Please enter your email address");
-		return;
-	}
+  // Client-side validation
+  const validation = validateEmail(email);
+  if (!validation.isValid) {
+    toast.error(validation.message!);
+    return;
+  }
 
-	try {
-		const { addToWaitlist } = await import('@/lib/api');
-		await addToWaitlist(email);
-		toast.success("Welcome aboard, early member!🎉 Check your email for what's next!");
-		setEmail(""); // Clear the email field
-	} catch (error) {
-		console.error("Error adding to waitlist:", error);
-		const errorMessage = error instanceof Error ? error.message : "Unknown error";
-		
-		// Handle specific error cases with user-friendly messages
-		if (errorMessage.includes("Email already exists")) {
-			toast.success("You're already on our early access list! 🎉 We'll notify you when we launch!");
-			setEmail(""); // Clear the email field
-		} else {
-			toast.error(`Failed to add to waitlist: ${errorMessage}`);
-		}
-	}
+  setIsLoading(true);
+  
+  try {
+    const { addToWaitlist } = await import('@/lib/api');
+    await addToWaitlist(email.trim());
+    
+    // Store the submitted email and show success modal
+    setSubmittedEmail(email.trim());
+    setShowSuccessModal(true);
+    setEmail(""); // Clear the email field
+    
+  } catch (error) {
+    console.error("Error adding to waitlist:", error);
+    
+    // Enhanced error handling with specific error categorization
+    let errorMessage = "Something went wrong. Please try again.";
+    let isUserError = false;
+    
+    if (error instanceof Error) {
+      const message = error.message.toLowerCase();
+      
+      // Network/connection errors
+      if (message.includes('network') || message.includes('fetch') || message.includes('connection')) {
+        errorMessage = "Network error. Please check your connection and try again.";
+      }
+      // Server errors (5xx)
+      else if (message.includes('server') || message.includes('internal') || message.includes('500')) {
+        errorMessage = "Our servers are temporarily unavailable. Please try again in a few minutes.";
+      }
+      // Rate limiting
+      else if (message.includes('rate limit') || message.includes('too many requests')) {
+        errorMessage = "Too many requests. Please wait a moment before trying again.";
+      }
+      // Email already exists (treat as success)
+      else if (message.includes('email already exists') || message.includes('already registered')) {
+        setSubmittedEmail(email.trim());
+        setShowSuccessModal(true);
+        setEmail("");
+        toast.success("You're already on our early access list! 🎉 We'll notify you when we launch!");
+        return;
+      }
+      // Invalid email format
+      else if (message.includes('invalid email') || message.includes('email format')) {
+        errorMessage = "Please enter a valid email address.";
+        isUserError = true;
+      }
+      // Generic API error
+      else if (message.includes('failed to add') || message.includes('error')) {
+        errorMessage = "Unable to add you to the waitlist. Please try again.";
+      }
+    }
+    
+    // Show appropriate error message
+    if (isUserError) {
+      toast.error(errorMessage);
+    } else {
+      toast.error(errorMessage);
+    }
+    
+  } finally {
+    setIsLoading(false);
+  }
 };
 
 
 
   const scrollToActionSection = () => {
-    document.querySelector('#action-section')?.scrollIntoView({ 
+    document.querySelector('#brands')?.scrollIntoView({ 
       behavior: 'smooth' 
     });
   };
 
 
 	return (
+		<>
 		<section className="min-h-screen relative overflow-hidden">
 			{/* Enhanced gradient background with pattern */}
 			<div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-green-50/80 to-white"></div>
@@ -256,15 +320,32 @@ const handleGetEarlyAccess = async () => {
                 placeholder="Enter your email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="flex-1 h-12 sm:h-14 text-base sm:text-lg px-4 sm:px-6 border-0 focus:ring-0 bg-transparent"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isLoading) {
+                    handleGetEarlyAccess();
+                  }
+                }}
+                disabled={isLoading}
+                className="flex-1 h-12 sm:h-14 text-base sm:text-lg px-4 sm:px-6 border-0 focus:ring-0 bg-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <Button
                 onClick={handleGetEarlyAccess}
+                disabled={isLoading}
                 variant="outline"
-                className="border-2 border-green-600 hover:border-green-700 text-green-600 hover:text-green-700 hover:bg-green-50 px-4 sm:px-8 py-3 sm:py-4 h-12 sm:h-14 text-sm sm:text-lg font-semibold rounded-none sm:rounded-r-lg shadow-none hover:shadow-none transition-all duration-300 transform hover:scale-105 whitespace-nowrap bg-white/90 touch-target"
+                className="border-2 border-green-600 hover:border-green-700 text-green-600 hover:text-green-700 hover:bg-green-50 px-4 sm:px-8 py-3 sm:py-4 h-12 sm:h-14 text-sm sm:text-lg font-semibold rounded-none sm:rounded-r-lg shadow-none hover:shadow-none transition-all duration-300 transform hover:scale-105 whitespace-nowrap bg-white/90 touch-target disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
-                <span className="sm:hidden">Get Access</span>
-                <span className="hidden sm:inline">Get Early Access</span>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <span className="sm:hidden">Adding...</span>
+                    <span className="hidden sm:inline">Adding to Waitlist...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="sm:hidden">Get Access</span>
+                    <span className="hidden sm:inline">Get Early Access</span>
+                  </>
+                )}
               </Button>
             </div>
 
@@ -429,6 +510,14 @@ const handleGetEarlyAccess = async () => {
 				</div>
 			</div>
 		</section>
+
+		{/* Success Modal */}
+		<WaitlistSuccessModal
+			isOpen={showSuccessModal}
+			onClose={() => setShowSuccessModal(false)}
+			email={submittedEmail}
+		/>
+		</>
 	);
 }
 
