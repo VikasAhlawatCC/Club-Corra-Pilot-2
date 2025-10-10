@@ -9,6 +9,8 @@ interface BrandSearchParams {
   searchTerm?: string;
   categoryId?: string;
   isActive?: boolean;
+  sortBy?: string;
+  sortOrder?: string;
 }
 
 export function useBrands(params: BrandSearchParams = {}) {
@@ -23,15 +25,21 @@ export function useBrands(params: BrandSearchParams = {}) {
         params.pageSize,
         params.searchTerm,
         params.categoryId,
-        params.isActive
+        params.isActive,
+        params.sortBy,
+        params.sortOrder
       );
-      if (response && response.success && response.data) {
-        return response.data;
-      }
-      // Handle fallback or error
+      
+      // The backend returns the data directly in the format { brands, total, page, limit, totalPages }
       if (response && typeof response === 'object' && response.brands) {
         return response;
       }
+      
+      // Handle wrapped response format if it exists
+      if (response && response.success && response.data) {
+        return response.data;
+      }
+      
       throw new Error('Invalid response from server');
     },
   });

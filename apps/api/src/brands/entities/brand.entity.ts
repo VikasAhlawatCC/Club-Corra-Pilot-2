@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, OneToMany } from 'typeorm'
+import { Column, Entity, ManyToOne, OneToMany, JoinColumn } from 'typeorm'
 import { BaseEntity } from '../../common/entities/base.entity'
 import { BrandCategory } from './brand-category.entity'
 import { Location } from './location.entity'
@@ -54,6 +54,7 @@ export class Brand extends BaseEntity {
   isActive!: boolean
 
   @ManyToOne(() => BrandCategory, category => category.brands, { nullable: true })
+  @JoinColumn({ name: 'categoryId' })
   category?: BrandCategory | null
 
   @OneToMany(() => Location, location => location.brand)

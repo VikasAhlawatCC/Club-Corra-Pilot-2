@@ -46,6 +46,9 @@ let BrandsController = class BrandsController {
         await this.brandsService.remove(id);
         return { message: 'Brand deleted successfully' };
     }
+    async toggleStatus(id) {
+        return this.brandsService.toggleStatus(id);
+    }
     // Offers endpoints
     async createOffer(brandId, createOfferDto) {
         return this.brandsService.createOffer(brandId, createOfferDto);
@@ -111,7 +114,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], BrandsController.prototype, "create", null);
 __decorate([
-    (0, common_1.Put)(':id'),
+    (0, common_1.Patch)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -125,6 +128,13 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], BrandsController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Patch)(':id/toggle-status'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], BrandsController.prototype, "toggleStatus", null);
 __decorate([
     (0, common_1.Post)(':id/offers'),
     __param(0, (0, common_1.Param)('id')),

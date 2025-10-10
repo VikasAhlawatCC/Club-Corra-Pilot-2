@@ -22,15 +22,22 @@ export default function BrandEditPage() {
 
   useEffect(() => {
     if (brandId) {
-      fetchBrand()
-      fetchCategories()
+      // Fetch both brand and categories in parallel for better performance
+      Promise.all([
+        fetchBrand(),
+        fetchCategories()
+      ]).catch(error => {
+        console.error('Error fetching data:', error)
+      })
     }
   }, [brandId])
 
   const fetchBrand = async () => {
     try {
       setIsLoading(true)
+      console.log('Fetching brand with ID:', brandId)
       const response = await brandApi.getBrand(brandId)
+      console.log('Brand API response:', response)
       setBrand(response)
     } catch (error) {
       console.error('Failed to fetch brand:', error)
@@ -43,8 +50,27 @@ export default function BrandEditPage() {
 
   const fetchCategories = async () => {
     try {
+      // Check if categories are already cached in localStorage
+      const cachedCategories = localStorage.getItem('admin_categories')
+      if (cachedCategories) {
+        const parsed = JSON.parse(cachedCategories)
+        // Check if cache is less than 5 minutes old
+        if (Date.now() - parsed.timestamp < 5 * 60 * 1000) {
+          console.log('Using cached categories')
+          setCategories(parsed.data)
+          return
+        }
+      }
+      
       const response = await categoryApi.getAllCategories()
+      console.log('Categories API response:', response)
       setCategories(response)
+      
+      // Cache the categories
+      localStorage.setItem('admin_categories', JSON.stringify({
+        data: response,
+        timestamp: Date.now()
+      }))
     } catch (error) {
       console.error('Failed to fetch categories:', error)
     }
@@ -78,21 +104,7 @@ export default function BrandEditPage() {
 
   
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2 mb-8"></div>
-          <div className="space-y-4">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="h-16 bg-gray-200 rounded"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    )
-  }
+  // Show form immediately with loading states instead of blocking the entire page
 
   if (!brand) {
     return (
@@ -127,22 +139,37 @@ export default function BrandEditPage() {
             Back to Brands
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{brand.name}</h1>
-            <p className="text-gray-600">Edit brand details and settings</p>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {isLoading ? (
+                <div className="h-8 bg-gray-200 rounded animate-pulse w-48"></div>
+              ) : (
+                brand.name
+              )}
+            </h1>
+            <p className="text-gray-600">
+              {isLoading ? (
+                <div className="h-4 bg-gray-200 rounded animate-pulse w-64 mt-2"></div>
+              ) : (
+                'Edit brand details and settings'
+              )}
+            </p>
           </div>
         </div>
         <div className="flex space-x-3">
-          <button
-            onClick={handleToggleStatus}
-            className={`inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md ${
-              brand.isActive
-                ? 'border-red-300 text-red-700 bg-red-50 hover:bg-red-100'
-                : 'border-green-300 text-green-700 bg-green-50 hover:bg-green-100'
-            }`}
-          >
-            {brand.isActive ? 'Deactivate' : 'Activate'}
-          </button>
-          
+          {isLoading ? (
+            <div className="h-10 bg-gray-200 rounded animate-pulse w-24"></div>
+          ) : (
+            <button
+              onClick={handleToggleStatus}
+              className={`inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md ${
+                brand.isActive
+                  ? 'border-red-300 text-red-700 bg-red-50 hover:bg-red-100'
+                  : 'border-green-300 text-green-700 bg-green-50 hover:bg-green-100'
+              }`}
+            >
+              {brand.isActive ? 'Deactivate' : 'Activate'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -156,6 +183,7 @@ export default function BrandEditPage() {
             onClose={() => router.push('/brands')}
             onSubmit={handleSave}
             isLoading={isSaving}
+            isDataLoading={isLoading}
           />
         </div>
       </div>

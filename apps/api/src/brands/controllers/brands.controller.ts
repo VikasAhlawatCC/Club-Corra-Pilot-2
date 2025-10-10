@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards } from '@nestjs/common'
+import { Controller, Get, Post, Put, Patch, Delete, Param, Body, Query, UseGuards } from '@nestjs/common'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
 import { AdminGuard } from '../../common/guards/admin.guard'
 import { BrandsService } from '../brands.service'
@@ -38,7 +38,7 @@ export class BrandsController {
     return this.brandsService.create(createBrandDto);
   }
 
-  @Put(':id')
+  @Patch(':id')
   async update(@Param('id') id: string, @Body() updateBrandDto: UpdateBrandDto): Promise<Brand> {
     return this.brandsService.update(id, updateBrandDto);
   }
@@ -47,6 +47,11 @@ export class BrandsController {
   async remove(@Param('id') id: string) {
     await this.brandsService.remove(id);
     return { message: 'Brand deleted successfully' };
+  }
+
+  @Patch(':id/toggle-status')
+  async toggleStatus(@Param('id') id: string): Promise<Brand> {
+    return this.brandsService.toggleStatus(id);
   }
 
   // Offers endpoints

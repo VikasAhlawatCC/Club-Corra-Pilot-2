@@ -60,7 +60,14 @@ async function apiRequest<T>(
       throw new ApiError(response.status, composed)
     }
 
-    return await response.json()
+    const responseData = await response.json()
+    
+    // Handle nested response format from backend
+    if (responseData && typeof responseData === 'object' && responseData.success && responseData.data) {
+      return responseData.data
+    }
+    
+    return responseData
   } catch (error) {
     if (error instanceof ApiError) {
       throw error
@@ -279,7 +286,7 @@ export const transactionApi = {
 // Brand Management API
 export const brandApi = {
   // Get all brands
-  getAllBrands: (page = 1, limit = 20, query?: string, categoryId?: string, isActive?: boolean) => {
+  getAllBrands: (page = 1, limit = 20, query?: string, categoryId?: string, isActive?: boolean, sortBy?: string, sortOrder?: string) => {
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
@@ -288,6 +295,8 @@ export const brandApi = {
     if (categoryId) params.append('categoryId', categoryId)
     // Send as true/false to align with backend boolean parsing
     if (isActive !== undefined) params.append('isActive', String(isActive))
+    if (sortBy) params.append('sortBy', sortBy)
+    if (sortOrder) params.append('sortOrder', sortOrder)
     
     console.log('API call to /brands with params:', params.toString())
     

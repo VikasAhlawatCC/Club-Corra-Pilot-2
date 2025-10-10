@@ -43,6 +43,8 @@ interface SimpleBrandFormProps {
   onClose: () => void
   onSubmit: (data: CreateBrandRequest | UpdateBrandRequest) => void
   isLoading?: boolean
+  isDataLoading?: boolean
+  onToggleStatus?: (brandId: string) => void
 }
 
 export function SimpleBrandForm({ 
@@ -51,7 +53,9 @@ export function SimpleBrandForm({
   isOpen, 
   onClose, 
   onSubmit, 
-  isLoading = false 
+  isLoading = false,
+  isDataLoading = false,
+  onToggleStatus
 }: SimpleBrandFormProps) {
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<BrandFormData>({
     resolver: zodResolver(brandFormSchema),
@@ -70,16 +74,17 @@ export function SimpleBrandForm({
 
   useEffect(() => {
     if (brand) {
+      console.log('Setting form values for brand:', brand)
       reset({
-        name: brand.name,
-        description: brand.description,
+        name: brand.name || '',
+        description: brand.description || '',
         logoUrl: brand.logoUrl || '',
-        categoryId: brand.categoryId,
-        earningPercentage: brand.earningPercentage,
-        redemptionPercentage: brand.redemptionPercentage,
-        minRedemptionAmount: brand.minRedemptionAmount,
-        maxRedemptionAmount: brand.maxRedemptionAmount,
-        brandwiseMaxCap: brand.brandwiseMaxCap,
+        categoryId: brand.categoryId || '',
+        earningPercentage: typeof brand.earningPercentage === 'string' ? parseFloat(brand.earningPercentage) : brand.earningPercentage || 30,
+        redemptionPercentage: typeof brand.redemptionPercentage === 'string' ? parseFloat(brand.redemptionPercentage) : brand.redemptionPercentage || 100,
+        minRedemptionAmount: brand.minRedemptionAmount || 1,
+        maxRedemptionAmount: brand.maxRedemptionAmount || 2000,
+        brandwiseMaxCap: brand.brandwiseMaxCap || 2000,
       })
     } else {
       reset({
@@ -102,6 +107,8 @@ export function SimpleBrandForm({
     // Clean up undefined values
     if (submitData.logoUrl === '') submitData.logoUrl = undefined
 
+    console.log('Form submission data:', submitData)
+    console.log('CategoryId being sent:', submitData.categoryId)
     onSubmit(submitData)
   }
 
@@ -146,9 +153,26 @@ export function SimpleBrandForm({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl">
-            {brand ? 'Edit Brand' : 'Create New Brand'}
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-2xl">
+              {brand ? 'Edit Brand' : 'Create New Brand'}
+            </DialogTitle>
+            {brand && onToggleStatus && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onToggleStatus(brand.id)}
+                className={`${
+                  brand.isActive
+                    ? 'border-red-300 text-red-700 bg-red-50 hover:bg-red-100'
+                    : 'border-green-300 text-green-700 bg-green-50 hover:bg-green-100'
+                }`}
+              >
+                {brand.isActive ? 'Deactivate' : 'Activate'}
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
@@ -157,12 +181,16 @@ export function SimpleBrandForm({
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Brand Name *</Label>
-                <Input
-                  {...register('name')}
-                  id="name"
-                  placeholder="Enter brand name"
-                  required
-                />
+                {isDataLoading ? (
+                  <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+                ) : (
+                  <Input
+                    {...register('name')}
+                    id="name"
+                    placeholder="Enter brand name"
+                    required
+                  />
+                )}
                 {errors.name && (
                   <p className="text-sm font-medium text-destructive">{errors.name.message}</p>
                 )}
@@ -170,22 +198,29 @@ export function SimpleBrandForm({
 
               <div className="space-y-2">
                 <Label htmlFor="categoryId">Category *</Label>
-                <Select onValueChange={(value) => setValue('categoryId', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.isArray(categories) ? categories.filter(category => category.id).map((category) => (
-                      <SelectItem key={category.id!} value={category.id!}>
-                        {category.name}
-                      </SelectItem>
-                    )) : (
-                      <SelectItem value="no-categories" disabled>
-                        No categories available
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+                {isDataLoading ? (
+                  <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+                ) : (
+                  <Select 
+                    value={watch('categoryId')} 
+                    onValueChange={(value) => setValue('categoryId', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.isArray(categories) ? categories.filter(category => category.id).map((category) => (
+                        <SelectItem key={category.id!} value={category.id!}>
+                          {category.name}
+                        </SelectItem>
+                      )) : (
+                        <SelectItem value="no-categories" disabled>
+                          No categories available
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
                 {errors.categoryId && (
                   <p className="text-sm font-medium text-destructive">{errors.categoryId.message}</p>
                 )}
@@ -193,12 +228,16 @@ export function SimpleBrandForm({
 
               <div className="space-y-2">
                 <Label htmlFor="logoUrl">Logo URL</Label>
-                <Input
-                  {...register('logoUrl')}
-                  id="logoUrl"
-                  type="url"
-                  placeholder="https://example.com/logo.png"
-                />
+                {isDataLoading ? (
+                  <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+                ) : (
+                  <Input
+                    {...register('logoUrl')}
+                    id="logoUrl"
+                    type="url"
+                    placeholder="https://example.com/logo.png"
+                  />
+                )}
                 {errors.logoUrl && (
                   <p className="text-sm font-medium text-destructive">{errors.logoUrl.message}</p>
                 )}
@@ -212,13 +251,17 @@ export function SimpleBrandForm({
             <div>
               <div className="space-y-2">
                 <Label htmlFor="description">Description *</Label>
-                <Textarea
-                  {...register('description')}
-                  id="description"
-                  rows={4}
-                  placeholder="Enter brand description"
-                  required
-                />
+                {isDataLoading ? (
+                  <div className="h-24 bg-gray-200 rounded animate-pulse"></div>
+                ) : (
+                  <Textarea
+                    {...register('description')}
+                    id="description"
+                    rows={4}
+                    placeholder="Enter brand description"
+                    required
+                  />
+                )}
                 {errors.description && (
                   <p className="text-sm font-medium text-destructive">{errors.description.message}</p>
                 )}
@@ -232,18 +275,22 @@ export function SimpleBrandForm({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="earningPercentage">Earning Percentage *</Label>
-                <div className="relative">
-                  <Input
-                    {...register('earningPercentage', { valueAsNumber: true })}
-                    id="earningPercentage"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="1"
-                    required
-                  />
-                  <span className="absolute right-3 top-2 text-muted-foreground">%</span>
-                </div>
+                {isDataLoading ? (
+                  <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+                ) : (
+                  <div className="relative">
+                    <Input
+                      {...register('earningPercentage', { valueAsNumber: true })}
+                      id="earningPercentage"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      required
+                    />
+                    <span className="absolute right-3 top-2 text-muted-foreground">%</span>
+                  </div>
+                )}
                 {errors.earningPercentage && (
                   <p className="text-sm font-medium text-destructive">{errors.earningPercentage.message}</p>
                 )}
@@ -254,18 +301,22 @@ export function SimpleBrandForm({
 
               <div className="space-y-2">
                 <Label htmlFor="redemptionPercentage">Redemption Percentage *</Label>
-                <div className="relative">
-                  <Input
-                    {...register('redemptionPercentage', { valueAsNumber: true })}
-                    id="redemptionPercentage"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="1"
-                    required
-                  />
-                  <span className="absolute right-3 top-2 text-muted-foreground">%</span>
-                </div>
+                {isDataLoading ? (
+                  <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+                ) : (
+                  <div className="relative">
+                    <Input
+                      {...register('redemptionPercentage', { valueAsNumber: true })}
+                      id="redemptionPercentage"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      required
+                    />
+                    <span className="absolute right-3 top-2 text-muted-foreground">%</span>
+                  </div>
+                )}
                 {errors.redemptionPercentage && (
                   <p className="text-sm font-medium text-destructive">{errors.redemptionPercentage.message}</p>
                 )}
@@ -282,18 +333,22 @@ export function SimpleBrandForm({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="brandwiseMaxCap">Maximum redemption absolute amount *</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2 text-muted-foreground">₹</span>
-                  <Input
-                    {...register('brandwiseMaxCap', { valueAsNumber: true })}
-                    id="brandwiseMaxCap"
-                    type="number"
-                    min="0"
-                    step="1"
-                    required
-                    className="pl-8"
-                  />
-                </div>
+                {isDataLoading ? (
+                  <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+                ) : (
+                  <div className="relative">
+                    <span className="absolute left-3 top-2 text-muted-foreground">₹</span>
+                    <Input
+                      {...register('brandwiseMaxCap', { valueAsNumber: true })}
+                      id="brandwiseMaxCap"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      required
+                      className="pl-8"
+                    />
+                  </div>
+                )}
                 {errors.brandwiseMaxCap && (
                   <p className="text-sm font-medium text-destructive">{errors.brandwiseMaxCap.message}</p>
                 )}
