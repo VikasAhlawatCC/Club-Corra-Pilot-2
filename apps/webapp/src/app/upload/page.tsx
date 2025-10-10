@@ -4,7 +4,8 @@ import * as React from "react";
 import { Suspense, useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { getActiveBrands, getPresignedUploadUrl, createPendingTransaction, Brand } from "@/lib/api";
+import { getActiveBrands, getPresignedUploadUrl, createPendingTransaction, Brand as ApiBrand } from "@/lib/api";
+import { getDirectImageUrl, getFallbackImageUrl, getBrandIconUrl, getBrandLogoUrl } from "@/utils/imageUtils";
 import Image from "next/image";
 import { toast } from "sonner";
 import { Info } from "lucide-react";
@@ -26,8 +27,8 @@ export default function UploadPage() {
 function UploadContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
+  const [brands, setBrands] = useState<ApiBrand[]>([]);
+  const [selectedBrand, setSelectedBrand] = useState<ApiBrand | null>(null);
   const [amount, setAmount] = useState<string>("500");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string>("");
@@ -95,7 +96,7 @@ function UploadContent() {
           const brandsData = (response.data as any).data || response.data;
           
           if (Array.isArray(brandsData)) {
-            const validBrands = brandsData.filter((brand: Brand) => brand && brand.id && brand.name);
+            const validBrands = brandsData.filter((brand: ApiBrand) => brand && brand.id && brand.name);
             console.log("Valid brands found:", validBrands);
             setBrands(validBrands);
             setSelectedBrand(validBrands[0] || null);
@@ -133,7 +134,7 @@ function UploadContent() {
     setPage(p => (p + 1) % totalPages);
   }
 
-  function handleSelectBrand(brand: Brand) {
+  function handleSelectBrand(brand: ApiBrand) {
     setSelectedBrand(brand);
   }
 
@@ -270,7 +271,7 @@ function UploadContent() {
                             }`}
                           >
                             <Image
-                              src={b.logoUrl}
+                              src={getBrandLogoUrl(b.logoUrl, b.name)}
                               alt={b.name}
                               width={48}
                               height={48}
@@ -279,6 +280,10 @@ function UploadContent() {
                               }`}
                               unoptimized
                               draggable={false}
+                              onError={(e) => {
+                                console.error('Failed to load image for brand:', b.name);
+                                e.currentTarget.src = getFallbackImageUrl(b.name);
+                              }}
                             />
                           </div>
                           <div className={`font-medium text-sm transition-colors duration-500 ease-out ${
@@ -364,13 +369,17 @@ function UploadContent() {
                           className={`h-6 w-6 rounded-full grid place-items-center overflow-hidden ring-1 ring-black/10 bg-gray-100`}
                         >
                           <Image
-                            src={b.logoUrl}
+                            src={getBrandLogoUrl(b.logoUrl, b.name)}
                             alt={b.name}
                             width={24}
                             height={24}
                             className="h-4 w-4 object-contain"
                             unoptimized
                             draggable={false}
+                            onError={(e) => {
+                              console.error('Failed to load overlay image for brand:', b.name);
+                              e.currentTarget.src = getFallbackImageUrl(b.name);
+                            }}
                           />
                         </div>
                         <span className="truncate text-xs">{b.name}</span>

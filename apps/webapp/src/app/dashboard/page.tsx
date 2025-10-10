@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { getUserTransactions, Transaction } from "@/lib/api";
+import { getUserTransactions, Transaction, getActiveBrands, Brand } from "@/lib/api";
+import { getDirectImageUrl, getFallbackImageUrl, getBrandIconUrl, getBrandLogoUrl } from "@/utils/imageUtils";
 import { toast } from "sonner";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
@@ -17,11 +18,13 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, token, isAuthenticated } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(true);
 
   useEffect(() => {
     if (token && isAuthenticated) {
       fetchTransactions();
+      fetchBrands();
     }
   }, [token, isAuthenticated]);
 
@@ -42,6 +45,21 @@ export default function DashboardPage() {
       toast.error(`Failed to load transaction history: ${errorMessage}`);
     } finally {
       setLoadingTransactions(false);
+    }
+  };
+
+  const fetchBrands = async () => {
+    try {
+      const response = await getActiveBrands();
+      if (response.success && response.data) {
+        const brandsData = (response.data as any).data || response.data;
+        if (Array.isArray(brandsData)) {
+          setBrands(brandsData);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching brands:", error);
+      // Not showing a toast here to avoid cluttering the UI
     }
   };
 
@@ -264,27 +282,45 @@ export default function DashboardPage() {
                 <div className="relative">
                   {/* Scrollable transaction list with max height */}
                   <div className="max-h-[480px] sm:max-h-[520px] md:max-h-[560px] lg:max-h-[600px] overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                    {transactions.map((transaction) => (
-                      <div key={transaction.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-100 rounded-full flex items-center justify-center text-sm sm:text-lg">
-                            {transaction.brandName ? transaction.brandName.charAt(0).toUpperCase() : '🏪'}
+                    {transactions.map((transaction) => {
+                      const brand = brands.find(b => b.id === transaction.brandId || b.name === transaction.brandName);
+                      return (
+                        <div key={transaction.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-100 rounded-full flex items-center justify-center text-sm sm:text-lg overflow-hidden">
+                              {brand ? (
+                                <Image 
+                                  src={getBrandLogoUrl(brand.logoUrl, brand.name)} 
+                                  alt={brand.name} 
+                                  width={40} 
+                                  height={40} 
+                                  className="object-contain" 
+                                  unoptimized 
+                                  onError={(e) => {
+                                    console.error('Failed to load transaction brand image:', brand.name);
+                                    e.currentTarget.src = getFallbackImageUrl(brand.name);
+                                  }}
+                                />
+                              ) : (
+                                transaction.brandName ? transaction.brandName.charAt(0).toUpperCase() : '🏪'
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900 text-sm sm:text-base">
+                                {transaction.coinsEarned > 0 ? 'Earned Coins' : 'Redeemed'}
+                              </p>
+                              <p className="text-xs sm:text-sm text-gray-500">{transaction.brandName || 'Unknown Brand'}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium text-gray-900 text-sm sm:text-base">
-                              {transaction.coinsEarned > 0 ? 'Earned Coins' : 'Redeemed'}
+                          <div className="text-right">
+                            <p className={`font-semibold text-sm sm:text-base ${transaction.coinsEarned > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                              {transaction.coinsEarned > 0 ? '+' : '-'}₹{transaction.coinsEarned > 0 ? transaction.coinsEarned : transaction.coinsRedeemed}
                             </p>
-                            <p className="text-xs sm:text-sm text-gray-500">{transaction.brandName || 'Unknown Brand'}</p>
+                            <p className="text-xs text-gray-500">{new Date(transaction.createdAt).toLocaleDateString()}</p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className={`font-semibold text-sm sm:text-base ${transaction.coinsEarned > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                            {transaction.coinsEarned > 0 ? '+' : '-'}₹{transaction.coinsEarned > 0 ? transaction.coinsEarned : transaction.coinsRedeemed}
-                          </p>
-                          <p className="text-xs text-gray-500">{new Date(transaction.createdAt).toLocaleDateString()}</p>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   
                   {/* Fade effect at bottom when scrollable */}

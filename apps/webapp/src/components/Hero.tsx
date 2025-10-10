@@ -10,6 +10,7 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import WaitlistSuccessModal from "./WaitlistSuccessModal";
+import { getBrandLogoUrl, getFallbackImageUrl } from "@/utils/imageUtils";
 
 // Brands displayed in the orbit are sourced from circleBrands (data/brands)
 
@@ -424,11 +425,16 @@ const handleGetEarlyAccess = async () => {
                                                 >
 													{b.icon ? (
 														<Image
-															src={b.icon}
+															src={getBrandLogoUrl(b.icon, b.name)}
 															alt={b.name}
 															width={40}
 															height={40}
 															className="w-full h-full object-contain"
+															unoptimized
+															onError={(e) => {
+																console.error('Failed to load hero brand image:', b.name);
+																e.currentTarget.src = getFallbackImageUrl(b.name);
+															}}
 														/>
 													) : (
 														<span className="text-xs font-semibold text-neutral-700">{b.short}</span>

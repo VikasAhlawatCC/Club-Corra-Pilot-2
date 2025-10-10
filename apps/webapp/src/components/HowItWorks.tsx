@@ -11,6 +11,7 @@ import { ChevronDown, Upload as UploadIcon, ShieldCheck, Wallet, Clock, Coins } 
 import type { ComponentType } from "react";
 import { getActiveBrands, Brand } from "@/lib/api";
 import { toast } from "sonner";
+import { getBrandLogoUrl, getFallbackImageUrl } from "@/utils/imageUtils";
 
 
 export default function HowItWorks() {
@@ -459,11 +460,16 @@ export default function HowItWorks() {
                     >
                             {b.icon ? (
                       <Image
-                        src={b.icon}
+                        src={getBrandLogoUrl(b.icon, b.name)}
                         alt={b.name}
                                 width={48}
                                 height={48}
                                 className="w-full h-full object-contain"
+                                unoptimized
+                                onError={(e) => {
+                                  console.error('Failed to load brand image:', b.name);
+                                  e.currentTarget.src = getFallbackImageUrl(b.name);
+                                }}
                               />
                             ) : (
                               <span className="text-xs font-semibold text-neutral-700">{b.short}</span>
@@ -552,13 +558,17 @@ export default function HowItWorks() {
                           className={`h-6 w-6 rounded-full grid place-items-center overflow-hidden ring-1 ring-black/10 ${b.color}`}
                         >
                           <Image
-                            src={b.icon}
+                            src={getBrandLogoUrl(b.icon, b.name)}
                             alt={b.name}
                             width={24}
                             height={24}
                             className="h-4 w-4 object-contain"
                             unoptimized
                             draggable={false}
+                            onError={(e) => {
+                              console.error('Failed to load overlay brand image:', b.name);
+                              e.currentTarget.src = getFallbackImageUrl(b.name);
+                            }}
                           />
                         </div>
                         <span className="truncate text-xs">{b.name}</span>

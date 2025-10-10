@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
   },
   images: {
     // Allow Google Drive-hosted images used in brand icons
-    domains: ["drive.google.com"],
+    domains: ["drive.google.com", "googleusercontent.com", "ui-avatars.com", "img.icons8.com"],
     remotePatterns: [
       {
         protocol: "https",
@@ -39,6 +39,24 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: '**.googleusercontent.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'ui-avatars.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'img.icons8.com',
+        port: '',
+        pathname: '/**',
+      }
     ],
   },
   turbopack: {
