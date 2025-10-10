@@ -113,51 +113,47 @@ function RedeemContent() {
             {/* Brand selector */}
             <div className="mb-6">
               <div className="text-sm font-medium mb-2">Select a brand</div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <button 
                   onClick={prevPage}
                   aria-label="Previous brands"
-                  className="h-8 w-8 rounded-full border border-black/10 grid place-items-center hover:bg-black/5 hover:scale-110 transition-all duration-500 ease-out group/prev"
+                  className="h-10 w-10 sm:h-8 sm:w-8 rounded-full border border-black/10 grid place-items-center hover:bg-black/5 hover:scale-110 transition-all duration-500 ease-out group/prev flex-shrink-0"
                 >
-                  <span className="group-hover/prev:-translate-x-0.5 transition-transform duration-300 ease-out">‹</span>
+                  <span className="group-hover/prev:-translate-x-0.5 transition-transform duration-300 ease-out text-lg sm:text-base">‹</span>
                 </button>
 
                 {/* Smooth scrolling brands container */}
                 <div className="flex-1 overflow-hidden">
                   <div 
-                    className="flex gap-4 transition-transform duration-700 ease-out"
+                    className="flex transition-transform duration-700 ease-out"
                     style={{ transform: `translateX(-${page * (100 / ITEMS_PER_PAGE)}%)` }}
                   >
                     {Array.from({ length: totalPages }).map((_, pageIndex) => (
-                      <div key={pageIndex} className="flex gap-4 min-w-full">
-                        {ALL_BRANDS.slice(pageIndex * ITEMS_PER_PAGE, pageIndex * ITEMS_PER_PAGE + ITEMS_PER_PAGE).map(b => (
+                      <div key={pageIndex} className="flex min-w-full gap-2">
+                        {ALL_BRANDS.slice(pageIndex * ITEMS_PER_PAGE, pageIndex * ITEMS_PER_PAGE + ITEMS_PER_PAGE).map((b, index) => (
                     <button
                       key={b.key}
-                            className={`flex-1 rounded-lg border-2 p-4 flex flex-col items-center gap-3 text-center transition-all duration-500 ease-out mt-4 mb-4 ml-2 mr-4${
+                            className={`flex-1 rounded-lg p-2 sm:p-4 flex flex-col items-center gap-2 sm:gap-3 text-center transition-all duration-500 ease-out mt-2 sm:mt-4 mb-2 sm:mb-4 ${
                               selected.key === b.key 
-                                ? "border-green-600 bg-green-50 scale-105 shadow-md" 
-                                : "border-black/10 hover:bg-black/5 hover:scale-102 hover:border-green-300"
+                                ? "bg-green-50 shadow-md" 
+                                : "hover:bg-gray-50"
                             }`}
                             onClick={() => handleSelectBrand(b)}
                           >
                             <div
-                              className={`h-12 w-12 rounded-full grid place-items-center overflow-hidden ring-1 ring-black/10 transition-all duration-500 ease-out ${b.color || "bg-gray-100"} ${
-                                selected.key === b.key ? "ring-green-300" : ""
-                              }`}
+                              className={`h-10 w-10 sm:h-12 sm:w-12 rounded-full grid place-items-center overflow-hidden transition-all duration-500 ease-out ${b.color || "bg-gray-100"}`}
                             >
                               <Image
                                 src={b.icon}
                                 alt={b.name}
                                 width={48}
                                 height={48}
-                                className={`h-8 w-8 object-contain transition-all duration-500 ease-out ${
-                                  selected.key === b.key ? "scale-110" : "scale-100"
-                                }`}
+                                className="h-6 w-6 sm:h-8 sm:w-8 object-contain transition-all duration-500 ease-out"
                                 unoptimized
                                 draggable={false}
                               />
                             </div>
-                            <div className={`font-medium text-sm transition-colors duration-500 ease-out ${
+                            <div className={`font-medium text-xs sm:text-sm transition-colors duration-500 ease-out ${
                               selected.key === b.key ? "text-green-700" : "text-gray-700"
                             }`}>
                               {b.name}
@@ -172,20 +168,20 @@ function RedeemContent() {
                 <button 
                   onClick={nextPage}
                   aria-label="Next brands"
-                  className="h-8 w-8 rounded-full border border-black/10 grid place-items-center hover:bg-black/5 hover:scale-110 transition-all duration-500 ease-out group/next"
+                  className="h-10 w-10 sm:h-8 sm:w-8 rounded-full border border-black/10 grid place-items-center hover:bg-black/5 hover:scale-110 transition-all duration-500 ease-out group/next flex-shrink-0"
                 >
-                  <span className="group-hover/next:translate-x-0.5 transition-transform duration-300 ease-out">›</span>
+                  <span className="group-hover/next:translate-x-0.5 transition-transform duration-300 ease-out text-lg sm:text-base">›</span>
                 </button>
               </div>
 
-              {/* Pagination Dots - Hidden on mobile */}
-              <div className="mt-3 hidden sm:flex justify-center gap-2">
+              {/* Pagination Dots - Visible on all screen sizes */}
+              <div className="mt-3 flex justify-center gap-2">
                 {Array.from({ length: totalPages }).map((_, i) => (
                   <button
                     key={i}
                     aria-label={`Go to brand set ${i + 1}`}
                     onClick={() => setPage(i)}
-                    className={`relative h-3 w-3 rounded-full transition-all duration-500 ease-out hover:scale-125 group/dot  ${
+                    className={`relative h-3 w-3 sm:h-3 sm:w-3 rounded-full transition-all duration-500 ease-out hover:scale-125 group/dot touch-manipulation ${
                       page === i 
                         ? "bg-green-600 scale-125 shadow-md" 
                         : "bg-black/20 hover:bg-black/30 hover:scale-110"
@@ -220,12 +216,12 @@ function RedeemContent() {
                 </button>
 
                 {showAllBrands && (
-                  <div className="absolute left-0 z-30 mt-2 w-72 rounded-xl border border-black/10 bg-white shadow-lg p-3">
-                    <div className="grid grid-cols-2 gap-3">
+                  <div className="absolute left-0 z-30 mt-2 w-72 sm:w-72 rounded-xl border border-black/10 bg-white shadow-lg p-3 max-w-[calc(100vw-2rem)]">
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
                       {overlayBrands.map(b => (
                         <button
                           key={b.key}
-                          className={`rounded-md border-2 p-1.5 flex items-center gap-1.5 text-left text-xs transition-all duration-300 ease-out ${
+                          className={`rounded-md border-2 p-1.5 sm:p-1.5 flex items-center gap-1 sm:gap-1.5 text-left text-xs transition-all duration-300 ease-out touch-manipulation ${
                             selected.key === b.key
                               ? "border-green-600 bg-green-50"
                               : "border-black/10 hover:bg-black/5 hover:border-green-300"
@@ -237,14 +233,14 @@ function RedeemContent() {
                           }}
                         >
                           <div
-                            className={`h-6 w-6 rounded-full grid place-items-center overflow-hidden ring-1 ring-black/10 ${b.color || "bg-gray-100"}`}
+                            className={`h-5 w-5 sm:h-6 sm:w-6 rounded-full grid place-items-center overflow-hidden ring-1 ring-black/10 ${b.color || "bg-gray-100"}`}
                           >
                             <Image
                               src={b.icon}
                               alt={b.name}
                               width={24}
                               height={24}
-                              className="h-4 w-4 object-contain"
+                              className="h-3 w-3 sm:h-4 sm:w-4 object-contain"
                               unoptimized
                               draggable={false}
                             />
@@ -257,20 +253,20 @@ function RedeemContent() {
                     {/* Pagination inside dropdown */}
                     {overlayTotalPages > 1 && (
                       <div className="mt-3 flex items-center justify-between">
-                        <button
-                          onClick={() =>
-                            setOverlayPage(p => (p - 1 + overlayTotalPages) % overlayTotalPages)
-                          }
-                          className="h-7 px-2 text-xs rounded border border-black/10 hover:bg-black/5 hover:scale-110 transition-all duration-300 ease-out group/overlay-prev"
-                        >
-                          <span className="group-hover/overlay-prev:-translate-x-0.5 transition-transform duration-200 ease-out">‹</span>
-                        </button>
+                          <button
+                            onClick={() =>
+                              setOverlayPage(p => (p - 1 + overlayTotalPages) % overlayTotalPages)
+                            }
+                            className="h-8 w-8 sm:h-7 sm:px-2 text-xs rounded border border-black/10 hover:bg-black/5 hover:scale-110 transition-all duration-300 ease-out group/overlay-prev touch-manipulation flex items-center justify-center"
+                          >
+                            <span className="group-hover/overlay-prev:-translate-x-0.5 transition-transform duration-200 ease-out">‹</span>
+                          </button>
                         <div className="flex gap-1">
                           {Array.from({ length: overlayTotalPages }).map((_, i) => (
                             <button
                               key={i}
                               onClick={() => setOverlayPage(i)}
-                              className={`relative h-2.5 w-2.5 rounded-full transition-all duration-400 ease-out hover:scale-125 group/overlay-dot ${
+                              className={`relative h-3 w-3 sm:h-2.5 sm:w-2.5 rounded-full transition-all duration-400 ease-out hover:scale-125 group/overlay-dot touch-manipulation ${
                                 overlayPage === i
                                   ? "bg-green-600 scale-125 shadow-sm"
                                   : "bg-black/20 hover:bg-black/30 hover:scale-110"
@@ -288,7 +284,7 @@ function RedeemContent() {
                           onClick={() =>
                             setOverlayPage(p => (p + 1) % overlayTotalPages)
                           }
-                          className="h-7 px-2 text-xs rounded border border-black/10 hover:bg-black/5 hover:scale-110 transition-all duration-300 ease-out group/overlay-next"
+                          className="h-8 w-8 sm:h-7 sm:px-2 text-xs rounded border border-black/10 hover:bg-black/5 hover:scale-110 transition-all duration-300 ease-out group/overlay-next touch-manipulation flex items-center justify-center"
                         >
                           <span className="group-hover/overlay-next:translate-x-0.5 transition-transform duration-200 ease-out">›</span>
                         </button>

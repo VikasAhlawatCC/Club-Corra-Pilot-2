@@ -424,14 +424,14 @@ export default function HowItWorks() {
               <h3 className="text-base sm:text-lg font-semibold text-gray-800">Select a brand</h3>
             </div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {/* Enhanced Carousel Controls with smooth animations */}
               <button
                 onClick={prevPage}
                 aria-label="Previous brands"
-                className="h-8 w-8 sm:h-10 sm:w-10 rounded-full border border-black/10 grid place-items-center hover:bg-black/5 hover:scale-110 transition-all duration-500 ease-out group/prev touch-target"
+                className="h-10 w-10 sm:h-8 sm:w-8 rounded-full border border-black/10 grid place-items-center hover:bg-black/5 hover:scale-110 transition-all duration-500 ease-out group/prev flex-shrink-0"
               >
-                <span className="group-hover/prev:-translate-x-0.5 transition-transform duration-300 ease-out text-sm sm:text-base">‹</span>
+                <span className="group-hover/prev:-translate-x-0.5 transition-transform duration-300 ease-out text-lg sm:text-base">‹</span>
               </button>
 
               {/* Smooth scrolling brands container */}
@@ -441,21 +441,19 @@ export default function HowItWorks() {
                   style={{ transform: `translateX(-${page * (100 / ITEMS_PER_PAGE)}%)` }}
                 >
                   {Array.from({ length: totalPages }).map((_, pageIndex) => (
-                    <div key={pageIndex} className="flex gap-4 min-w-full">
+                    <div key={pageIndex} className="flex min-w-full gap-2">
                       {brands.slice(pageIndex * ITEMS_PER_PAGE, pageIndex * ITEMS_PER_PAGE + ITEMS_PER_PAGE).map(b => (
                   <button
                     key={b.key}
-                          className={`flex-1 rounded-lg border-2 p-3 sm:p-4 flex flex-col items-center gap-2 sm:gap-3 text-center transition-all duration-500 ease-out mt-4 mb-4 ml-2 mr-4 touch-target${
+                          className={`flex-1 rounded-lg p-2 sm:p-4 flex flex-col items-center gap-2 sm:gap-3 text-center transition-all duration-500 ease-out mt-2 sm:mt-4 mb-2 sm:mb-4 ${
                             selected.key === b.key 
-                              ? "border-green-600 bg-green-50 scale-105 shadow-md" 
-                              : "border-black/10 hover:bg-black/5 hover:scale-102 hover:border-green-300"
+                              ? "bg-green-50 shadow-md" 
+                              : "hover:bg-gray-50"
                     }`}
                     onClick={() => handleSelectBrand(b)}
                   >
                     <div
-                            className={`h-10 w-10 sm:h-12 sm:w-12 grid place-items-center overflow-hidden transition-all duration-500 ease-out ${
-                              selected.key === b.key ? "ring-green-300" : ""
-                            }`}
+                            className={`h-10 w-10 sm:h-12 sm:w-12 grid place-items-center overflow-hidden transition-all duration-500 ease-out`}
                     >
                             {b.icon ? (
                       <Image
@@ -484,20 +482,20 @@ export default function HowItWorks() {
               <button
                 onClick={nextPage}
                 aria-label="Next brands"
-                className="h-8 w-8 sm:h-10 sm:w-10 rounded-full border border-black/10 grid place-items-center hover:bg-black/5 hover:scale-110 transition-all duration-500 ease-out group/next touch-target"
+                className="h-10 w-10 sm:h-8 sm:w-8 rounded-full border border-black/10 grid place-items-center hover:bg-black/5 hover:scale-110 transition-all duration-500 ease-out group/next flex-shrink-0"
               >
-                <span className="group-hover/next:translate-x-0.5 transition-transform duration-300 ease-out text-sm sm:text-base">›</span>
+                <span className="group-hover/next:translate-x-0.5 transition-transform duration-300 ease-out text-lg sm:text-base">›</span>
               </button>
             </div>
 
-            {/* Enhanced Pagination Dots with smooth animations - Hidden on mobile */}
-            <div className="mt-3 hidden sm:flex justify-center gap-2">
+            {/* Enhanced Pagination Dots with smooth animations - Always visible */}
+            <div className="mt-3 flex justify-center gap-2">
               {Array.from({ length: totalPages }).map((_, i) => (
                 <button
                   key={i}
                   aria-label={`Go to brand set ${i + 1}`}
                   onClick={() => setPage(i)}
-                  className={`relative h-3 w-3 rounded-full transition-all duration-500 ease-out hover:scale-125 group/dot  ${
+                  className={`relative h-3 w-3 sm:h-3 sm:w-3 rounded-full transition-all duration-500 ease-out hover:scale-125 group/dot touch-manipulation ${
                     page === i 
                       ? "bg-green-600 scale-125 shadow-md" 
                       : "bg-black/20 hover:bg-black/30 hover:scale-110"
@@ -532,15 +530,15 @@ export default function HowItWorks() {
               </button>
 
               {showAllBrands && (
-                <div className="absolute left-0 z-30 mt-2 w-72 rounded-xl border border-black/10 bg-white shadow-lg p-3">
-                  <div className="grid grid-cols-2 gap-3">
+                <div className="absolute left-0 z-30 mt-2 w-72 sm:w-72 rounded-xl border border-black/10 bg-white shadow-lg p-3 max-w-[calc(100vw-2rem)]">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3">
                     {overlayBrands.map(b => (
                       <button
                         key={b.key}
-                        className={`rounded-md border-2 p-1.5 flex items-center gap-1.5 text-left text-xs transition-all duration-300 ease-out ${
+                        className={`rounded-md p-1.5 sm:p-1.5 flex items-center gap-1 sm:gap-1.5 text-left text-xs transition-all duration-300 ease-out touch-manipulation ${
                           selected.key === b.key
-                            ? "border-green-600 bg-green-50"
-                            : "border-black/10 hover:bg-black/5 hover:border-green-300"
+                            ? "bg-green-50"
+                            : "hover:bg-gray-50"
                         }`}
                         onClick={() => {
                           handleSelectBrand(b);
@@ -549,7 +547,7 @@ export default function HowItWorks() {
                         }}
                       >
                         <div
-                          className={`h-6 w-6 rounded-full grid place-items-center overflow-hidden ring-1 ring-black/10 ${b.color}`}
+                          className={`h-5 w-5 sm:h-6 sm:w-6 rounded-full grid place-items-center overflow-hidden ${b.color}`}
                         >
                           <Image
                             src={b.icon}
