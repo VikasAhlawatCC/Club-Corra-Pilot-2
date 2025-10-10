@@ -11,14 +11,19 @@ import { Input } from "@/components/ui/input";
 import Image from "next/image";
 import { motion } from "motion/react";
 import { Info, Shield } from "lucide-react";
+import AuthGuard from "@/components/AuthGuard";
 
 export default function RewardsPage() {
-  return <RewardsContent />;
+  return (
+    <AuthGuard>
+      <RewardsContent />
+    </AuthGuard>
+  );
 }
 
 function RewardsContent() {
   const router = useRouter();
-  const { user, token, isAuthenticated, isLoading, refreshUser } = useAuth();
+  const { user, token, isAuthenticated, refreshUser } = useAuth();
   const [brands, setBrands] = useState<Brand[]>([]);
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
   const [selectedStaticBrand, setSelectedStaticBrand] = useState<StaticBrand>(ALL_BRANDS[0]);
@@ -62,11 +67,6 @@ function RewardsContent() {
     return rewardRates[brand] || 10;
   }
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace("/login?redirect=rewards");
-    }
-  }, [isAuthenticated, isLoading, router]);
 
   useEffect(() => {
     if (token && isAuthenticated) {
@@ -270,20 +270,7 @@ function RewardsContent() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
 
-  if (!isAuthenticated) {
-    return null; // Will redirect via useEffect
-  }
 
   // Calculate maximum redeemable coins based on business rules
   const maxRedeemable = Math.min(

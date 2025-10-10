@@ -7,11 +7,14 @@ import { ALL_BRANDS, type Brand } from "@/data/brands";
 import Image from "next/image";
 import { motion } from "motion/react";
 import { Info, Shield } from "lucide-react";
+import AuthGuard from "@/components/AuthGuard";
 
 export default function RedeemPage() {
   return (
     <Suspense fallback={<div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-10">Loading…</div>}>
-      <RedeemContent />
+      <AuthGuard>
+        <RedeemContent />
+      </AuthGuard>
     </Suspense>
   );
 }
