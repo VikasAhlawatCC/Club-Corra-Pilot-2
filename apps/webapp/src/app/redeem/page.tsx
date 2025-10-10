@@ -3,15 +3,19 @@
 import BackButton from "@/components/BackButton";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, useMemo } from "react";
-import { ALL_BRANDS, type Brand } from "@/data/brands";
+import { getActiveBrands, Brand as ApiBrand } from "@/lib/api";
+import { getDirectImageUrl, getFallbackImageUrl, getBrandIconUrl, getBrandLogoUrl } from "@/utils/imageUtils";
 import Image from "next/image";
 import { motion } from "motion/react";
 import { Info, Shield } from "lucide-react";
+import AuthGuard from "@/components/AuthGuard";
 
 export default function RedeemPage() {
   return (
     <Suspense fallback={<div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-10">Loading…</div>}>
-      <RedeemContent />
+      <AuthGuard>
+        <RedeemContent />
+      </AuthGuard>
     </Suspense>
   );
 }
@@ -19,7 +23,8 @@ export default function RedeemPage() {
 function RedeemContent() {
   const router = useRouter();
   const params = useSearchParams();
-  const [selected, setSelected] = useState<Brand>(ALL_BRANDS[0]);
+  const [brands, setBrands] = useState<ApiBrand[]>([]);
+  const [selected, setSelected] = useState<ApiBrand | null>(null);
   const [amount, setAmount] = useState<string>(String(Number(params.get("amount") || 100)));
   const [upiId, setUpiId] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
@@ -30,17 +35,38 @@ function RedeemContent() {
   // Brand carousel state
   const ITEMS_PER_PAGE = 3;
   const [page, setPage] = useState(0);
-  const totalPages = Math.ceil(ALL_BRANDS.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(brands.length / ITEMS_PER_PAGE);
   const [showAllBrands, setShowAllBrands] = useState(false);
   
   // Overlay pagination state
   const OVERLAY_PER_PAGE = 8;
   const [overlayPage, setOverlayPage] = useState(0);
-  const overlayTotalPages = Math.ceil(ALL_BRANDS.length / OVERLAY_PER_PAGE);
+  const overlayTotalPages = Math.ceil(brands.length / OVERLAY_PER_PAGE);
   const overlayBrands = useMemo(
-    () => ALL_BRANDS.slice(overlayPage * OVERLAY_PER_PAGE, overlayPage * OVERLAY_PER_PAGE + OVERLAY_PER_PAGE),
-    [overlayPage]
+    () => brands.slice(overlayPage * OVERLAY_PER_PAGE, overlayPage * OVERLAY_PER_PAGE + OVERLAY_PER_PAGE),
+    [overlayPage, brands]
   );
+
+  useEffect(() => {
+    fetchBrands();
+  }, []);
+
+  const fetchBrands = async () => {
+    try {
+      const response = await getActiveBrands();
+      if (response.success && response.data) {
+        const brandsData = (response.data as any).data || response.data;
+        if (Array.isArray(brandsData)) {
+          setBrands(brandsData);
+          if (brandsData.length > 0) {
+            setSelected(brandsData[0]);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching brands:", error);
+    }
+  };
 
   function getRewardPercentage(brand: string) {
     const rewardRates: { [key: string]: number } = {
@@ -64,7 +90,7 @@ function RedeemContent() {
     setPage(p => (p + 1) % totalPages);
   }
 
-  function handleSelectBrand(b: Brand) {
+  function handleSelectBrand(b: ApiBrand) {
     setSelected(b);
   }
 
@@ -130,35 +156,39 @@ function RedeemContent() {
                   >
                     {Array.from({ length: totalPages }).map((_, pageIndex) => (
                       <div key={pageIndex} className="flex gap-4 min-w-full">
-                        {ALL_BRANDS.slice(pageIndex * ITEMS_PER_PAGE, pageIndex * ITEMS_PER_PAGE + ITEMS_PER_PAGE).map(b => (
+                        {brands.slice(pageIndex * ITEMS_PER_PAGE, pageIndex * ITEMS_PER_PAGE + ITEMS_PER_PAGE).map(b => (
                     <button
-                      key={b.key}
+                      key={b.id}
                             className={`flex-1 rounded-lg border-2 p-4 flex flex-col items-center gap-3 text-center transition-all duration-500 ease-out mt-4 mb-4 ml-2 mr-4${
-                              selected.key === b.key 
+                              selected?.id === b.id 
                                 ? "border-green-600 bg-green-50 scale-105 shadow-md" 
                                 : "border-black/10 hover:bg-black/5 hover:scale-102 hover:border-green-300"
                             }`}
                             onClick={() => handleSelectBrand(b)}
                           >
                             <div
-                              className={`h-12 w-12 rounded-full grid place-items-center overflow-hidden ring-1 ring-black/10 transition-all duration-500 ease-out ${b.color || "bg-gray-100"} ${
-                                selected.key === b.key ? "ring-green-300" : ""
+                              className={`h-12 w-12 rounded-full grid place-items-center overflow-hidden ring-1 ring-black/10 transition-all duration-500 ease-out bg-gray-100 ${
+                                selected?.id === b.id ? "ring-green-300" : ""
                               }`}
                             >
                               <Image
-                                src={b.icon}
+                                src={getBrandLogoUrl(b.logoUrl, b.name)}
                                 alt={b.name}
                                 width={48}
                                 height={48}
                                 className={`h-8 w-8 object-contain transition-all duration-500 ease-out ${
-                                  selected.key === b.key ? "scale-110" : "scale-100"
+                                  selected?.id === b.id ? "scale-110" : "scale-100"
                                 }`}
                                 unoptimized
                                 draggable={false}
+                                onError={(e) => {
+                                  console.error('Failed to load image for brand:', b.name);
+                                  e.currentTarget.src = getFallbackImageUrl(b.name);
+                                }}
                               />
                             </div>
                             <div className={`font-medium text-sm transition-colors duration-500 ease-out ${
-                              selected.key === b.key ? "text-green-700" : "text-gray-700"
+                              selected?.id === b.id ? "text-green-700" : "text-gray-700"
                             }`}>
                               {b.name}
                             </div>
@@ -224,29 +254,33 @@ function RedeemContent() {
                     <div className="grid grid-cols-2 gap-3">
                       {overlayBrands.map(b => (
                         <button
-                          key={b.key}
+                          key={b.id}
                           className={`rounded-md border-2 p-1.5 flex items-center gap-1.5 text-left text-xs transition-all duration-300 ease-out ${
-                            selected.key === b.key
+                            selected?.id === b.id
                               ? "border-green-600 bg-green-50"
                               : "border-black/10 hover:bg-black/5 hover:border-green-300"
                           }`}
                           onClick={() => {
                             handleSelectBrand(b);
                             setShowAllBrands(false);
-                            setPage(Math.floor(ALL_BRANDS.indexOf(b) / ITEMS_PER_PAGE));
+                            setPage(Math.floor(brands.indexOf(b) / ITEMS_PER_PAGE));
                           }}
                         >
                           <div
-                            className={`h-6 w-6 rounded-full grid place-items-center overflow-hidden ring-1 ring-black/10 ${b.color || "bg-gray-100"}`}
+                            className={`h-6 w-6 rounded-full grid place-items-center overflow-hidden ring-1 ring-black/10 bg-gray-100`}
                           >
                             <Image
-                              src={b.icon}
+                              src={getBrandLogoUrl(b.logoUrl, b.name)}
                               alt={b.name}
                               width={24}
                               height={24}
                               className="h-4 w-4 object-contain"
                               unoptimized
                               draggable={false}
+                              onError={(e) => {
+                                console.error('Failed to load overlay image for brand:', b.name);
+                                e.currentTarget.src = getFallbackImageUrl(b.name);
+                              }}
                             />
                           </div>
                           <span className="truncate text-xs">{b.name}</span>
@@ -377,10 +411,10 @@ function RedeemContent() {
                         ease: "easeInOut"
                       }}
                     >
-                      {getRewardPercentage(selected.name)}%
+                      {getRewardPercentage(selected?.name || '')}%
                     </motion.span>
                     <span className="text-green-700 font-medium">
-                      worth rewards on purchase from {selected.name}
+                      worth rewards on purchase from {selected?.name}
                     </span>
                   </motion.div>
                 </motion.div>

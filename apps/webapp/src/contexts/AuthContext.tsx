@@ -77,6 +77,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('auth_token', newToken);
     localStorage.setItem('auth_user', JSON.stringify(newUser));
     
+    // Set cookie for middleware authentication
+    document.cookie = `auth_token=${newToken}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`;
+    
     // Fetch fresh user data from API
     fetchUserProfile(newToken);
   };
@@ -86,6 +89,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
+    
+    // Clear cookie for middleware authentication
+    document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
   };
 
   const clearAuthData = () => {
@@ -94,6 +100,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
+    
+    // Clear cookie for middleware authentication
+    document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    
     setIsLoading(false);
   };
 

@@ -8,9 +8,15 @@ export function middleware(request: NextRequest) {
   const protectedRoutes = ['/dashboard', '/rewards', '/redeem'];
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
   
-  // For now, let the frontend handle authentication checks
-  // The frontend will redirect unauthenticated users to login
-  // This middleware will be enhanced later to work with localStorage
+  // Check for auth token in cookies (if available)
+  const authToken = request.cookies.get('auth_token')?.value;
+  
+  // If accessing a protected route without auth token, redirect to login
+  if (isProtectedRoute && !authToken) {
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(loginUrl);
+  }
   
   return NextResponse.next();
 }

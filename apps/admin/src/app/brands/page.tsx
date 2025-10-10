@@ -1,20 +1,22 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { PlusIcon, MagnifyingGlassIcon, FunnelIcon, ArrowPathIcon } from '@/components/icons/SvgIcons'
 import { BrandTable } from '@/components/brands/BrandTable'
 import { ManageCategoriesModal } from '@/components/brands'
-import { categoryApi } from '@/lib/api'
+import { SimpleBrandForm } from '@/components/brands/SimpleBrandForm'
+import { categoryApi, brandApi } from '@/lib/api'
 import { useToast } from '@/components/common'
 import { useBrands } from '@/hooks/useBrands'
 import { useBrandFilters } from '@/hooks/useBrandFilters'
 import { useDebounce } from '@/hooks/useDebounce'
-import { ErrorBoundary } from '@/components/common'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Brand, BrandCategory } from '@/types'
 
 function BrandsPageContent() {
+  const router = useRouter()
   const [categories, setCategories] = useState<BrandCategory[]>([])
   const [isLoadingCategories, setIsLoadingCategories] = useState(true)
   const [showManageCategories, setShowManageCategories] = useState(false)
@@ -25,12 +27,17 @@ function BrandsPageContent() {
   const {
     searchTerm,
     categoryFilter,
+    statusFilter,
     currentPage,
+    sortBy,
+    sortOrder,
     setSearchTerm,
     setCategoryFilter,
+    setStatusFilter,
     setCurrentPage,
     clearFilters,
     handleFilterChange,
+    handleSort,
     hasActiveFilters,
   } = useBrandFilters()
 
@@ -50,6 +57,9 @@ function BrandsPageContent() {
     pageSize,
     searchTerm: debouncedSearchTerm || undefined,
     categoryId: categoryFilter === 'all' ? undefined : categoryFilter,
+    isActive: statusFilter === 'all' ? undefined : statusFilter === 'active',
+    sortBy,
+    sortOrder,
   })
 
   // Ensure brands is always an array to prevent crashes
@@ -105,19 +115,56 @@ function BrandsPageContent() {
 
 
 
-  const handleEdit = (brand: Brand) => {
-    // Navigate to edit page
-    window.location.href = `/brands/${brand.id}`
-  }
+  const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
-  
+  const handleEdit = (brand: Brand) => {
+    setSelectedBrand(brand)
+    setIsEditModalOpen(true)
+  }
 
   const handleView = (brand: Brand) => {
-    // Navigate to view page (could be same as edit for now)
-    window.location.href = `/brands/${brand.id}`
+    setSelectedBrand(brand)
+    setIsEditModalOpen(true)
   }
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleCloseModal = () => {
+    setIsEditModalOpen(false)
+    setSelectedBrand(null)
+  }
+
+  const handleBrandUpdate = async (formData: any) => {
+    if (!selectedBrand) return
+    
+    try {
+      await brandApi.updateBrand(selectedBrand.id, formData)
+      showSuccess('Brand updated successfully')
+      handleCloseModal()
+      // Refresh the brands list
+      refetch()
+    } catch (error) {
+      console.error('Failed to update brand:', error)
+      showError('Failed to update brand')
+    }
+  }
+
+  const handleToggleStatus = async (brandId: string) => {
+    try {
+      await toggleBrandStatus(brandId)
+      showSuccess('Brand status updated successfully')
+      // Update the selected brand if it's the one being toggled
+      if (selectedBrand && selectedBrand.id === brandId) {
+        setSelectedBrand({ ...selectedBrand, isActive: !selectedBrand.isActive })
+      }
+      // Refresh the brands list
+      refetch()
+    } catch (error) {
+      console.error('Failed to update brand status:', error)
+      showError('Failed to update brand status')
+    }
+  }
+
+  const handleSearch = (e: any) => {
     e.preventDefault()
     if (isLoading) return // Prevent multiple API calls while loading
     
@@ -125,15 +172,18 @@ function BrandsPageContent() {
     // React Query will automatically refetch when currentPage changes
   }
 
-  const handleToggleStatus = async (brandId: string) => {
-    if (isLoading) return // Prevent multiple API calls while loading
-    
-    const success = await toggleBrandStatus(brandId)
-    if (success) {
-      showSuccess('Brand status updated successfully')
-      // React Query will automatically refetch after the mutation
-    }
+  // Handle category filter change with immediate effect
+  const handleCategoryChange = (categoryId: string) => {
+    setCategoryFilter(categoryId)
+    setCurrentPage(1) // Reset to first page when filter changes
   }
+
+  // Handle status filter change with immediate effect
+  const handleStatusChange = (status: string) => {
+    setStatusFilter(status)
+    setCurrentPage(1) // Reset to first page when filter changes
+  }
+
 
   // Show loading state while checking authentication
   if (authLoading) {
@@ -234,10 +284,7 @@ function BrandsPageContent() {
               <select
                 id="category"
                 value={categoryFilter}
-                onChange={(e) => {
-                  setCategoryFilter(e.target.value)
-                  setCurrentPage(1)
-                }}
+                onChange={(e) => handleCategoryChange(e.target.value)}
                 className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                 disabled={isLoadingCategories}
               >
@@ -258,8 +305,22 @@ function BrandsPageContent() {
                 <p className="mt-1 text-xs text-gray-500">Loading categories...</p>
               )}
             </div>
-
-            {/* Status filter removed */}
+            
+            <div>
+              <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <select
+                id="status"
+                value={statusFilter}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
           </div>
           
           <div className="flex justify-between items-center">
@@ -286,11 +347,20 @@ function BrandsPageContent() {
             </div>
             
             <div className="text-sm text-gray-500">
-              Showing {displayBrands.length} of {totalBrands} brands
-              {hasActiveFilters && (
-                <span className="ml-2 text-green-theme-primary">
-                  (filtered)
+              {isLoading ? (
+                <span className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-theme-primary mr-2"></div>
+                  Loading brands...
                 </span>
+              ) : (
+                <>
+                  Showing {displayBrands.length} of {totalBrands} brands
+                  {hasActiveFilters && (
+                    <span className="ml-2 text-green-theme-primary">
+                      (filtered)
+                    </span>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -322,11 +392,11 @@ function BrandsPageContent() {
               </div>
               <h3 className="text-sm font-medium text-gray-900 mb-2">No brands found</h3>
               <p className="text-sm text-gray-500 mb-4">
-                {searchTerm || categoryFilter !== 'all'
+                {searchTerm || categoryFilter !== 'all' || statusFilter !== 'all'
                   ? 'Try adjusting your search criteria.'
                   : 'Get started by adding your first brand.'}
               </p>
-              {!searchTerm && categoryFilter === 'all' && (
+              {!searchTerm && categoryFilter === 'all' && statusFilter === 'all' && (
                 <Link
                   href="/brands/new"
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-green-theme-primary bg-green-theme-secondary hover:bg-green-theme-accent"
@@ -343,25 +413,60 @@ function BrandsPageContent() {
                 onEdit={handleEdit}
                 onView={handleView}
                 onToggleStatus={handleToggleStatus}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
+                onSort={handleSort}
               />
               
               {/* Pagination */}
               {totalPages > 1 && (
                 <div className="mt-6 flex items-center justify-between">
                   <div className="text-sm text-gray-700">
-                    Page {currentPage} of {totalPages}
+                    Page {currentPage} of {totalPages} ({totalBrands} total brands)
                   </div>
                   <div className="flex space-x-2">
                     <button
                       onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                      disabled={currentPage === 1}
+                      disabled={currentPage === 1 || isLoading}
                       className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Previous
                     </button>
+                    
+                    {/* Page numbers */}
+                    <div className="flex space-x-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+                        
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setCurrentPage(pageNum)}
+                            disabled={isLoading}
+                            className={`px-3 py-2 text-sm font-medium rounded-md ${
+                              currentPage === pageNum
+                                ? 'bg-green-theme-primary text-white'
+                                : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    
                     <button
                       onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                      disabled={currentPage === totalPages}
+                      disabled={currentPage === totalPages || isLoading}
                       className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
@@ -386,15 +491,24 @@ function BrandsPageContent() {
           }}
         />
       )}
+
+      {/* Brand Edit Modal */}
+      {isEditModalOpen && selectedBrand && (
+        <SimpleBrandForm
+          brand={selectedBrand}
+          categories={categories}
+          isOpen={isEditModalOpen}
+          onClose={handleCloseModal}
+          onSubmit={handleBrandUpdate}
+          isLoading={false}
+          onToggleStatus={handleToggleStatus}
+        />
+      )}
       
     </div>
   )
 }
 
 export default function BrandsPage() {
-  return (
-    <ErrorBoundary fallback={<div className="p-6 text-red-600">Something went wrong loading the brands page. Please refresh the page.</div>}>
-      <BrandsPageContent />
-    </ErrorBoundary>
-  )
+  return <BrandsPageContent />
 }

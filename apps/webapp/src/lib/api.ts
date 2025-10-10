@@ -86,7 +86,21 @@ export async function getActiveBrands(): Promise<ApiResponse<Brand[]>> {
     throw new Error('Failed to fetch brands');
   }
 
-  return response.json();
+  const result = await response.json();
+
+  // Modify the logoUrl to be a direct download link
+  if (result.success && result.data) {
+    const brandsData = (result.data as any).data || result.data;
+    if (Array.isArray(brandsData)) {
+      brandsData.forEach((brand: Brand) => {
+        if (brand.logoUrl && brand.logoUrl.includes('drive.google.com')) {
+          brand.logoUrl = brand.logoUrl.replace('export=view', 'export=download');
+        }
+      });
+    }
+  }
+
+  return result;
 }
 
 // Auth API

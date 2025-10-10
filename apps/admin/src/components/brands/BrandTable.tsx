@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import React from 'react'
 import { 
   PencilIcon, 
   TrashIcon, 
@@ -27,44 +27,18 @@ interface BrandTableProps {
   onDelete?: (brandId: string) => void
   onView?: (brand: Brand) => void
   onToggleStatus?: (brandId: string) => void
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
+  onSort?: (field: string) => void
 }
 
-type SortField = keyof Brand | 'categoryName'
 
-export function BrandTable({ brands, onEdit, onDelete, onView, onToggleStatus }: BrandTableProps) {
-  const [sortField, setSortField] = useState<SortField>('updatedAt')
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
-
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortField(field)
-      setSortDirection('asc')
+export function BrandTable({ brands, onEdit, onDelete, onView, onToggleStatus, sortBy, sortOrder, onSort }: BrandTableProps) {
+  const handleSort = (field: string) => {
+    if (onSort) {
+      onSort(field)
     }
   }
-
-  const sortedBrands = useMemo(() => {
-    const getComparable = (brand: Brand): any => {
-      if (sortField === 'categoryName') return brand.category?.name ?? ''
-      if (sortField === 'updatedAt') return new Date(brand.updatedAt as unknown as any).getTime()
-      if (sortField === 'createdAt') return new Date(brand.createdAt as unknown as any).getTime()
-      return (brand as any)[sortField]
-    }
-
-    return [...brands].sort((a, b) => {
-      const aValue = getComparable(a)
-      const bValue = getComparable(b)
-
-      if (aValue === undefined && bValue === undefined) return 0
-      if (aValue === undefined) return sortDirection === 'asc' ? -1 : 1
-      if (bValue === undefined) return sortDirection === 'asc' ? 1 : -1
-
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
-      return 0
-    })
-  }, [brands, sortField, sortDirection])
 
   const formatDateTime = (input: Date | string | undefined) => {
     if (!input) return '—'
@@ -90,9 +64,9 @@ export function BrandTable({ brands, onEdit, onDelete, onView, onToggleStatus }:
             >
               <div className="flex items-center">
                 Brand Name
-                {sortField === 'name' && (
+                {sortBy === 'name' && (
                   <span className="ml-1">
-                    {sortDirection === 'asc' ? '↑' : '↓'}
+                    {sortOrder === 'asc' ? '↑' : '↓'}
                   </span>
                 )}
               </div>
@@ -103,9 +77,9 @@ export function BrandTable({ brands, onEdit, onDelete, onView, onToggleStatus }:
             >
               <div className="flex items-center">
                 Category
-                {sortField === 'categoryName' && (
+                {sortBy === 'categoryName' && (
                   <span className="ml-1">
-                    {sortDirection === 'asc' ? '↑' : '↓'}
+                    {sortOrder === 'asc' ? '↑' : '↓'}
                   </span>
                 )}
               </div>
@@ -116,9 +90,9 @@ export function BrandTable({ brands, onEdit, onDelete, onView, onToggleStatus }:
             >
               <div className="flex items-center">
                 Earning %
-                {sortField === 'earningPercentage' && (
+                {sortBy === 'earningPercentage' && (
                   <span className="ml-1">
-                    {sortDirection === 'asc' ? '↑' : '↓'}
+                    {sortOrder === 'asc' ? '↑' : '↓'}
                   </span>
                 )}
               </div>
@@ -129,9 +103,9 @@ export function BrandTable({ brands, onEdit, onDelete, onView, onToggleStatus }:
             >
               <div className="flex items-center">
                 Redemption %
-                {sortField === 'redemptionPercentage' && (
+                {sortBy === 'redemptionPercentage' && (
                   <span className="ml-1">
-                    {sortDirection === 'asc' ? '↑' : '↓'}
+                    {sortOrder === 'asc' ? '↑' : '↓'}
                   </span>
                 )}
               </div>
@@ -142,9 +116,9 @@ export function BrandTable({ brands, onEdit, onDelete, onView, onToggleStatus }:
             >
               <div className="flex items-center">
                 Caps
-                {sortField === 'brandwiseMaxCap' && (
+                {sortBy === 'brandwiseMaxCap' && (
                   <span className="ml-1">
-                    {sortDirection === 'asc' ? '↑' : '↓'}
+                    {sortOrder === 'asc' ? '↑' : '↓'}
                   </span>
                 )}
               </div>
@@ -155,9 +129,9 @@ export function BrandTable({ brands, onEdit, onDelete, onView, onToggleStatus }:
             >
               <div className="flex items-center">
                 Status
-                {sortField === 'isActive' && (
+                {sortBy === 'isActive' && (
                   <span className="ml-1">
-                    {sortDirection === 'asc' ? '↑' : '↓'}
+                    {sortOrder === 'asc' ? '↑' : '↓'}
                   </span>
                 )}
               </div>
@@ -168,9 +142,9 @@ export function BrandTable({ brands, onEdit, onDelete, onView, onToggleStatus }:
             >
               <div className="flex items-center">
                 Last Updated
-                {sortField === 'updatedAt' && (
+                {sortBy === 'updatedAt' && (
                   <span className="ml-1">
-                    {sortDirection === 'asc' ? '↑' : '↓'}
+                    {sortOrder === 'asc' ? '↑' : '↓'}
                   </span>
                 )}
               </div>
@@ -179,7 +153,7 @@ export function BrandTable({ brands, onEdit, onDelete, onView, onToggleStatus }:
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sortedBrands.map((brand) => (
+          {brands.map((brand) => (
             <TableRow key={brand.id} className="hover:bg-gray-50">
               <TableCell>
                 <div className="flex items-center">
@@ -323,7 +297,7 @@ export function BrandTable({ brands, onEdit, onDelete, onView, onToggleStatus }:
         </TableBody>
       </Table>
       
-      {sortedBrands.length === 0 && (
+      {brands.length === 0 && (
         <div className="text-center py-12">
           <div className="text-gray-500">
             <p>No brands found</p>

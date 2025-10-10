@@ -3,17 +3,15 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const { logout } = useAuth();
 
   function handleLogout() {
-    try {
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("auth");
-      }
-    } catch {}
-    router.push("/login");
+    logout();
+    router.push("/");
   }
 
   return (

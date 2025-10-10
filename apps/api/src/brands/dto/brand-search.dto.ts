@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsUUID, IsBoolean, IsNumber, Min, Max } from 'class-validator';
+import { IsOptional, IsString, IsUUID, IsBoolean, IsNumber, Min, Max, IsIn } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
 export class BrandSearchDto {
@@ -25,6 +25,16 @@ export class BrandSearchDto {
     return undefined;
   })
   isActive?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['name', 'categoryName', 'earningPercentage', 'redemptionPercentage', 'brandwiseMaxCap', 'isActive', 'createdAt', 'updatedAt'])
+  sortBy?: string = 'updatedAt';
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['asc', 'desc'])
+  sortOrder?: string = 'desc';
 
   @IsOptional()
   @IsNumber()

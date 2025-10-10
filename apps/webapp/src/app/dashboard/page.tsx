@@ -3,30 +3,28 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { getUserTransactions, Transaction } from "@/lib/api";
+import { getUserTransactions, Transaction, getActiveBrands, Brand } from "@/lib/api";
+import { getDirectImageUrl, getFallbackImageUrl, getBrandIconUrl, getBrandLogoUrl } from "@/utils/imageUtils";
 import { toast } from "sonner";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Coins, History } from "lucide-react";
 import Image from "next/image";
+import AuthGuard from "@/components/AuthGuard";
 
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, token, isAuthenticated, isLoading } = useAuth();
+  const { user, token, isAuthenticated } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(true);
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace("/login?redirect=dashboard");
-    }
-  }, [isAuthenticated, isLoading, router]);
 
   useEffect(() => {
     if (token && isAuthenticated) {
       fetchTransactions();
+      fetchBrands();
     }
   }, [token, isAuthenticated]);
 
@@ -50,20 +48,21 @@ export default function DashboardPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/30 to-green-50/50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  const fetchBrands = async () => {
+    try {
+      const response = await getActiveBrands();
+      if (response.success && response.data) {
+        const brandsData = (response.data as any).data || response.data;
+        if (Array.isArray(brandsData)) {
+          setBrands(brandsData);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching brands:", error);
+      // Not showing a toast here to avoid cluttering the UI
+    }
+  };
 
-  if (!isAuthenticated) {
-    return null; // Will redirect via useEffect
-  }
 
   const totalCoins = Number(user?.totalCoins || 0);
   const totalEarned = Number(user?.totalEarned || 0);
@@ -71,7 +70,8 @@ export default function DashboardPage() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/30 to-green-50/50">
+    <AuthGuard>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/30 to-green-50/50">
       {/* Header */}
       <div className="py-6 flex justify-center">
         <Image src="/corro_logo.png" alt="Corra Club" width={96} height={96} />
@@ -279,28 +279,63 @@ export default function DashboardPage() {
                   <p className="text-sm">Start earning by uploading your first receipt!</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {transactions.map((transaction) => (
-                    <div key={transaction.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-100 rounded-full flex items-center justify-center text-sm sm:text-lg">
-                          {transaction.brandName ? transaction.brandName.charAt(0).toUpperCase() : '🏪'}
+                <div className="relative">
+                  {/* Scrollable transaction list with max height */}
+                  <div className="max-h-[480px] sm:max-h-[520px] md:max-h-[560px] lg:max-h-[600px] overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                    {transactions.map((transaction) => {
+                      const brand = brands.find(b => b.id === transaction.brandId || b.name === transaction.brandName);
+                      return (
+                        <div key={transaction.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-100 rounded-full flex items-center justify-center text-sm sm:text-lg overflow-hidden">
+                              {brand ? (
+                                <Image 
+                                  src={getBrandLogoUrl(brand.logoUrl, brand.name)} 
+                                  alt={brand.name} 
+                                  width={40} 
+                                  height={40} 
+                                  className="object-contain" 
+                                  unoptimized 
+                                  onError={(e) => {
+                                    console.error('Failed to load transaction brand image:', brand.name);
+                                    e.currentTarget.src = getFallbackImageUrl(brand.name);
+                                  }}
+                                />
+                              ) : (
+                                transaction.brandName ? transaction.brandName.charAt(0).toUpperCase() : '🏪'
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900 text-sm sm:text-base">
+                                {transaction.coinsEarned > 0 ? 'Earned Coins' : 'Redeemed'}
+                              </p>
+                              <p className="text-xs sm:text-sm text-gray-500">{transaction.brandName || 'Unknown Brand'}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={`font-semibold text-sm sm:text-base ${transaction.coinsEarned > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                              {transaction.coinsEarned > 0 ? '+' : '-'}₹{transaction.coinsEarned > 0 ? transaction.coinsEarned : transaction.coinsRedeemed}
+                            </p>
+                            <p className="text-xs text-gray-500">{new Date(transaction.createdAt).toLocaleDateString()}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-gray-900 text-sm sm:text-base">
-                            {transaction.coinsEarned > 0 ? 'Earned Coins' : 'Redeemed'}
-                          </p>
-                          <p className="text-xs sm:text-sm text-gray-500">{transaction.brandName || 'Unknown Brand'}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className={`font-semibold text-sm sm:text-base ${transaction.coinsEarned > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                          {transaction.coinsEarned > 0 ? '+' : '-'}₹{transaction.coinsEarned > 0 ? transaction.coinsEarned : transaction.coinsRedeemed}
-                        </p>
-                        <p className="text-xs text-gray-500">{new Date(transaction.createdAt).toLocaleDateString()}</p>
-                      </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Fade effect at bottom when scrollable */}
+                  {transactions.length > 5 && (
+                    <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
+                  )}
+                  
+                  {/* Transaction count indicator */}
+                  {transactions.length > 0 && (
+                    <div className="mt-3 text-center">
+                      <p className="text-xs text-gray-500">
+                        Showing {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}
+                      </p>
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
             </CardContent>
@@ -320,6 +355,7 @@ export default function DashboardPage() {
         </motion.div>
       </div>
     </div>
+    </AuthGuard>
   );
 }
 

@@ -79,6 +79,7 @@ __decorate([
 ], Brand.prototype, "isActive", void 0);
 __decorate([
     (0, typeorm_1.ManyToOne)(() => brand_category_entity_1.BrandCategory, category => category.brands, { nullable: true }),
+    (0, typeorm_1.JoinColumn)({ name: 'categoryId' }),
     __metadata("design:type", Object)
 ], Brand.prototype, "category", void 0);
 __decorate([

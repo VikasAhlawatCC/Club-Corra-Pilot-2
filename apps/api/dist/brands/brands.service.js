@@ -83,7 +83,7 @@ let BrandsService = class BrandsService {
         return this.brandRepository.save(brand);
     }
     async findAll(searchDto) {
-        const { query, categoryId, isActive, page = 1, limit = 20 } = searchDto;
+        const { query, categoryId, isActive, sortBy = 'updatedAt', sortOrder = 'desc', page = 1, limit = 20 } = searchDto;
         const skip = (page - 1) * limit;
         try {
             // Build query with proper joins for category information
@@ -121,10 +121,40 @@ let BrandsService = class BrandsService {
             if (query) {
                 queryBuilder = queryBuilder.andWhere('(brand.name ILIKE :query OR brand.description ILIKE :query)', { query: `%${query}%` });
             }
+            // Apply sorting
+            const sortDirection = sortOrder.toUpperCase();
+            let orderByField = 'brand.updatedAt';
+            switch (sortBy) {
+                case 'name':
+                    orderByField = 'brand.name';
+                    break;
+                case 'categoryName':
+                    orderByField = 'category.name';
+                    break;
+                case 'earningPercentage':
+                    orderByField = 'brand.earningPercentage';
+                    break;
+                case 'redemptionPercentage':
+                    orderByField = 'brand.redemptionPercentage';
+                    break;
+                case 'brandwiseMaxCap':
+                    orderByField = 'brand.brandwiseMaxCap';
+                    break;
+                case 'isActive':
+                    orderByField = 'brand.isActive';
+                    break;
+                case 'createdAt':
+                    orderByField = 'brand.createdAt';
+                    break;
+                case 'updatedAt':
+                default:
+                    orderByField = 'brand.updatedAt';
+                    break;
+            }
             const [brands, total] = await queryBuilder
                 .skip(skip)
                 .take(limit)
-                .orderBy('brand.updatedAt', 'DESC')
+                .orderBy(orderByField, sortDirection)
                 .getManyAndCount();
             const totalPages = Math.ceil(total / limit);
             return {
@@ -141,7 +171,7 @@ let BrandsService = class BrandsService {
         }
     }
     async findAllFallback(searchDto) {
-        const { query, categoryId, isActive, page = 1, limit = 20 } = searchDto;
+        const { query, categoryId, isActive, sortBy = 'updatedAt', sortOrder = 'desc', page = 1, limit = 20 } = searchDto;
         const skip = (page - 1) * limit;
         let queryBuilder = this.brandRepository
             .createQueryBuilder('brand')
@@ -171,10 +201,38 @@ let BrandsService = class BrandsService {
         if (query) {
             queryBuilder = queryBuilder.andWhere('(brand.name ILIKE :query OR brand.description ILIKE :query)', { query: `%${query}%` });
         }
+        // Apply sorting for fallback (without category join)
+        const sortDirection = sortOrder.toUpperCase();
+        let orderByField = 'brand.updatedAt';
+        switch (sortBy) {
+            case 'name':
+                orderByField = 'brand.name';
+                break;
+            case 'earningPercentage':
+                orderByField = 'brand.earningPercentage';
+                break;
+            case 'redemptionPercentage':
+                orderByField = 'brand.redemptionPercentage';
+                break;
+            case 'brandwiseMaxCap':
+                orderByField = 'brand.brandwiseMaxCap';
+                break;
+            case 'isActive':
+                orderByField = 'brand.isActive';
+                break;
+            case 'createdAt':
+                orderByField = 'brand.createdAt';
+                break;
+            case 'updatedAt':
+            default:
+                orderByField = 'brand.updatedAt';
+                break;
+            // Note: categoryName sorting not available in fallback mode
+        }
         const [brands, total] = await queryBuilder
             .skip(skip)
             .take(limit)
-            .orderBy('brand.updatedAt', 'DESC')
+            .orderBy(orderByField, sortDirection)
             .getManyAndCount();
         const totalPages = Math.ceil(total / limit);
         return {
@@ -217,6 +275,7 @@ let BrandsService = class BrandsService {
         }
     }
     async update(id, updateBrandDto) {
+        console.log('Brand update request:', { id, updateBrandDto });
         const brand = await this.findOne(id);
         // If category is being updated, validate it exists
         if (updateBrandDto.categoryId && updateBrandDto.categoryId !== brand.categoryId) {
@@ -236,6 +295,7 @@ let BrandsService = class BrandsService {
             this.validateBrandBusinessRules(updatedData);
         }
         Object.assign(brand, updateBrandDto);
+        console.log('Brand before save:', { id: brand.id, categoryId: brand.categoryId, name: brand.name });
         return this.brandRepository.save(brand);
     }
     async remove(id) {
@@ -255,6 +315,11 @@ let BrandsService = class BrandsService {
             // If the join fails, assume no transactions and continue
         }
         await this.brandRepository.remove(brand);
+    }
+    async toggleStatus(id) {
+        const brand = await this.findOne(id);
+        brand.isActive = !brand.isActive;
+        return this.brandRepository.save(brand);
     }
     async findActiveBrands() {
         try {

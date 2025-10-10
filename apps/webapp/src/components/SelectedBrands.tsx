@@ -3,6 +3,7 @@ import * as React from "react";
 import Image from "next/image";
 import { ALL_BRANDS } from "../data/brands";
 import { motion } from "motion/react";
+import { getBrandLogoUrl, getFallbackImageUrl } from "@/utils/imageUtils";
 
 export default function SelectedBrands() {
   return (
@@ -56,12 +57,16 @@ export default function SelectedBrands() {
                   >
                     {b.icon ? (
                       <Image
-                        src={b.icon}
+                        src={getBrandLogoUrl(b.icon, b.name)}
                         alt={b.name}
                         width={32}
                         height={32}
                         className="h-6 w-6 sm:h-8 sm:w-8 object-contain"
-                        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => (e.currentTarget.style.display = "none")}
+                        unoptimized
+                        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                          console.error('Failed to load brand image:', b.name);
+                          e.currentTarget.src = getFallbackImageUrl(b.name);
+                        }}
                       />
                     ) : (
                       <span className="text-xs font-semibold text-neutral-700">{b.off}</span>

@@ -14,6 +14,8 @@ const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
 class BrandSearchDto {
     constructor() {
+        this.sortBy = 'updatedAt';
+        this.sortOrder = 'desc';
         this.page = 1;
         this.limit = 20;
     }
@@ -50,6 +52,18 @@ __decorate([
     }),
     __metadata("design:type", Boolean)
 ], BrandSearchDto.prototype, "isActive", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsIn)(['name', 'categoryName', 'earningPercentage', 'redemptionPercentage', 'brandwiseMaxCap', 'isActive', 'createdAt', 'updatedAt']),
+    __metadata("design:type", String)
+], BrandSearchDto.prototype, "sortBy", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsIn)(['asc', 'desc']),
+    __metadata("design:type", String)
+], BrandSearchDto.prototype, "sortOrder", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsNumber)(),
